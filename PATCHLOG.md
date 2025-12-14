@@ -1,5 +1,21 @@
 # Patch Log
 
+## UI_PATCH_INVENTORY_MODULE_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented Inventory (Finished Goods) module. Features include Put-away, Location Management, Reservation, and Quarantine workflows. Restricted eligibility to EOL Pass batteries.
+- **Files changed**:
+  - src/domain/types.ts (Added InventoryStatus, InventoryMovementEntry)
+  - src/rbac/policy.ts (Updated Inventory permissions for C3/C6)
+  - src/services/api.ts (Implemented InventoryService)
+  - src/pages/InventoryList.tsx (New Inventory UI)
+  - App.tsx (Updated routes)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as C6 (Logistics) -> View Inventory -> Perform Put-away -> Reserve for Dispatch.
+  - [ ] Login as C3 (QA) -> Quarantine a battery -> Verify status change -> Release.
+  - [ ] Verify non-EOL-pass batteries do not appear in Inventory.
+  - [ ] Verify C9 cannot access Inventory.
+
 ## UI_PATCH_EOL_QA_STATION_V1
 - **Date**: 2024-05-24
 - **Summary**: Implemented EOL / QA Station module with stepper workflow for testing, dispositioning, and certifying batteries. Added `EolService` mock and updated RBAC.

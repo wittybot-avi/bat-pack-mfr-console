@@ -24,6 +24,13 @@ export enum BatteryStatus {
   SCRAPPED = 'Scrapped'
 }
 
+export enum InventoryStatus {
+  PENDING_PUTAWAY = 'Pending Put-away',
+  AVAILABLE = 'Available',
+  RESERVED = 'Reserved',
+  QUARANTINED = 'Quarantined'
+}
+
 export enum QaDisposition {
   PASS = 'PASS',
   FAIL = 'FAIL',
@@ -170,6 +177,16 @@ export interface EolLogEntry {
   details?: string;
 }
 
+export interface InventoryMovementEntry {
+  id: string;
+  timestamp: string;
+  type: 'PUT_AWAY' | 'MOVE' | 'RESERVE' | 'QUARANTINE' | 'RELEASE';
+  fromLocation?: string;
+  toLocation?: string;
+  operator: string;
+  details?: string;
+}
+
 export interface Battery {
   id: string; // Internal UUID
   
@@ -219,6 +236,16 @@ export interface Battery {
   qaApproverId?: string;
   qaApprovedAt?: string;
   certificateRef?: string;
+
+  // Inventory & Logistics
+  releaseToInventory?: boolean;
+  inventoryStatus?: InventoryStatus;
+  inventoryLocation?: string; // e.g. WH1-Z2-R04-B10
+  inventoryEnteredAt?: string;
+  inventoryMovementLog?: InventoryMovementEntry[];
+  
+  reservedAt?: string;
+  reservedBy?: string;
   
   // Lifecycle
   dispatchStatus?: 'Pending' | 'Ready' | 'Shipped';

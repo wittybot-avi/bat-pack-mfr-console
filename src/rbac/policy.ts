@@ -52,6 +52,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.EOL_QA_STATION_SETUP]: ['V', 'E', 'M'],
     [ScreenId.EOL_QA_REVIEW]: ['V', 'A'],
     [ScreenId.ANALYTICS]: ['V'],
+    [ScreenId.INVENTORY]: ['V', 'E'], // QA can Quarantine/Release
   },
 
   // C4: Engineering/IT - Admin & Config
@@ -64,6 +65,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.PROVISIONING_STATION_SETUP]: ['V', 'E', 'M'],
     [ScreenId.EOL_QA_STATION]: ['V'],
     [ScreenId.EOL_QA_STATION_SETUP]: ['V', 'E', 'M'],
+    [ScreenId.INVENTORY]: ['V'],
   },
 
   // C5: BMS/Firmware - Deep tech view
@@ -81,7 +83,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V'], // Added access
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'X'], // Edit Suppliers, Export
-    [ScreenId.INVENTORY]: ['V', 'C', 'E', 'M'],
+    [ScreenId.INVENTORY]: ['V', 'C', 'E', 'M', 'X'], // Full inventory control
     [ScreenId.DISPATCH]: ['V', 'C', 'E', 'X'],
     [ScreenId.CUSTODY]: ['V', 'C', 'A'],
     [ScreenId.BATTERIES_LIST]: ['V'],
@@ -96,6 +98,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATCHES_LIST]: ['V'], // Reference checks
     [ScreenId.BATCHES_DETAIL]: ['V'],
     [ScreenId.EOL_QA_STATION]: ['V'], // Check test data
+    [ScreenId.INVENTORY]: ['V'],
   },
 
   // C8: Compliance
@@ -106,6 +109,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.RBAC_VIEW]: ['V'], // Audit access
     [ScreenId.BATCHES_LIST]: ['V'], // Audit batches
     [ScreenId.BATCHES_DETAIL]: ['V'],
+    [ScreenId.INVENTORY]: ['V'],
   },
 
   // C9: External

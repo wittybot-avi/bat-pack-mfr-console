@@ -1,4 +1,4 @@
-import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry, EolMeasurements, QaDisposition, EolLogEntry } from '../domain/types';
+import { Batch, BatchStatus, Battery, BatteryStatus, InventoryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry, EolMeasurements, QaDisposition, EolLogEntry, InventoryMovementEntry } from '../domain/types';
 
 /**
  * SERVICE INTERFACES
@@ -52,6 +52,15 @@ export interface IEolService {
   setQaDisposition(batteryId: string, disposition: QaDisposition, reasonCode: string, notes: string, operator: string): Promise<Battery>;
   generateCertificate(batteryId: string, operator: string): Promise<Battery>;
   finalizeQa(batteryId: string, operator: string): Promise<Battery>;
+}
+
+export interface IInventoryService {
+  getInventory(filters?: any): Promise<Battery[]>;
+  putAwayBattery(batteryId: string, location: string, operator: string): Promise<Battery>;
+  moveBattery(batteryId: string, newLocation: string, operator: string): Promise<Battery>;
+  reserveBattery(batteryId: string, operator: string): Promise<Battery>;
+  quarantineBattery(batteryId: string, reason: string, notes: string, operator: string): Promise<Battery>;
+  releaseQuarantine(batteryId: string, operator: string): Promise<Battery>;
 }
 
 export interface IDashboardService {
@@ -126,6 +135,8 @@ const generateBatteries = (count: number): Battery[] => {
         const batchId = `batch-${Math.floor(i / 10) + 1}`;
         const status = [BatteryStatus.ASSEMBLY, BatteryStatus.PROVISIONING, BatteryStatus.QA_TESTING, BatteryStatus.IN_INVENTORY, BatteryStatus.DEPLOYED][Math.floor(Math.random() * 5)];
         
+        const isInventory = status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED;
+        
         return {
             id: `batt-${i}`,
             serialNumber: `SN-${(100000 + i).toString(16).toUpperCase()}`,
@@ -135,7 +146,7 @@ const generateBatteries = (count: number): Battery[] => {
             lineId: 'L1',
             stationId: 'ST-04',
             status: status as BatteryStatus,
-            location: status === BatteryStatus.DEPLOYED ? 'Customer Site' : 'Warehouse A, Zone 2',
+            location: isInventory ? 'WH1-Z1-R03-B05' : 'Assembly Line 1',
             lastSeen: new Date().toISOString(),
             manufacturedAt: new Date(Date.now() - Math.random() * 1000000000).toISOString(),
             
@@ -154,8 +165,8 @@ const generateBatteries = (count: number): Battery[] => {
             provisioningLogs: [],
             
             // EOL Mock Data
-            eolStatus: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? 'PASS' : 'NOT_TESTED',
-            eolMeasurements: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? {
+            eolStatus: isInventory ? 'PASS' : 'NOT_TESTED',
+            eolMeasurements: isInventory ? {
               voltage: 48.2,
               capacityAh: 102.5,
               internalResistance: 12,
@@ -163,13 +174,24 @@ const generateBatteries = (count: number): Battery[] => {
               cellBalancingDelta: 0.005,
               timestamp: new Date().toISOString()
             } : undefined,
-            qaDisposition: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? QaDisposition.PASS : undefined,
+            qaDisposition: isInventory ? QaDisposition.PASS : undefined,
+            
+            // Inventory Mock Data
+            releaseToInventory: isInventory,
+            inventoryStatus: isInventory 
+              ? (Math.random() > 0.8 ? InventoryStatus.RESERVED : InventoryStatus.AVAILABLE) 
+              : undefined,
+            inventoryLocation: isInventory ? 'WH1-Z1-R03-B05' : undefined,
+            inventoryEnteredAt: isInventory ? new Date(Date.now() - 100000000).toISOString() : undefined,
+            inventoryMovementLog: isInventory ? [
+              { id: 'mv-1', timestamp: new Date(Date.now() - 100000000).toISOString(), type: 'PUT_AWAY', toLocation: 'WH1-Z1-R03-B05', operator: 'System' }
+            ] : [],
             
             soh: 95 + Math.random() * 5,
             soc: 30 + Math.random() * 60,
             voltage: 48 + Math.random(),
-            eolResult: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? 'PASS' : undefined,
-            certificateRef: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? `CERT-${i}` : undefined,
+            eolResult: isInventory ? 'PASS' : undefined,
+            certificateRef: isInventory ? `CERT-${i}` : undefined,
             
             notes: []
         };
@@ -470,6 +492,8 @@ class MockBatteryService implements IBatteryService {
       batt.status = BatteryStatus.IN_INVENTORY;
       batt.qaApproverId = user;
       batt.certificateRef = `CERT-${Math.random().toString(36).substring(7).toUpperCase()}`;
+      batt.releaseToInventory = true;
+      batt.inventoryStatus = InventoryStatus.PENDING_PUTAWAY;
       
       return batt;
   }
@@ -682,12 +706,109 @@ class MockEolService implements IEolService {
     if (batt.qaDisposition === QaDisposition.PASS) {
       batt.status = BatteryStatus.IN_INVENTORY;
       batt.eolStatus = 'PASS';
+      batt.releaseToInventory = true;
+      batt.inventoryStatus = InventoryStatus.PENDING_PUTAWAY;
     } else {
       batt.eolStatus = 'FAIL';
       // Status might stay in QA_TESTING or move to RMA/SCRAPPED depending on workflow
       if (batt.qaDisposition === QaDisposition.REWORK) batt.status = BatteryStatus.ASSEMBLY; // Send back
     }
     
+    return batt;
+  }
+}
+
+class MockInventoryService implements IInventoryService {
+  private logMovement(batt: Battery, type: InventoryMovementEntry['type'], toLocation: string | undefined, operator: string, details?: string) {
+    if (!batt.inventoryMovementLog) batt.inventoryMovementLog = [];
+    batt.inventoryMovementLog.push({
+      id: Math.random().toString(36).substring(7),
+      timestamp: new Date().toISOString(),
+      type,
+      fromLocation: batt.inventoryLocation || 'Origin',
+      toLocation,
+      operator,
+      details
+    });
+  }
+
+  async getInventory(filters?: any): Promise<Battery[]> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    let res = MOCK_BATTERIES.filter(b => b.releaseToInventory === true && b.eolResult === 'PASS');
+    
+    if (filters?.status && filters.status !== 'All') {
+      res = res.filter(b => b.inventoryStatus === filters.status);
+    }
+    return res;
+  }
+
+  async putAwayBattery(batteryId: string, location: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+
+    batt.inventoryStatus = InventoryStatus.AVAILABLE;
+    batt.inventoryLocation = location;
+    batt.location = location; // Sync main location
+    batt.inventoryEnteredAt = new Date().toISOString();
+    
+    this.logMovement(batt, 'PUT_AWAY', location, operator, 'Initial Put-away');
+    return batt;
+  }
+
+  async moveBattery(batteryId: string, newLocation: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+
+    batt.inventoryLocation = newLocation;
+    batt.location = newLocation;
+    
+    this.logMovement(batt, 'MOVE', newLocation, operator);
+    return batt;
+  }
+
+  async reserveBattery(batteryId: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+    if (batt.inventoryStatus !== InventoryStatus.AVAILABLE) throw new Error("Battery not available for reservation");
+
+    batt.inventoryStatus = InventoryStatus.RESERVED;
+    batt.reservedAt = new Date().toISOString();
+    batt.reservedBy = operator;
+
+    this.logMovement(batt, 'RESERVE', undefined, operator, 'Reserved for dispatch');
+    return batt;
+  }
+
+  async quarantineBattery(batteryId: string, reason: string, notes: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+
+    batt.inventoryStatus = InventoryStatus.QUARANTINED;
+    
+    this.logMovement(batt, 'QUARANTINE', undefined, operator, `${reason}: ${notes}`);
+    
+    // Add note to main notes as well
+    batt.notes.push({
+      id: Math.random().toString(),
+      author: operator,
+      role: 'QA/Inventory',
+      text: `Quarantined: ${reason} - ${notes}`,
+      timestamp: new Date().toISOString()
+    });
+    return batt;
+  }
+
+  async releaseQuarantine(batteryId: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+
+    batt.inventoryStatus = InventoryStatus.AVAILABLE;
+    this.logMovement(batt, 'RELEASE', undefined, operator, 'Released from Quarantine');
     return batt;
   }
 }
@@ -717,4 +838,5 @@ export const batchService = new MockBatchService();
 export const batteryService = new MockBatteryService();
 export const provisioningService = new MockProvisioningService();
 export const eolService = new MockEolService();
+export const inventoryService = new MockInventoryService();
 export const dashboardService = new MockDashboardService();

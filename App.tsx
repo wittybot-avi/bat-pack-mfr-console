@@ -18,6 +18,7 @@ import ProvisioningConsole from './src/pages/ProvisioningConsole';
 import ProvisioningStationSetup from './src/pages/ProvisioningStationSetup';
 import EolStation from './src/pages/EolStation';
 import EolStationSetup from './src/pages/EolStationSetup';
+import InventoryList from './src/pages/InventoryList';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
 
@@ -120,15 +121,9 @@ function App() {
             </RouteGuard>
           } />
 
-          <Route path="logistics" element={<Navigate to="/inventory" replace />} />
-
           <Route path="inventory" element={
             <RouteGuard screen={ScreenId.INVENTORY}>
-              <Placeholder 
-                title="Warehouse Inventory" 
-                description="Real-time stock levels, rack/bin location management, and aging alerts."
-                features={["Zone Map", "Stock Aging", "Inbound Scans", "Holding Area"]}
-              />
+              <InventoryList />
             </RouteGuard>
           } />
           
