@@ -1,5 +1,23 @@
 # Patch Log
 
+## UI_PATCH_ADMIN_ACCESS_CONTROL_UX_V1
+- **Date**: 2024-05-24
+- **Summary**: Enhanced Access Control Admin page with human-readable Capability Summaries, Restriction Explanations, improved Matrix UX with search and legend, and RBAC Snapshot Export. Added Policy Changelog preview.
+- **Files changed**:
+  - src/pages/RbacAdmin.tsx (Major UX upgrade)
+  - src/rbac/capabilityMap.ts (New helper)
+  - src/rbac/restrictionReasons.ts (New helper)
+  - src/rbac/exportRbacSnapshot.ts (New helper)
+  - src/app/policyChangelog.ts (New helper)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User -> Verify "All Actions Enabled" in legend and matrix.
+  - [ ] Login as C6 (Logistics) -> Verify "Cannot access System Settings" in summary.
+  - [ ] Verify "Restricted Access Explanations" shows reason for denied modules (e.g., Settings).
+  - [ ] Use Matrix Search to find "WARRANTY" -> Verify table filters.
+  - [ ] Click "Export Snapshot" -> Verify JSON download contains `accessControl` and `capabilities`.
+  - [ ] Verify Policy Changelog is visible at bottom.
+
 ## UI_PATCH_ADMIN_SETTINGS_CONTROL_PLANE_V1
 - **Date**: 2024-05-24
 - **Summary**: Upgraded the Settings page from a placeholder to a comprehensive "Control Plane" preview. Includes tabs for Profile, User Management, API Keys, Notifications, and Webhooks. All inputs are explicitly disabled to indicate backend requirement.
