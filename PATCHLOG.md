@@ -1,5 +1,51 @@
 # Patch Log
 
+## UI_PATCH_OBSERVE_ANALYTICS_RENDER_FIX_V1
+- **Date**: 2024-05-24
+- **Summary**: Fixed wiring of Analytics page in router to replace placeholder. Improved tab resilience on Analytics page.
+- **Files changed**:
+  - App.tsx (Wired Analytics route)
+  - src/pages/Analytics.tsx (Robust tab selection)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User (CS) -> Go to Analytics -> Verify tabbed suite renders.
+  - [ ] Login as C1 (Plant Head) -> Go to Analytics -> Verify Overview tab renders.
+  - [ ] Verify "Coming Features" placeholder is gone for Analytics.
+
+## UI_PATCH_OBSERVE_ANALYTICS_SUITE_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented comprehensive Analytics Suite with RBAC-gated tabs (Overview, Batches, Quality, Location, Reports). Added mock Metrics Service and Geofencing analytics.
+- **Files changed**:
+  - src/rbac/screenIds.ts (Added ANALYTICS_* IDs)
+  - src/rbac/policy.ts (Updated policies for C1-C9)
+  - src/services/analyticsMetrics.ts (New service)
+  - src/pages/Analytics.tsx (New tabbed page)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User (CS) -> Verify all tabs visible and data populates.
+  - [ ] Login as C2 (Mfg) -> Verify Overview/Batches visible, Quality/Location hidden.
+  - [ ] Login as C6 (Logistics) -> Verify Location & Movement tab visible.
+  - [ ] Login as C3 (QA) -> Verify Quality tab with Pareto chart.
+  - [ ] Test Date Range selector (should trigger reload).
+  - [ ] Verify Location tab shows dwell time and mock geofence data.
+
+## UI_PATCH_OBSERVE_TELEMETRY_RBAC_V1
+- **Date**: 2024-05-24
+- **Summary**: Upgraded Telemetry module to be RBAC-aware with Live/History modes, role-based battery selection, and a mock telemetry service.
+- **Files changed**:
+  - src/rbac/screenIds.ts (Added TELEMETRY_* IDs)
+  - src/rbac/policy.ts (Updated policies for C1-C9)
+  - src/services/telemetryService.ts (New service)
+  - src/pages/Telemetry.tsx (Full refactor)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User (CS) -> Verify Live & History tabs, Export button, all batteries visible.
+  - [ ] Login as C2 (Mfg) -> Verify Live tab only, battery picker filters for Production batteries.
+  - [ ] Login as C7 (Warranty) -> Verify History tab only, picker shows only RMA/Issue units.
+  - [ ] Login as C6 (Logistics) -> Verify Access Denied (not in sidebar or route blocked).
+  - [ ] Test live chart streaming (Pause/Resume).
+  - [ ] Test history range selector.
+
 ## UI_PATCH_OBSERVE_DASHBOARD_RBAC_V1
 - **Date**: 2024-05-24
 - **Summary**: Upgraded Dashboard to be role-aware using granular widget permissions. Implemented `DashboardMetricsService` to aggregate mock data from various services.

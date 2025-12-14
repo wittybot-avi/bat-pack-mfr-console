@@ -14,6 +14,7 @@ import BatchDetail from './src/pages/BatchDetail';
 import Batteries from './src/pages/Batteries';
 import BatteryDetail from './src/pages/BatteryDetail';
 import Telemetry from './src/pages/Telemetry';
+import Analytics from './src/pages/Analytics'; // Imported
 import ProvisioningConsole from './src/pages/ProvisioningConsole';
 import ProvisioningStationSetup from './src/pages/ProvisioningStationSetup';
 import EolStation from './src/pages/EolStation';
@@ -173,11 +174,7 @@ function App() {
           
           <Route path="analytics" element={
             <RouteGuard screen={ScreenId.ANALYTICS}>
-               <Placeholder 
-                title="Advanced Analytics" 
-                description="Long-term performance trends, predictive maintenance, and fleet health."
-                features={["Degradation Curves", "Fleet Heatmap", "Anomaly Detection", "Usage Patterns"]}
-              />
+               <Analytics />
             </RouteGuard>
           } />
 
