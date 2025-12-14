@@ -1,5 +1,34 @@
 # Patch Log
 
+## UI_PATCH_DISPATCH_NAV_FIX_V1
+- **Date**: 2024-05-24
+- **Summary**: Fixed navigation configuration to correctly display the "Dispatch" sidebar item. Mapped `DISPATCH_LIST` screen ID to the sidebar layout configuration.
+- **Files changed**:
+  - src/components/Layout.tsx (Updated NAV_CONFIG)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User (CS) -> Verify "Dispatch" appears under "Operate".
+  - [ ] Click "Dispatch" -> Verify Dispatch List page loads.
+  - [ ] Click an order -> Verify Dispatch Detail page loads.
+
+## UI_PATCH_DISPATCH_MODULE_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented Dispatch Module. Users can now create Dispatch Orders, pick batteries from Inventory, generate documents (Packing List, Manifest), and mark shipments as Dispatched.
+- **Files changed**:
+  - src/domain/types.ts (Added DispatchOrder, DispatchStatus, CustodyStatus)
+  - src/rbac/screenIds.ts (Added DISPATCH_LIST, DISPATCH_DETAIL)
+  - src/rbac/policy.ts (Updated policies for C6/C3)
+  - src/services/api.ts (Implemented DispatchService)
+  - src/pages/DispatchList.tsx (New)
+  - src/pages/DispatchDetail.tsx (New)
+  - App.tsx (Routing)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as C6 (Logistics) -> Create Dispatch Order -> Add Batteries -> Mark Ready -> Dispatch.
+  - [ ] Verify dispatched batteries move to IN_TRANSIT status and disappear from Inventory list.
+  - [ ] Login as C3 (QA) -> View Dispatch Orders (ReadOnly).
+  - [ ] Login as C9 -> No access to Dispatch.
+
 ## UI_PATCH_INVENTORY_MODULE_V1
 - **Date**: 2024-05-24
 - **Summary**: Implemented Inventory (Finished Goods) module. Features include Put-away, Location Management, Reservation, and Quarantine workflows. Restricted eligibility to EOL Pass batteries.

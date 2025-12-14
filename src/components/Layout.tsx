@@ -39,7 +39,7 @@ const NAV_CONFIG: Record<string, { icon: any, label: string, path: string }> = {
   [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning', path: '/provisioning' },
   [ScreenId.PROVISIONING_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/provisioning/setup' },
   [ScreenId.INVENTORY]: { icon: Box, label: 'Inventory', path: '/inventory' },
-  [ScreenId.DISPATCH]: { icon: Truck, label: 'Dispatch', path: '/dispatch' },
+  [ScreenId.DISPATCH_LIST]: { icon: Truck, label: 'Dispatch', path: '/dispatch' },
   [ScreenId.EOL_QA_STATION]: { icon: ClipboardCheck, label: 'EOL / QA', path: '/eol' },
   [ScreenId.EOL_QA_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/eol/setup' },
   [ScreenId.WARRANTY]: { icon: AlertOctagon, label: 'Warranty', path: '/warranty' },
@@ -91,7 +91,7 @@ export const Layout = () => {
                 icon={config.icon} 
                 label={config.label} 
                 path={config.path} 
-                active={location.pathname === config.path}
+                active={location.pathname === config.path || (location.pathname.startsWith(config.path) && config.path !== '/')}
               />
             );
           })}

@@ -19,6 +19,8 @@ import ProvisioningStationSetup from './src/pages/ProvisioningStationSetup';
 import EolStation from './src/pages/EolStation';
 import EolStationSetup from './src/pages/EolStationSetup';
 import InventoryList from './src/pages/InventoryList';
+import DispatchList from './src/pages/DispatchList';
+import DispatchDetail from './src/pages/DispatchDetail';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
 
@@ -128,12 +130,14 @@ function App() {
           } />
           
           <Route path="dispatch" element={
-            <RouteGuard screen={ScreenId.DISPATCH}>
-              <Placeholder 
-                title="Dispatch & Movement" 
-                description="Manage outbound shipments, movement orders, and manifests."
-                features={["Create Movement Order", "Manifest Generation", "Carrier Assignment", "Tracking"]}
-              />
+            <RouteGuard screen={ScreenId.DISPATCH_LIST}>
+              <DispatchList />
+            </RouteGuard>
+          } />
+
+          <Route path="dispatch/:id" element={
+            <RouteGuard screen={ScreenId.DISPATCH_DETAIL}>
+              <DispatchDetail />
             </RouteGuard>
           } />
 

@@ -28,7 +28,23 @@ export enum InventoryStatus {
   PENDING_PUTAWAY = 'Pending Put-away',
   AVAILABLE = 'Available',
   RESERVED = 'Reserved',
-  QUARANTINED = 'Quarantined'
+  QUARANTINED = 'Quarantined',
+  DISPATCHED = 'Dispatched'
+}
+
+export enum DispatchStatus {
+  DRAFT = 'Draft',
+  READY = 'Ready',
+  DISPATCHED = 'Dispatched',
+  CANCELLED = 'Cancelled'
+}
+
+export enum CustodyStatus {
+  AT_FACTORY = 'At Factory',
+  IN_TRANSIT = 'In Transit',
+  DELIVERED = 'Delivered',
+  ACCEPTED = 'Accepted',
+  REJECTED = 'Rejected'
 }
 
 export enum QaDisposition {
@@ -180,11 +196,49 @@ export interface EolLogEntry {
 export interface InventoryMovementEntry {
   id: string;
   timestamp: string;
-  type: 'PUT_AWAY' | 'MOVE' | 'RESERVE' | 'QUARANTINE' | 'RELEASE';
+  type: 'PUT_AWAY' | 'MOVE' | 'RESERVE' | 'QUARANTINE' | 'RELEASE' | 'DISPATCH';
   fromLocation?: string;
   toLocation?: string;
   operator: string;
   details?: string;
+}
+
+export interface CustodyEvent {
+  id: string;
+  timestamp: string;
+  status: CustodyStatus;
+  location: string;
+  handler: string;
+  signature?: string;
+  dispatchId?: string;
+}
+
+export interface DispatchOrder {
+  id: string;
+  orderNumber: string; // DO-2024-XXXX
+  status: DispatchStatus;
+  
+  // Header
+  customerName: string;
+  destinationAddress: string;
+  expectedShipDate: string;
+  carrierName?: string;
+  transportMode?: 'Road' | 'Air' | 'Sea';
+  
+  // Contents
+  batteryIds: string[];
+  
+  // Documents (Refs)
+  packingListRef?: string;
+  manifestRef?: string;
+  invoiceRef?: string;
+  
+  // Meta
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  dispatchedAt?: string;
+  notes?: string;
 }
 
 export interface Battery {
@@ -246,10 +300,12 @@ export interface Battery {
   
   reservedAt?: string;
   reservedBy?: string;
+  dispatchId?: string;
   
   // Lifecycle
-  dispatchStatus?: 'Pending' | 'Ready' | 'Shipped';
-  custodyStatus?: string;
+  dispatchStatus?: 'Pending' | 'Ready' | 'Shipped'; // Legacy
+  custodyStatus?: CustodyStatus;
+  custodyLog?: CustodyEvent[];
   returnReason?: string;
   
   notes: BatteryNote[];

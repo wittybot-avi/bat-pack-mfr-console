@@ -1,4 +1,4 @@
-import { Batch, BatchStatus, Battery, BatteryStatus, InventoryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry, EolMeasurements, QaDisposition, EolLogEntry, InventoryMovementEntry } from '../domain/types';
+import { Batch, BatchStatus, Battery, BatteryStatus, InventoryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry, EolMeasurements, QaDisposition, EolLogEntry, InventoryMovementEntry, DispatchOrder, DispatchStatus, CustodyStatus } from '../domain/types';
 
 /**
  * SERVICE INTERFACES
@@ -61,6 +61,19 @@ export interface IInventoryService {
   reserveBattery(batteryId: string, operator: string): Promise<Battery>;
   quarantineBattery(batteryId: string, reason: string, notes: string, operator: string): Promise<Battery>;
   releaseQuarantine(batteryId: string, operator: string): Promise<Battery>;
+}
+
+export interface IDispatchService {
+  getOrders(filters?: any): Promise<DispatchOrder[]>;
+  getOrderById(id: string): Promise<DispatchOrder | undefined>;
+  createOrder(data: Partial<DispatchOrder>, operator: string): Promise<DispatchOrder>;
+  updateOrder(id: string, data: Partial<DispatchOrder>, operator: string): Promise<DispatchOrder>;
+  addBatteries(orderId: string, batteryIds: string[], operator: string): Promise<DispatchOrder>;
+  removeBattery(orderId: string, batteryId: string, operator: string): Promise<DispatchOrder>;
+  generateDocument(orderId: string, type: 'packing' | 'manifest' | 'invoice', operator: string): Promise<DispatchOrder>;
+  markReady(orderId: string, operator: string): Promise<DispatchOrder>;
+  markDispatched(orderId: string, operator: string): Promise<DispatchOrder>;
+  cancelOrder(orderId: string, operator: string): Promise<DispatchOrder>;
 }
 
 export interface IDashboardService {
@@ -186,6 +199,7 @@ const generateBatteries = (count: number): Battery[] => {
             inventoryMovementLog: isInventory ? [
               { id: 'mv-1', timestamp: new Date(Date.now() - 100000000).toISOString(), type: 'PUT_AWAY', toLocation: 'WH1-Z1-R03-B05', operator: 'System' }
             ] : [],
+            custodyStatus: isInventory ? CustodyStatus.AT_FACTORY : undefined,
             
             soh: 95 + Math.random() * 5,
             soc: 30 + Math.random() * 60,
@@ -200,6 +214,21 @@ const generateBatteries = (count: number): Battery[] => {
 
 // Global mutable store for mocks
 let MOCK_BATTERIES = generateBatteries(150);
+
+const MOCK_DISPATCH_ORDERS: DispatchOrder[] = [
+  {
+    id: 'do-1',
+    orderNumber: 'DO-2024-001',
+    status: DispatchStatus.DRAFT,
+    customerName: 'Mega Motors Inc.',
+    destinationAddress: '123 EV Blvd, Detroit, MI',
+    expectedShipDate: '2024-06-01',
+    batteryIds: [],
+    createdBy: 'System',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  }
+];
 
 /**
  * MOCK IMPLEMENTATIONS
@@ -494,6 +523,7 @@ class MockBatteryService implements IBatteryService {
       batt.certificateRef = `CERT-${Math.random().toString(36).substring(7).toUpperCase()}`;
       batt.releaseToInventory = true;
       batt.inventoryStatus = InventoryStatus.PENDING_PUTAWAY;
+      batt.custodyStatus = CustodyStatus.AT_FACTORY;
       
       return batt;
   }
@@ -708,6 +738,7 @@ class MockEolService implements IEolService {
       batt.eolStatus = 'PASS';
       batt.releaseToInventory = true;
       batt.inventoryStatus = InventoryStatus.PENDING_PUTAWAY;
+      batt.custodyStatus = CustodyStatus.AT_FACTORY;
     } else {
       batt.eolStatus = 'FAIL';
       // Status might stay in QA_TESTING or move to RMA/SCRAPPED depending on workflow
@@ -734,7 +765,13 @@ class MockInventoryService implements IInventoryService {
 
   async getInventory(filters?: any): Promise<Battery[]> {
     await new Promise(resolve => setTimeout(resolve, 600));
-    let res = MOCK_BATTERIES.filter(b => b.releaseToInventory === true && b.eolResult === 'PASS');
+    // Exclude batteries that have left inventory (Dispatched / In Transit)
+    let res = MOCK_BATTERIES.filter(b => 
+      b.releaseToInventory === true && 
+      b.eolResult === 'PASS' && 
+      b.inventoryStatus !== InventoryStatus.DISPATCHED && 
+      b.status !== BatteryStatus.IN_TRANSIT
+    );
     
     if (filters?.status && filters.status !== 'All') {
       res = res.filter(b => b.inventoryStatus === filters.status);
@@ -772,7 +809,10 @@ class MockInventoryService implements IInventoryService {
     await new Promise(resolve => setTimeout(resolve, 500));
     const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
     if (!batt) throw new Error("Not found");
-    if (batt.inventoryStatus !== InventoryStatus.AVAILABLE) throw new Error("Battery not available for reservation");
+    // If not already reserved, allow reservation from AVAILABLE
+    if (batt.inventoryStatus !== InventoryStatus.AVAILABLE && batt.inventoryStatus !== InventoryStatus.RESERVED) {
+       throw new Error("Battery not available for reservation");
+    }
 
     batt.inventoryStatus = InventoryStatus.RESERVED;
     batt.reservedAt = new Date().toISOString();
@@ -813,6 +853,148 @@ class MockInventoryService implements IInventoryService {
   }
 }
 
+class MockDispatchService implements IDispatchService {
+  async getOrders(filters?: any): Promise<DispatchOrder[]> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    let res = [...MOCK_DISPATCH_ORDERS];
+    if (filters?.status) {
+      res = res.filter(o => o.status === filters.status);
+    }
+    return res;
+  }
+
+  async getOrderById(id: string): Promise<DispatchOrder | undefined> {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return MOCK_DISPATCH_ORDERS.find(o => o.id === id);
+  }
+
+  async createOrder(data: Partial<DispatchOrder>, operator: string): Promise<DispatchOrder> {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const newOrder: DispatchOrder = {
+      id: `do-${Date.now()}`,
+      orderNumber: `DO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      status: DispatchStatus.DRAFT,
+      customerName: data.customerName || '',
+      destinationAddress: data.destinationAddress || '',
+      expectedShipDate: data.expectedShipDate || '',
+      batteryIds: [],
+      createdBy: operator,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...data
+    };
+    MOCK_DISPATCH_ORDERS.unshift(newOrder);
+    return newOrder;
+  }
+
+  async updateOrder(id: string, data: Partial<DispatchOrder>, operator: string): Promise<DispatchOrder> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const index = MOCK_DISPATCH_ORDERS.findIndex(o => o.id === id);
+    if (index === -1) throw new Error("Order not found");
+    
+    MOCK_DISPATCH_ORDERS[index] = { 
+      ...MOCK_DISPATCH_ORDERS[index], 
+      ...data, 
+      updatedAt: new Date().toISOString() 
+    };
+    return MOCK_DISPATCH_ORDERS[index];
+  }
+
+  async addBatteries(orderId: string, batteryIds: string[], operator: string): Promise<DispatchOrder> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const order = MOCK_DISPATCH_ORDERS.find(o => o.id === orderId);
+    if (!order) throw new Error("Order not found");
+    
+    // De-dupe
+    const newIds = batteryIds.filter(id => !order.batteryIds.includes(id));
+    order.batteryIds = [...order.batteryIds, ...newIds];
+    order.updatedAt = new Date().toISOString();
+    
+    // Also reserve these batteries in Inventory
+    for (const bId of newIds) {
+      await inventoryService.reserveBattery(bId, operator);
+    }
+    
+    return order;
+  }
+
+  async removeBattery(orderId: string, batteryId: string, operator: string): Promise<DispatchOrder> {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    const order = MOCK_DISPATCH_ORDERS.find(o => o.id === orderId);
+    if (!order) throw new Error("Order not found");
+    
+    order.batteryIds = order.batteryIds.filter(id => id !== batteryId);
+    order.updatedAt = new Date().toISOString();
+    
+    // Release reservation? Or keep it? Usually keep it or handle separately.
+    // For now, let's keep it RESERVED but just remove from order list.
+    
+    return order;
+  }
+
+  async generateDocument(orderId: string, type: 'packing' | 'manifest' | 'invoice', operator: string): Promise<DispatchOrder> {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const order = MOCK_DISPATCH_ORDERS.find(o => o.id === orderId);
+    if (!order) throw new Error("Order not found");
+    
+    const docRef = `DOC-${type.toUpperCase()}-${Math.floor(Math.random() * 10000)}`;
+    
+    if (type === 'packing') order.packingListRef = docRef;
+    if (type === 'manifest') order.manifestRef = docRef;
+    if (type === 'invoice') order.invoiceRef = docRef;
+    
+    order.updatedAt = new Date().toISOString();
+    return order;
+  }
+
+  async markReady(orderId: string, operator: string): Promise<DispatchOrder> {
+    const order = await this.getOrderById(orderId);
+    if (!order) throw new Error("Not found");
+    if (order.batteryIds.length === 0) throw new Error("No batteries added");
+    
+    return this.updateOrder(orderId, { status: DispatchStatus.READY }, operator);
+  }
+
+  async markDispatched(orderId: string, operator: string): Promise<DispatchOrder> {
+    const order = await this.getOrderById(orderId);
+    if (!order) throw new Error("Not found");
+    if (!order.packingListRef) throw new Error("Packing list required before dispatch");
+    
+    const updatedOrder = await this.updateOrder(orderId, { 
+      status: DispatchStatus.DISPATCHED,
+      dispatchedAt: new Date().toISOString()
+    }, operator);
+    
+    // Update all batteries
+    for (const bId of order.batteryIds) {
+      const batt = MOCK_BATTERIES.find(b => b.id === bId);
+      if (batt) {
+        batt.status = BatteryStatus.IN_TRANSIT;
+        batt.inventoryStatus = InventoryStatus.DISPATCHED;
+        batt.custodyStatus = CustodyStatus.IN_TRANSIT;
+        batt.location = `In Transit to ${order.customerName}`;
+        batt.dispatchId = orderId;
+        
+        if (!batt.custodyLog) batt.custodyLog = [];
+        batt.custodyLog.push({
+          id: Math.random().toString(),
+          timestamp: new Date().toISOString(),
+          status: CustodyStatus.IN_TRANSIT,
+          location: 'Carrier Handover',
+          handler: operator,
+          dispatchId: orderId
+        });
+      }
+    }
+    
+    return updatedOrder;
+  }
+
+  async cancelOrder(orderId: string, operator: string): Promise<DispatchOrder> {
+    return this.updateOrder(orderId, { status: DispatchStatus.CANCELLED }, operator);
+  }
+}
+
 class MockDashboardService implements IDashboardService {
   async getKPIs(): Promise<KPIData> {
     await new Promise(resolve => setTimeout(resolve, 400));
@@ -839,4 +1021,5 @@ export const batteryService = new MockBatteryService();
 export const provisioningService = new MockProvisioningService();
 export const eolService = new MockEolService();
 export const inventoryService = new MockInventoryService();
+export const dispatchService = new MockDispatchService();
 export const dashboardService = new MockDashboardService();

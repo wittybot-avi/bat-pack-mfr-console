@@ -13,7 +13,9 @@ export enum ScreenId {
   PROVISIONING = 'PROVISIONING', // The Console
   PROVISIONING_STATION_SETUP = 'PROVISIONING_STATION_SETUP', // Station Config
   INVENTORY = 'INVENTORY',
-  DISPATCH = 'DISPATCH',
+  DISPATCH = 'DISPATCH', // Legacy group holder, kept for sidebar if needed, but specific screens below preferred
+  DISPATCH_LIST = 'DISPATCH_LIST',
+  DISPATCH_DETAIL = 'DISPATCH_DETAIL',
   
   // Assure
   EOL_QA_STATION = 'EOL_QA_STATION', // Station UI
@@ -34,7 +36,7 @@ export enum ScreenId {
 
 export const SCREEN_GROUPS = {
   OBSERVE: [ScreenId.DASHBOARD, ScreenId.TELEMETRY, ScreenId.ANALYTICS],
-  OPERATE: [ScreenId.BATCHES_LIST, ScreenId.BATTERIES_LIST, ScreenId.PROVISIONING, ScreenId.PROVISIONING_STATION_SETUP, ScreenId.INVENTORY, ScreenId.DISPATCH],
+  OPERATE: [ScreenId.BATCHES_LIST, ScreenId.BATTERIES_LIST, ScreenId.PROVISIONING, ScreenId.PROVISIONING_STATION_SETUP, ScreenId.INVENTORY, ScreenId.DISPATCH_LIST],
   ASSURE: [ScreenId.EOL_QA_STATION, ScreenId.EOL_QA_STATION_SETUP, ScreenId.EOL_QA_REVIEW],
   RESOLVE: [ScreenId.WARRANTY],
   GOVERN: [ScreenId.COMPLIANCE, ScreenId.CUSTODY],
