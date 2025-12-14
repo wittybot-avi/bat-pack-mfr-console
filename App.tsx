@@ -5,6 +5,7 @@ import { RouteGuard } from './src/components/RouteGuard';
 import { AuthGate } from './src/components/AuthGate';
 import { ScreenId } from './src/rbac/screenIds';
 import { useAppStore } from './src/lib/store';
+import { DIAGNOSTIC_MODE } from './src/app/diagnostics';
 
 // Pages
 import Login from './src/pages/Login';
@@ -31,6 +32,7 @@ import Warranty from './src/pages/Warranty';
 import WarrantyDetail from './src/pages/WarrantyDetail';
 import WarrantyIntake from './src/pages/WarrantyIntake';
 import Settings from './src/pages/Settings';
+import DiagnosticsPage from './src/pages/DiagnosticsPage';
 
 // Toast Component
 const ToastContainer = () => {
@@ -202,6 +204,13 @@ function App() {
               <RbacAdmin />
             </RouteGuard>
           } />
+
+          {DIAGNOSTIC_MODE && (
+            <Route path="__diagnostics/pages" element={
+              // Guard with Admin or just Auth? Let's use Auth only for ease of access during check
+              <DiagnosticsPage />
+            } />
+          )}
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

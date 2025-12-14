@@ -2,9 +2,10 @@ import React from 'react';
 import { useAppStore } from '../lib/store';
 import { ScreenId } from '../rbac/screenIds';
 import { canView } from '../rbac/can';
-import { Button, Card, CardContent } from './ui/design-system';
+import { Button } from './ui/design-system';
 import { ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { DiagnosticBanner } from './DiagnosticBanner';
 
 interface RouteGuardProps {
   screen: ScreenId;
@@ -22,7 +23,7 @@ const AccessDenied = ({ screen }: { screen: ScreenId }) => {
       </div>
       <h1 className="text-3xl font-bold mb-2">Access Denied</h1>
       <p className="text-muted-foreground max-w-md mb-8">
-        You are currently logged in as <span className="font-semibold text-foreground">{currentRole.name}</span> ({currentCluster.name}).
+        You are currently logged in as <span className="font-semibold text-foreground">{currentRole?.name}</span> ({currentCluster?.name}).
         You do not have permission to view <span className="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-1 rounded">{screen}</span>.
       </p>
       
@@ -45,9 +46,15 @@ const AccessDenied = ({ screen }: { screen: ScreenId }) => {
 export const RouteGuard: React.FC<RouteGuardProps> = ({ screen, children }) => {
   const { currentCluster } = useAppStore();
   
-  if (!canView(currentCluster.id, screen)) {
-    return <AccessDenied screen={screen} />;
-  }
+  // Guard clause: if no cluster loaded yet (refresh case), might need handling or let AuthGate handle it
+  if (!currentCluster) return null; 
 
-  return <>{children}</>;
+  const isAllowed = canView(currentCluster.id, screen);
+
+  return (
+    <>
+      <DiagnosticBanner screenId={screen} />
+      {isAllowed ? children : <AccessDenied screen={screen} />}
+    </>
+  );
 };

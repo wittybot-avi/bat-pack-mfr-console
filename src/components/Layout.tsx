@@ -1,53 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  Package, 
-  Battery, 
-  Cpu, 
-  Activity, 
-  ClipboardCheck, 
-  Truck, 
-  Settings, 
   Menu,
-  ShieldCheck,
   Bell,
   Search,
   Users,
-  Box,
-  FileText,
-  Lock,
-  Container,
-  AlertOctagon,
   LogOut,
   UserCircle,
-  Zap
+  Zap,
+  AlertTriangle
 } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { Button, Input, Badge } from './ui/design-system';
 import { APP_VERSION, PATCH_LEVEL, LAST_PATCH_ID } from '../app/patchInfo';
 import { ScreenId, SCREEN_GROUPS } from '../rbac/screenIds';
 import { canView } from '../rbac/can';
-
-// Map ScreenId to Icons and Labels
-const NAV_CONFIG: Record<string, { icon: any, label: string, path: string }> = {
-  [ScreenId.DASHBOARD]: { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-  [ScreenId.TELEMETRY]: { icon: Activity, label: 'Telemetry', path: '/telemetry' },
-  [ScreenId.ANALYTICS]: { icon: FileText, label: 'Analytics', path: '/analytics' },
-  [ScreenId.BATCHES_LIST]: { icon: Package, label: 'Batches', path: '/batches' },
-  [ScreenId.BATTERIES_LIST]: { icon: Battery, label: 'Batteries', path: '/batteries' },
-  [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning', path: '/provisioning' },
-  [ScreenId.PROVISIONING_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/provisioning/setup' },
-  [ScreenId.INVENTORY]: { icon: Box, label: 'Inventory', path: '/inventory' },
-  [ScreenId.DISPATCH_LIST]: { icon: Truck, label: 'Dispatch', path: '/dispatch' },
-  [ScreenId.EOL_QA_STATION]: { icon: ClipboardCheck, label: 'EOL / QA', path: '/eol' },
-  [ScreenId.EOL_QA_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/eol/setup' },
-  [ScreenId.WARRANTY]: { icon: AlertOctagon, label: 'Warranty', path: '/warranty' }, // Mapped
-  [ScreenId.COMPLIANCE]: { icon: ShieldCheck, label: 'Compliance', path: '/compliance' },
-  [ScreenId.CUSTODY]: { icon: Container, label: 'Custody', path: '/custody' }, 
-  [ScreenId.SETTINGS]: { icon: Settings, label: 'Settings', path: '/settings' },
-  [ScreenId.RBAC_VIEW]: { icon: Lock, label: 'Access Control', path: '/admin/rbac' },
-};
+import { APP_ROUTES, checkConsistency } from '../app/routeRegistry';
+import { DIAGNOSTIC_MODE } from '../app/diagnostics';
 
 const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean }) => (
   <Link to={path}>
@@ -63,13 +32,22 @@ export const Layout = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Diagnostic Check on Mount
+  useEffect(() => {
+    if (DIAGNOSTIC_MODE) {
+      const warnings = checkConsistency();
+      if (warnings.length > 0) {
+        console.warn('Diagnostic Mode - Route Consistency Check:', warnings);
+      }
+    }
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
   const handleSwitchRole = () => {
-    // Navigate to login without clearing session strictly, but UI flow implies re-selection
     navigate('/login');
   };
 
@@ -83,7 +61,7 @@ export const Layout = () => {
         <h3 className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">{groupName}</h3>
         <div className="space-y-1">
           {visibleItems.map(id => {
-            const config = NAV_CONFIG[id];
+            const config = APP_ROUTES[id];
             if (!config) return null;
             return (
               <SidebarItem 
@@ -100,7 +78,6 @@ export const Layout = () => {
     );
   };
 
-  // Safe guard for render if redirect hasn't happened yet
   if (!currentRole || !currentCluster) return null;
 
   const isSuperUser = currentCluster.id === 'CS';
@@ -123,6 +100,22 @@ export const Layout = () => {
           {renderNavGroup('Resolve', SCREEN_GROUPS.RESOLVE)}
           {renderNavGroup('Govern', SCREEN_GROUPS.GOVERN)}
           {renderNavGroup('Admin', SCREEN_GROUPS.ADMIN)}
+          
+          {DIAGNOSTIC_MODE && (
+             <div className="mb-6">
+                <h3 className="px-3 mb-2 text-xs font-semibold text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                    <AlertTriangle size={10} /> Diagnostics
+                </h3>
+                <div className="space-y-1">
+                    <SidebarItem 
+                        icon={AlertTriangle} 
+                        label="System Health" 
+                        path="/__diagnostics/pages" 
+                        active={location.pathname === '/__diagnostics/pages'}
+                    />
+                </div>
+             </div>
+          )}
         </div>
 
         <div className="p-4 border-t dark:border-slate-800 shrink-0">
@@ -195,6 +188,15 @@ export const Layout = () => {
         <main className="flex-1 p-6 overflow-auto">
           <Outlet />
         </main>
+
+        {/* Diagnostic Footer */}
+        {DIAGNOSTIC_MODE && (
+            <footer className="h-8 bg-slate-900 text-slate-400 text-[10px] font-mono flex items-center justify-between px-6 border-t border-slate-800 shrink-0">
+                <span>DIAGNOSTIC MODE ACTIVE</span>
+                <span>PATCH: {LAST_PATCH_ID}</span>
+                <span>BUILD: {new Date().toISOString()}</span>
+            </footer>
+        )}
       </div>
     </div>
   );

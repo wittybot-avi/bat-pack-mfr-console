@@ -1,5 +1,30 @@
 # Patch Log
 
+## UI_DIAGNOSTIC_SANITY_CHECK_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented non-invasive "Diagnostic Mode" overlay.
+  - Added global toggle `DIAGNOSTIC_MODE` in `src/app/diagnostics.ts`.
+  - Added `DiagnosticBanner` to all protected routes via `RouteGuard`.
+  - Added `routeRegistry` to centralize sidebar config and validate routing.
+  - Added `/__diagnostics/pages` to list all mapped routes.
+  - Added persistent footer in diagnostic mode showing build version.
+- **Files changed**:
+  - src/app/diagnostics.ts (New)
+  - src/app/routeRegistry.ts (New)
+  - src/components/DiagnosticBanner.tsx (New)
+  - src/pages/DiagnosticsPage.tsx (New)
+  - src/components/Layout.tsx (Updated)
+  - src/components/RouteGuard.tsx (Updated)
+  - App.tsx (Updated)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Set `DIAGNOSTIC_MODE = true` -> Verify banners appear on pages.
+  - [ ] Verify banner shows correct Page Name, Route, and Screen ID.
+  - [ ] Verify banner shows current User Role and Cluster access status.
+  - [ ] Check sidebar for new "Diagnostics" menu item (admin section).
+  - [ ] Navigate to /__diagnostics/pages and verify route table.
+  - [ ] Set `DIAGNOSTIC_MODE = false` -> Verify app looks like production.
+
 ## UI_PATCH_ADMIN_ACCESS_CONTROL_UX_V1
 - **Date**: 2024-05-24
 - **Summary**: Enhanced Access Control Admin page with human-readable Capability Summaries, Restriction Explanations, improved Matrix UX with search and legend, and RBAC Snapshot Export. Added Policy Changelog preview.
