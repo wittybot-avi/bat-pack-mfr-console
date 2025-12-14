@@ -5,6 +5,7 @@ export interface Cluster {
 }
 
 export const CLUSTERS: Record<string, Cluster> = {
+  CS: { id: 'CS', name: 'Super User (Full Access)', description: 'Unrestricted access to all modules and actions for development/demo.' },
   C1: { id: 'C1', name: 'Executive & Plant Leadership', description: 'Strategic oversight, reporting, full visibility.' },
   C2: { id: 'C2', name: 'Manufacturing & Production', description: 'Shopfloor execution, batch management, assembly.' },
   C3: { id: 'C3', name: 'Quality & Reliability', description: 'EOL testing, certification, QA approval.' },

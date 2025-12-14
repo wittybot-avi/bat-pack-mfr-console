@@ -1,5 +1,5 @@
 import React from 'react';
-import { useLocation, Link, Outlet } from 'react-router-dom';
+import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Package, 
@@ -18,13 +18,14 @@ import {
   FileText,
   Lock,
   Container,
-  AlertOctagon
+  AlertOctagon,
+  LogOut,
+  UserCircle,
+  Zap
 } from 'lucide-react';
 import { useAppStore } from '../lib/store';
-import { Button, Input } from './ui/design-system';
+import { Button, Input, Badge } from './ui/design-system';
 import { APP_VERSION, PATCH_LEVEL, LAST_PATCH_ID } from '../app/patchInfo';
-import { CLUSTERS } from '../rbac/clusters';
-import { ROLES } from '../rbac/roleCatalog';
 import { ScreenId, SCREEN_GROUPS } from '../rbac/screenIds';
 import { canView } from '../rbac/can';
 
@@ -56,10 +57,22 @@ const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: st
 );
 
 export const Layout = () => {
-  const { theme, toggleTheme, currentRole, currentCluster, switchRole, sidebarOpen, toggleSidebar } = useAppStore();
+  const { theme, toggleTheme, currentRole, currentCluster, logout, sidebarOpen, toggleSidebar } = useAppStore();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleSwitchRole = () => {
+    // Navigate to login without clearing session strictly, but UI flow implies re-selection
+    navigate('/login');
+  };
 
   const renderNavGroup = (groupName: string, screenIds: ScreenId[]) => {
+    if (!currentCluster) return null;
     const visibleItems = screenIds.filter(id => canView(currentCluster.id, id));
     if (visibleItems.length === 0) return null;
 
@@ -69,7 +82,6 @@ export const Layout = () => {
         <div className="space-y-1">
           {visibleItems.map(id => {
             const config = NAV_CONFIG[id];
-            // If create permissions exist but list view is separate, usually we just link to list.
             if (!config) return null;
             return (
               <SidebarItem 
@@ -86,12 +98,19 @@ export const Layout = () => {
     );
   };
 
+  // Safe guard for render if redirect hasn't happened yet
+  if (!currentRole || !currentCluster) return null;
+
+  const isSuperUser = currentCluster.id === 'CS';
+
   return (
     <div className={`min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-900 dark:text-slate-100`}>
       {/* Sidebar */}
       <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} fixed inset-y-0 z-50 flex flex-col transition-all duration-300 border-r bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden`}>
         <div className="h-16 flex items-center px-6 border-b dark:border-slate-800 shrink-0">
-          <div className="h-8 w-8 rounded bg-primary mr-3 flex items-center justify-center text-white font-bold">A</div>
+          <div className={`h-8 w-8 rounded mr-3 flex items-center justify-center text-white font-bold ${isSuperUser ? 'bg-amber-500' : 'bg-primary'}`}>
+            {isSuperUser ? <Zap size={18} fill="currentColor" /> : 'A'}
+          </div>
           <span className="font-bold text-lg tracking-tight">Aayatana Tech</span>
         </div>
 
@@ -106,7 +125,7 @@ export const Layout = () => {
 
         <div className="p-4 border-t dark:border-slate-800 shrink-0">
           <div className="flex items-center gap-3 mb-3">
-            <div className="h-9 w-9 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-slate-500">
+            <div className={`h-9 w-9 rounded-full flex items-center justify-center text-slate-500 ${isSuperUser ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600' : 'bg-slate-200 dark:bg-slate-700'}`}>
               <Users size={16} />
             </div>
             <div className="flex flex-col overflow-hidden">
@@ -149,25 +168,23 @@ export const Layout = () => {
               </button>
             </div>
 
-            <div className="relative">
-              <select 
-                className="appearance-none bg-slate-100 dark:bg-slate-800 border-none text-xs font-medium py-1.5 pl-3 pr-8 rounded cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors w-48 truncate"
-                value={currentRole.id}
-                onChange={(e) => switchRole(e.target.value)}
-              >
-                {Object.values(CLUSTERS).map(cluster => (
-                  <optgroup key={cluster.id} label={`${cluster.id}: ${cluster.name}`}>
-                    {ROLES.filter(r => r.clusterId === cluster.id).map(role => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-500">
-                <svg className="h-4 w-4 fill-current" viewBox="0 0 20 20"><path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"/></svg>
-              </div>
+            <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className={`hidden sm:flex items-center gap-1 font-normal ${isSuperUser ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400' : 'bg-slate-50 dark:bg-slate-800'}`}>
+                {isSuperUser && <Zap size={12} fill="currentColor" />}
+                <span className="font-semibold">{currentCluster.id}</span>
+                <span className="truncate max-w-[100px]">{currentRole.name}</span>
+              </Badge>
+              
+              <Button variant="ghost" size="sm" onClick={handleSwitchRole} title="Switch Identity">
+                <UserCircle className="h-4 w-4 mr-1" />
+                <span className="hidden sm:inline">Switch</span>
+              </Button>
+              
+              <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">
+                <LogOut className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </header>

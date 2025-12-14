@@ -6,6 +6,9 @@ export interface Role {
 }
 
 export const ROLES: Role[] = [
+  // Super User
+  { id: 'SUPER_ADMIN', name: 'System Administrator', clusterId: 'CS', description: 'Root access to all systems.' },
+
   // C1
   { id: 'C1_PLANT_HEAD', name: 'Plant Director', clusterId: 'C1' },
   { id: 'C1_COO', name: 'COO', clusterId: 'C1' },

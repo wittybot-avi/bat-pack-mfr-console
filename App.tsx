@@ -2,10 +2,12 @@ import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './src/components/Layout';
 import { RouteGuard } from './src/components/RouteGuard';
+import { AuthGate } from './src/components/AuthGate';
 import { ScreenId } from './src/rbac/screenIds';
 import { useAppStore } from './src/lib/store';
 
 // Pages
+import Login from './src/pages/Login';
 import Dashboard from './src/pages/Dashboard';
 import Batches from './src/pages/Batches';
 import Telemetry from './src/pages/Telemetry';
@@ -42,7 +44,14 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route path="/login" element={<Login />} />
+        
+        {/* Protected Routes */}
+        <Route path="/" element={
+          <AuthGate>
+            <Layout />
+          </AuthGate>
+        }>
           
           <Route index element={
             <RouteGuard screen={ScreenId.DASHBOARD}>
