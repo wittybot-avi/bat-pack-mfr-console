@@ -56,6 +56,8 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.CUSTODY_OVERVIEW]: ['V'],
     [ScreenId.CUSTODY_EXCEPTIONS]: ['V'],
     [ScreenId.SETTINGS]: ['V'],
+    [ScreenId.SETTINGS_PROFILE]: ['V'],
+    [ScreenId.SETTINGS_NOTIFICATIONS]: ['V'],
     [ScreenId.RBAC_VIEW]: ['V'],
   },
 
@@ -134,6 +136,9 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.TELEMETRY_LIVE_VIEW]: ['V'],
     [ScreenId.TELEMETRY_HISTORY_VIEW]: ['V'],
     [ScreenId.SETTINGS]: ['V', 'M'],
+    [ScreenId.SETTINGS_PROFILE]: ['V'],
+    [ScreenId.SETTINGS_USERS]: ['V'], // C4 sees users but maybe limited edits
+    [ScreenId.SETTINGS_NOTIFICATIONS]: ['V', 'E'],
     [ScreenId.RBAC_VIEW]: ['V', 'M'],
     [ScreenId.PROVISIONING]: ['V'],
     [ScreenId.PROVISIONING_STATION_SETUP]: ['V', 'E', 'M'],
@@ -155,6 +160,9 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATTERIES_DETAIL]: ['V', 'E'], // Update firmware
     [ScreenId.PROVISIONING]: ['V', 'C', 'E', 'X', 'A'],
     [ScreenId.EOL_QA_STATION]: ['V'], // View EOL results
+    [ScreenId.SETTINGS]: ['V'],
+    [ScreenId.SETTINGS_API_KEYS]: ['V'],
+    [ScreenId.SETTINGS_WEBHOOKS]: ['V'],
   },
 
   // C6: Logistics - Move stuff
@@ -268,6 +276,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.WARRANTY_CLAIMS_LIST]: ['V'],
     [ScreenId.WARRANTY_CLAIM_DETAIL]: ['V'],
     [ScreenId.WARRANTY_EXPORT]: ['X'],
+    [ScreenId.SETTINGS]: ['V'],
+    [ScreenId.SETTINGS_PROFILE]: ['V'],
+    [ScreenId.SETTINGS_NOTIFICATIONS]: ['V'],
+    [ScreenId.SETTINGS_WEBHOOKS]: ['V'],
   },
 
   // C9: External

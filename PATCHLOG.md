@@ -1,5 +1,22 @@
 # Patch Log
 
+## UI_PATCH_ADMIN_SETTINGS_CONTROL_PLANE_V1
+- **Date**: 2024-05-24
+- **Summary**: Upgraded the Settings page from a placeholder to a comprehensive "Control Plane" preview. Includes tabs for Profile, User Management, API Keys, Notifications, and Webhooks. All inputs are explicitly disabled to indicate backend requirement.
+- **Files changed**:
+  - src/rbac/screenIds.ts (Added SETTINGS_* IDs)
+  - src/rbac/policy.ts (Permissions for CS, C8, C1, C5)
+  - src/services/settingsSpec.ts (New service for schema export)
+  - src/pages/Settings.tsx (Complete rewrite with tabs and preview UI)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User (CS) -> Verify all tabs visible.
+  - [ ] Verify banner "PREVIEW / BACKEND REQUIRED" is present.
+  - [ ] Login as C8 (Compliance) -> Verify only Profile, Notifications, Webhooks visible.
+  - [ ] Login as C5 (BMS) -> Verify API Keys, Webhooks visible.
+  - [ ] Verify "Download Spec" works and produces JSON.
+  - [ ] Ensure all buttons show disabled tooltip.
+
 ## UI_PATCH_RESOLVE_WARRANTY_SUITE_V1
 - **Date**: 2024-05-24
 - **Summary**: Implemented complete Warranty module with role-based access. Includes Overview dashboard, Claims List, and Detailed View with RCA/Disposition workflow. Added external intake portal for C9 cluster.

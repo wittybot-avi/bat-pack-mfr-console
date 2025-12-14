@@ -27,9 +27,10 @@ import Placeholder from './src/pages/Placeholder';
 import Compliance from './src/pages/Compliance';
 import Custody from './src/pages/Custody';
 import CustodyDetail from './src/pages/CustodyDetail';
-import Warranty from './src/pages/Warranty'; // New
-import WarrantyDetail from './src/pages/WarrantyDetail'; // New
-import WarrantyIntake from './src/pages/WarrantyIntake'; // New
+import Warranty from './src/pages/Warranty';
+import WarrantyDetail from './src/pages/WarrantyDetail';
+import WarrantyIntake from './src/pages/WarrantyIntake';
+import Settings from './src/pages/Settings';
 
 // Toast Component
 const ToastContainer = () => {
@@ -192,11 +193,7 @@ function App() {
 
           <Route path="settings" element={
             <RouteGuard screen={ScreenId.SETTINGS}>
-               <Placeholder 
-                title="System Settings" 
-                description="Configure organization profile, users, and integration webhooks."
-                features={["Profile Mgmt", "User Mgmt", "API Keys", "Notifications"]}
-              />
+               <Settings />
             </RouteGuard>
           } />
 
