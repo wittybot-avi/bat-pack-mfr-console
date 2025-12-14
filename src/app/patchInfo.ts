@@ -1,3 +1,3 @@
-export const APP_VERSION = '1.6.4';
-export const PATCH_LEVEL = 18;
-export const LAST_PATCH_ID = 'UI_PATCH_GOVERN_COMPLIANCE_SUITE_V1';
+export const APP_VERSION = '1.6.5';
+export const PATCH_LEVEL = 19;
+export const LAST_PATCH_ID = 'UI_PATCH_GOVERN_COMPLIANCE_FUTURE_READINESS_V1';

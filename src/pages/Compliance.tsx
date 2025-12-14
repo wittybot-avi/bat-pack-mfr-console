@@ -2,10 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../lib/store';
 import { complianceService, ComplianceScore, ComplianceCheck, EvidencePack } from '../services/complianceService';
 import { findingsStore, Finding } from '../services/findingsStore';
+import { futureReadinessService, ReadinessField, RegulatoryProfile } from '../services/futureReadiness';
+import { batteryService } from '../services/api';
+import { Battery } from '../domain/types';
 import { canView, canDo } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableHeader, TableRow, TableHead, TableCell, Input } from '../components/ui/design-system';
-import { ShieldCheck, AlertTriangle, FileText, CheckCircle, Search, Download, Plus, Filter, Activity, History, XCircle } from 'lucide-react';
+import { ShieldCheck, AlertTriangle, FileText, CheckCircle, Search, Download, Plus, Filter, Activity, History, XCircle, Leaf, Recycle, Globe, AlertOctagon, Info } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 // --- Components ---
@@ -18,6 +21,10 @@ const StatusChip = ({ status }: { status: string }) => {
         'OPEN': 'bg-rose-100 text-rose-800 border-rose-200',
         'IN_REVIEW': 'bg-blue-100 text-blue-800 border-blue-200',
         'CLOSED': 'bg-slate-100 text-slate-800 border-slate-200',
+        // Future Readiness
+        'AVAILABLE': 'bg-emerald-50 text-emerald-700 border-emerald-100',
+        'PARTIAL': 'bg-amber-50 text-amber-700 border-amber-100',
+        'FUTURE': 'bg-slate-100 text-slate-500 border-slate-200 border-dashed',
     };
     return (
         <span className={`px-2 py-0.5 rounded text-xs font-bold border ${colors[status] || 'bg-slate-100'}`}>
@@ -323,6 +330,249 @@ const AuditTrailTab = () => (
     </div>
 );
 
+// --- Future Readiness Components ---
+
+const FutureField = ({ field }: { field: ReadinessField }) => (
+    <div className="flex justify-between items-center text-sm py-1 border-b last:border-0 border-dashed border-slate-100 dark:border-slate-800">
+        <span className="text-muted-foreground">{field.label}</span>
+        <div className="flex items-center gap-2">
+            <span className={`font-mono text-xs ${field.status === 'FUTURE' ? 'text-slate-400 italic' : ''}`}>{field.value}</span>
+            <StatusChip status={field.status} />
+        </div>
+    </div>
+);
+
+const FutureReadinessTab = () => {
+    const { currentCluster } = useAppStore();
+    const [batteryId, setBatteryId] = useState('');
+    const [battery, setBattery] = useState<Battery | null>(null);
+    const [readiness, setReadiness] = useState(futureReadinessService.analyzeDppReadiness(null));
+    const [profiles] = useState(futureReadinessService.getRegulatoryProfiles());
+    const [sustainability] = useState(futureReadinessService.getSustainabilityMetrics());
+
+    // Granular RBAC for sub-sections
+    const showDPP = canView(currentCluster?.id || '', ScreenId.COMPLIANCE_DPP_PREVIEW);
+    const showSust = canView(currentCluster?.id || '', ScreenId.COMPLIANCE_SUSTAINABILITY_PREVIEW);
+    const showRecycle = canView(currentCluster?.id || '', ScreenId.COMPLIANCE_RECYCLING_PREVIEW);
+    const showExport = canView(currentCluster?.id || '', ScreenId.COMPLIANCE_REG_EXPORT_PREVIEW);
+
+    const handlePreview = async () => {
+        if (!batteryId) return;
+        const batt = await batteryService.getBatteryBySN(batteryId) || await batteryService.getBatteryById(batteryId);
+        setBattery(batt || null);
+        setReadiness(futureReadinessService.analyzeDppReadiness(batt || null));
+    };
+
+    return (
+        <div className="space-y-8 animate-in fade-in">
+            {/* Banner */}
+            <div className="bg-slate-900 text-white rounded-lg p-6 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <div className="flex items-center gap-2 mb-2">
+                        <AlertOctagon className="text-amber-400" />
+                        <h3 className="text-xl font-bold">Future Readiness Preview</h3>
+                    </div>
+                    <p className="text-slate-300 text-sm max-w-2xl">
+                        These capabilities are planned for upcoming releases. 
+                        The interfaces below are representative mockups demonstrating how current data will map to future regulatory requirements like EU DPP and Circular Economy standards.
+                    </p>
+                </div>
+                <Badge variant="outline" className="text-amber-400 border-amber-400/50 bg-amber-400/10 px-4 py-2 text-sm">PREVIEW / NOT ACTIVE</Badge>
+            </div>
+
+            {/* DPP Section */}
+            {showDPP && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                        <Globe className="h-5 w-5 text-blue-600" />
+                        <h3 className="text-lg font-semibold">DPP Preview (Digital Product Passport)</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div className="space-y-4">
+                            <Card className="bg-slate-50 dark:bg-slate-900">
+                                <CardHeader><CardTitle className="text-base">What this enables</CardTitle></CardHeader>
+                                <CardContent>
+                                    <ul className="space-y-2 text-sm text-muted-foreground list-disc list-inside">
+                                        <li>Full lifecycle traceability from raw material to recycling.</li>
+                                        <li>Consumer transparency via QR code scanning.</li>
+                                        <li>Regulatory compliance with EU Battery Regulation.</li>
+                                    </ul>
+                                </CardContent>
+                            </Card>
+                            
+                            <Card>
+                                <CardHeader><CardTitle className="text-base">Preview Selector</CardTitle></CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="flex gap-2">
+                                        <Input 
+                                            placeholder="Enter Battery ID/SN..." 
+                                            value={batteryId} 
+                                            onChange={e => setBatteryId(e.target.value)} 
+                                            onKeyDown={e => e.key === 'Enter' && handlePreview()}
+                                        />
+                                        <Button onClick={handlePreview}>Preview</Button>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Try scanning a battery to see mapped fields.</p>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <Card className="lg:col-span-2">
+                            <CardHeader className="flex flex-row justify-between items-center">
+                                <CardTitle className="text-base">DPP Data Structure</CardTitle>
+                                <Button size="sm" variant="ghost" disabled title="Future Release">
+                                    <Download className="h-4 w-4 mr-2" /> Export JSON-LD
+                                </Button>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Identity & Conformity</h4>
+                                        <div className="space-y-1">
+                                            {readiness.identity.map((f, i) => <FutureField key={i} field={f} />)}
+                                            {readiness.conformity.map((f, i) => <FutureField key={i} field={f} />)}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Traceability & Composition</h4>
+                                        <div className="space-y-1">
+                                            {readiness.traceability.map((f, i) => <FutureField key={i} field={f} />)}
+                                            {readiness.composition.map((f, i) => <FutureField key={i} field={f} />)}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Circularity (Future)</h4>
+                                    <div className="space-y-1">
+                                        {readiness.circularity.map((f, i) => <FutureField key={i} field={f} />)}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+            )}
+
+            {/* Sustainability Section */}
+            {showSust && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                        <Leaf className="h-5 w-5 text-emerald-600" />
+                        <h3 className="text-lg font-semibold">Sustainability Metrics Preview</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <Card>
+                            <CardContent className="p-4">
+                                <p className="text-xs text-muted-foreground uppercase">Est. Carbon Footprint</p>
+                                <div className="text-2xl font-bold mt-1 text-slate-400">{sustainability.co2.value}</div>
+                                <StatusChip status={sustainability.co2.status} />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="p-4">
+                                <p className="text-xs text-muted-foreground uppercase">Mfg Energy / Pack</p>
+                                <div className="text-2xl font-bold mt-1 text-slate-400">{sustainability.energy.value}</div>
+                                <StatusChip status={sustainability.energy.status} />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="p-4">
+                                <p className="text-xs text-muted-foreground uppercase">Scrap Rate Proxy</p>
+                                <div className="text-2xl font-bold mt-1">{sustainability.scrap.value}</div>
+                                <StatusChip status={sustainability.scrap.status} />
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="p-4">
+                                <p className="text-xs text-muted-foreground uppercase">Water Usage</p>
+                                <div className="text-2xl font-bold mt-1 text-slate-400">{sustainability.water.value}</div>
+                                <StatusChip status={sustainability.water.status} />
+                            </CardContent>
+                        </Card>
+                    </div>
+                    <div className="bg-emerald-50 dark:bg-emerald-900/10 p-3 rounded text-xs text-emerald-800 dark:text-emerald-200 border border-emerald-100 flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        This dashboard will be powered by integration with EcoMetricsESG modules. Currently showing preview placeholders.
+                    </div>
+                </div>
+            )}
+
+            {/* Circularity Section */}
+            {showRecycle && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                        <Recycle className="h-5 w-5 text-teal-600" />
+                        <h3 className="text-lg font-semibold">Recycling & Circularity Preview</h3>
+                    </div>
+                    
+                    <Card>
+                        <CardContent className="p-8">
+                            <div className="flex items-center justify-between relative">
+                                {/* Connector Line */}
+                                <div className="absolute top-1/2 left-0 w-full h-0.5 bg-slate-200 -z-10" />
+                                
+                                {['In-Use', 'Returned', 'Diagnosed', 'Second-Life', 'Recycled'].map((stage, i) => (
+                                    <div key={stage} className="flex flex-col items-center bg-white dark:bg-slate-950 px-2">
+                                        <div className={`h-8 w-8 rounded-full border-2 flex items-center justify-center text-xs font-bold ${i === 0 ? 'border-primary bg-primary text-white' : 'border-slate-300 text-slate-400'}`}>
+                                            {i + 1}
+                                        </div>
+                                        <span className="text-xs font-medium mt-2 text-muted-foreground">{stage}</span>
+                                        <span className="text-[10px] text-slate-400 italic">Future</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="mt-8 text-center text-sm text-muted-foreground bg-slate-50 dark:bg-slate-900 p-4 rounded border border-dashed">
+                                Requires integration with Reverse Logistics and Recycling Partner APIs.
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {/* Regulatory Export */}
+            {showExport && (
+                <div className="space-y-4">
+                    <div className="flex items-center gap-2 pb-2 border-b">
+                        <FileText className="h-5 w-5 text-indigo-600" />
+                        <h3 className="text-lg font-semibold">Regulatory Export Profiles</h3>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {profiles.map(p => (
+                            <Card key={p.id} className="opacity-75">
+                                <CardHeader className="pb-2">
+                                    <CardTitle className="text-base">{p.name}</CardTitle>
+                                    <p className="text-xs text-muted-foreground">{p.description}</p>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-1">
+                                        <div className="flex justify-between text-xs">
+                                            <span>Readiness</span>
+                                            <span>{p.readinessPct}%</span>
+                                        </div>
+                                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-blue-500" style={{ width: `${p.readinessPct}%`}} />
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-between text-xs text-muted-foreground">
+                                        <span>Fields: {p.fieldCount}</span>
+                                        <span>Missing: {Math.round(p.fieldCount * (1 - p.readinessPct/100))}</span>
+                                    </div>
+                                    <Button className="w-full" variant="outline" disabled title="Requires schema + signing">
+                                        Generate Package
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // --- Main Page ---
 
 export default function Compliance() {
@@ -335,6 +585,7 @@ export default function Compliance() {
     const showFindings = canView(currentCluster?.id || '', ScreenId.COMPLIANCE_FINDINGS_TAB);
     const showEvidence = canView(currentCluster?.id || '', ScreenId.COMPLIANCE_EVIDENCE_TAB);
     const showAudit = canView(currentCluster?.id || '', ScreenId.COMPLIANCE_AUDIT_TRAIL_TAB);
+    const showFuture = canView(currentCluster?.id || '', ScreenId.COMPLIANCE_FUTURE_TAB);
     const canEditFindings = canDo(currentCluster?.id || '', ScreenId.COMPLIANCE_FINDINGS_EDIT, 'C');
 
     // Data State
@@ -408,7 +659,7 @@ export default function Compliance() {
         setPackLoading(false);
     };
 
-    if (!showOverview && !showChecks && !showFindings && !showEvidence && !showAudit) {
+    if (!showOverview && !showChecks && !showFindings && !showEvidence && !showAudit && !showFuture) {
         return <div className="p-10 text-center">Access Denied</div>;
     }
 
@@ -431,11 +682,12 @@ export default function Compliance() {
 
             {/* Tabs */}
             <div className="border-b flex gap-6 text-sm font-medium text-muted-foreground overflow-x-auto shrink-0">
-                {showOverview && <button className={`pb-2 border-b-2 ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('overview')}>Overview</button>}
-                {showChecks && <button className={`pb-2 border-b-2 ${activeTab === 'checks' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('checks')}>Automated Checks</button>}
-                {showFindings && <button className={`pb-2 border-b-2 ${activeTab === 'findings' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('findings')}>Findings Log</button>}
-                {showEvidence && <button className={`pb-2 border-b-2 ${activeTab === 'evidence' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('evidence')}>Evidence Packs</button>}
-                {showAudit && <button className={`pb-2 border-b-2 ${activeTab === 'audit' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('audit')}>Audit Trail</button>}
+                {showOverview && <button className={`pb-2 border-b-2 transition-colors ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('overview')}>Overview</button>}
+                {showChecks && <button className={`pb-2 border-b-2 transition-colors ${activeTab === 'checks' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('checks')}>Automated Checks</button>}
+                {showFindings && <button className={`pb-2 border-b-2 transition-colors ${activeTab === 'findings' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('findings')}>Findings Log</button>}
+                {showEvidence && <button className={`pb-2 border-b-2 transition-colors ${activeTab === 'evidence' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('evidence')}>Evidence Packs</button>}
+                {showAudit && <button className={`pb-2 border-b-2 transition-colors ${activeTab === 'audit' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('audit')}>Audit Trail</button>}
+                {showFuture && <button className={`pb-2 border-b-2 transition-colors ${activeTab === 'future' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('future')}>Future Readiness</button>}
             </div>
 
             {/* Content */}
@@ -447,6 +699,7 @@ export default function Compliance() {
                         {activeTab === 'findings' && <FindingsTab findings={findings} onCreate={canEditFindings ? () => setIsFindingModalOpen(true) : undefined} onAction={handleFindingAction} />}
                         {activeTab === 'evidence' && <EvidenceTab onGenerate={handleGenerateEvidence} pack={evidencePack} loading={packLoading} />}
                         {activeTab === 'audit' && <AuditTrailTab />}
+                        {activeTab === 'future' && <FutureReadinessTab />}
                     </>
                 )}
             </div>

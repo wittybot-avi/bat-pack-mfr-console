@@ -1,5 +1,20 @@
 # Patch Log
 
+## UI_PATCH_GOVERN_COMPLIANCE_FUTURE_READINESS_V1
+- **Date**: 2024-05-24
+- **Summary**: Added "Future Readiness" preview tab to Compliance module. Features previews for DPP (Digital Product Passport), Sustainability metrics, Recycling workflows, and Regulatory Export profiles.
+- **Files changed**:
+  - src/rbac/screenIds.ts (Added FUTURE_* IDs)
+  - src/rbac/policy.ts (Updated policies for C1/C8/C7)
+  - src/services/futureReadiness.ts (New service logic)
+  - src/pages/Compliance.tsx (Added Future tab and components)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as C8 (Compliance) -> Verify Future Readiness tab is visible.
+  - [ ] Verify DPP Preview allows mapping a battery ID to future fields.
+  - [ ] Verify Export buttons are disabled with tooltips.
+  - [ ] Login as C2 (Production) -> Verify Future tab is hidden (default policy).
+
 ## UI_PATCH_GOVERN_COMPLIANCE_SUITE_V1
 - **Date**: 2024-05-24
 - **Summary**: Implemented full Compliance module with RBAC-gated tabs (Overview, Checks, Findings, Evidence). Added rules engine, scoring logic, and findings management with local persistence.

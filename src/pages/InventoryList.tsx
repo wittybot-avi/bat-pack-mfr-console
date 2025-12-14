@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { inventoryService } from '../services/api';
 import { Battery, InventoryStatus } from '../domain/types';
 import { Button, Input, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Card, CardContent, Tooltip } from '../components/ui/design-system';
-import { Search, Filter, Eye, Box, ArrowRightLeft, ShieldAlert, Lock, Unlock, MapPin } from 'lucide-react';
+import { Search, Filter, Eye, Box, ArrowRightLeft, ShieldAlert, Lock, Unlock } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { canDo } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
