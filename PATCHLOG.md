@@ -1,5 +1,25 @@
 # Patch Log
 
+## UI_PATCH_EOL_QA_STATION_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented EOL / QA Station module with stepper workflow for testing, dispositioning, and certifying batteries. Added `EolService` mock and updated RBAC.
+- **Files changed**:
+  - src/domain/types.ts (Added EolMeasurements, QaDisposition, EolLog)
+  - src/rbac/screenIds.ts (Added EOL screens)
+  - src/rbac/policy.ts (Updated C3/CS/C5 policies)
+  - src/services/api.ts (Implemented EolService, updated Battery mock)
+  - src/components/Layout.tsx (Updated Sidebar)
+  - src/pages/EolStation.tsx (New Station UI)
+  - src/pages/EolStationSetup.tsx (New Setup UI)
+  - App.tsx (Routes)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as C3 (QA) -> Access EOL Station -> Run Test -> Disposition PASS -> Certify.
+  - [ ] Login as C3 -> Fail a battery -> Verify Disposition = FAIL and Reason Code required.
+  - [ ] Login as C4 (IT) -> Access EOL Station -> View Only (Actions disabled).
+  - [ ] Login as C2 (Mfg) -> EOL menu hidden or Access Denied.
+  - [ ] Verify Battery Detail updates with EOL results and Certificate Ref.
+
 ## UI_PATCH_PROVISIONING_CONSOLE_STATION_V1
 - **Date**: 2024-05-24
 - **Summary**: Implemented "Station-Style" Provisioning Console with a multi-step workflow for scanning batteries, binding BMS, flashing firmware, simulated calibration, and security injection. Added `ProvisioningService` mock implementation.

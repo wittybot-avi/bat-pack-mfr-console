@@ -10,7 +10,7 @@ export const getLandingRouteForRole = (cluster: Cluster | null): string => {
     { id: ScreenId.DASHBOARD, path: '/' },
     { id: ScreenId.BATCHES_LIST, path: '/batches' },
     { id: ScreenId.INVENTORY, path: '/inventory' },
-    { id: ScreenId.EOL_QA, path: '/eol' },
+    { id: ScreenId.EOL_QA_STATION, path: '/eol' },
     { id: ScreenId.TELEMETRY, path: '/telemetry' },
     { id: ScreenId.COMPLIANCE, path: '/compliance' },
     { id: ScreenId.SETTINGS, path: '/settings' },

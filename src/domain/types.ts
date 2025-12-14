@@ -24,6 +24,14 @@ export enum BatteryStatus {
   SCRAPPED = 'Scrapped'
 }
 
+export enum QaDisposition {
+  PASS = 'PASS',
+  FAIL = 'FAIL',
+  HOLD = 'HOLD',
+  REWORK = 'REWORK',
+  SCRAP = 'SCRAP'
+}
+
 export enum UserRole {
   MANUFACTURER_ADMIN = 'Manufacturer Admin',
   QA_ENGINEER = 'QA Engineer',
@@ -143,6 +151,25 @@ export interface ProvisioningLogEntry {
   details?: string;
 }
 
+export interface EolMeasurements {
+  voltage: number;
+  capacityAh: number;
+  internalResistance: number;
+  temperatureMax: number;
+  cellBalancingDelta: number;
+  timestamp: string;
+}
+
+export interface EolLogEntry {
+  id: string;
+  timestamp: string;
+  stationId: string;
+  action: 'Test Run' | 'Disposition' | 'Certificate' | 'Override';
+  outcome: string;
+  operator: string;
+  details?: string;
+}
+
 export interface Battery {
   id: string; // Internal UUID
   
@@ -175,14 +202,22 @@ export interface Battery {
   provisioningLogs?: ProvisioningLogEntry[];
   
   // EOL / QA
+  eolStatus?: 'NOT_TESTED' | 'IN_TEST' | 'PASS' | 'FAIL';
+  eolMeasurements?: EolMeasurements;
+  eolLog?: EolLogEntry[];
+  
+  // Legacy fields (kept for compatibility, can sync with eolMeasurements)
   soh: number; // State of Health %
   soc: number; // State of Charge %
   voltage?: number;
   capacityAh?: number;
   internalResistance?: number;
   thermalResult?: 'PASS' | 'FAIL';
-  eolResult?: 'PASS' | 'FAIL';
+  
+  eolResult?: 'PASS' | 'FAIL'; // High level result
+  qaDisposition?: QaDisposition;
   qaApproverId?: string;
+  qaApprovedAt?: string;
   certificateRef?: string;
   
   // Lifecycle

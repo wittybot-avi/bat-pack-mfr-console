@@ -1,4 +1,4 @@
-import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry } from '../domain/types';
+import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry, EolMeasurements, QaDisposition, EolLogEntry } from '../domain/types';
 
 /**
  * SERVICE INTERFACES
@@ -45,6 +45,13 @@ export interface IProvisioningService {
   injectSecurity(batteryId: string, operator: string): Promise<Battery>;
   runVerification(batteryId: string): Promise<{ handshake: boolean; telemetry: boolean; }>;
   finalizeProvisioning(batteryId: string, result: 'PASS'|'FAIL', operator: string, notes?: string): Promise<Battery>;
+}
+
+export interface IEolService {
+  runEolTest(batteryId: string, operator: string): Promise<Battery>;
+  setQaDisposition(batteryId: string, disposition: QaDisposition, reasonCode: string, notes: string, operator: string): Promise<Battery>;
+  generateCertificate(batteryId: string, operator: string): Promise<Battery>;
+  finalizeQa(batteryId: string, operator: string): Promise<Battery>;
 }
 
 export interface IDashboardService {
@@ -145,6 +152,18 @@ const generateBatteries = (count: number): Battery[] => {
             calibrationProfile: status === BatteryStatus.ASSEMBLY ? undefined : 'CAL_LFP_16S_v1',
             calibrationStatus: status === BatteryStatus.ASSEMBLY ? undefined : 'PASS',
             provisioningLogs: [],
+            
+            // EOL Mock Data
+            eolStatus: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? 'PASS' : 'NOT_TESTED',
+            eolMeasurements: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? {
+              voltage: 48.2,
+              capacityAh: 102.5,
+              internalResistance: 12,
+              temperatureMax: 32,
+              cellBalancingDelta: 0.005,
+              timestamp: new Date().toISOString()
+            } : undefined,
+            qaDisposition: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? QaDisposition.PASS : undefined,
             
             soh: 95 + Math.random() * 5,
             soc: 30 + Math.random() * 60,
@@ -568,6 +587,111 @@ class MockProvisioningService implements IProvisioningService {
   }
 }
 
+class MockEolService implements IEolService {
+  private logStep(batt: Battery, action: 'Test Run' | 'Disposition' | 'Certificate' | 'Override', outcome: string, operator: string) {
+    if (!batt.eolLog) batt.eolLog = [];
+    batt.eolLog.push({
+      id: Math.random().toString(36).substring(7),
+      timestamp: new Date().toISOString(),
+      stationId: 'EOL-01',
+      action,
+      outcome,
+      operator
+    });
+  }
+
+  async runEolTest(batteryId: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+
+    batt.status = BatteryStatus.QA_TESTING;
+    batt.eolStatus = 'IN_TEST';
+    
+    // Simulate Results
+    const passed = Math.random() > 0.2; // 80% pass rate
+    const voltage = 48 + Math.random() * 0.5;
+    const capacity = 100 + Math.random() * 5;
+    
+    batt.eolMeasurements = {
+      voltage: voltage,
+      capacityAh: capacity,
+      internalResistance: 10 + Math.random() * 5,
+      temperatureMax: 25 + Math.random() * 10,
+      cellBalancingDelta: 0.001 + Math.random() * 0.01,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Sync legacy fields
+    batt.voltage = voltage;
+    batt.capacityAh = capacity;
+    batt.thermalResult = batt.eolMeasurements.temperatureMax < 40 ? 'PASS' : 'FAIL';
+    
+    this.logStep(batt, 'Test Run', 'Completed', operator);
+    return batt;
+  }
+
+  async setQaDisposition(batteryId: string, disposition: QaDisposition, reasonCode: string, notes: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+
+    batt.qaDisposition = disposition;
+    batt.eolResult = disposition === QaDisposition.PASS ? 'PASS' : 'FAIL';
+    batt.qaApproverId = operator;
+    batt.qaApprovedAt = new Date().toISOString();
+
+    if (disposition === QaDisposition.REWORK || disposition === QaDisposition.FAIL) {
+      batt.reworkFlag = true;
+    }
+    if (disposition === QaDisposition.SCRAP) {
+      batt.scrapFlag = true;
+      batt.status = BatteryStatus.SCRAPPED;
+    }
+
+    this.logStep(batt, 'Disposition', `${disposition} - ${reasonCode}`, operator);
+    if (notes) {
+      batt.notes.push({
+        id: Math.random().toString(),
+        author: operator,
+        role: 'QA',
+        text: `QA Disposition: ${disposition} (${reasonCode}) - ${notes}`,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    return batt;
+  }
+
+  async generateCertificate(batteryId: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+    if (batt.qaDisposition !== QaDisposition.PASS) throw new Error("Cannot certify failed battery");
+
+    batt.certificateRef = `CERT-${new Date().getFullYear()}-${Math.floor(Math.random() * 100000)}`;
+    this.logStep(batt, 'Certificate', batt.certificateRef, operator);
+    return batt;
+  }
+
+  async finalizeQa(batteryId: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+
+    if (batt.qaDisposition === QaDisposition.PASS) {
+      batt.status = BatteryStatus.IN_INVENTORY;
+      batt.eolStatus = 'PASS';
+    } else {
+      batt.eolStatus = 'FAIL';
+      // Status might stay in QA_TESTING or move to RMA/SCRAPPED depending on workflow
+      if (batt.qaDisposition === QaDisposition.REWORK) batt.status = BatteryStatus.ASSEMBLY; // Send back
+    }
+    
+    return batt;
+  }
+}
+
 class MockDashboardService implements IDashboardService {
   async getKPIs(): Promise<KPIData> {
     await new Promise(resolve => setTimeout(resolve, 400));
@@ -592,4 +716,5 @@ class MockDashboardService implements IDashboardService {
 export const batchService = new MockBatchService();
 export const batteryService = new MockBatteryService();
 export const provisioningService = new MockProvisioningService();
+export const eolService = new MockEolService();
 export const dashboardService = new MockDashboardService();

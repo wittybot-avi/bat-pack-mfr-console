@@ -22,7 +22,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATTERIES_DETAIL]: ['V'],
     [ScreenId.INVENTORY]: ['V'],
     [ScreenId.DISPATCH]: ['V'],
-    [ScreenId.EOL_QA]: ['V'],
+    [ScreenId.EOL_QA_STATION]: ['V'],
     [ScreenId.WARRANTY]: ['V'],
     [ScreenId.COMPLIANCE]: ['V'],
     [ScreenId.CUSTODY]: ['V'],
@@ -48,7 +48,9 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'A'], // QA Edit/Approve
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V'],
-    [ScreenId.EOL_QA]: ['V', 'C', 'E', 'A', 'X'], // Full control of QA
+    [ScreenId.EOL_QA_STATION]: ['V', 'C', 'E', 'A', 'X'], // Full control of QA
+    [ScreenId.EOL_QA_STATION_SETUP]: ['V', 'E', 'M'],
+    [ScreenId.EOL_QA_REVIEW]: ['V', 'A'],
     [ScreenId.ANALYTICS]: ['V'],
   },
 
@@ -60,6 +62,8 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.RBAC_VIEW]: ['V', 'M'],
     [ScreenId.PROVISIONING]: ['V'],
     [ScreenId.PROVISIONING_STATION_SETUP]: ['V', 'E', 'M'],
+    [ScreenId.EOL_QA_STATION]: ['V'],
+    [ScreenId.EOL_QA_STATION_SETUP]: ['V', 'E', 'M'],
   },
 
   // C5: BMS/Firmware - Deep tech view
@@ -69,6 +73,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V', 'E'], // Update firmware
     [ScreenId.PROVISIONING]: ['V', 'C', 'E', 'X', 'A'],
+    [ScreenId.EOL_QA_STATION]: ['V'], // View EOL results
   },
 
   // C6: Logistics - Move stuff
@@ -90,6 +95,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.TELEMETRY]: ['V'], // Debug
     [ScreenId.BATCHES_LIST]: ['V'], // Reference checks
     [ScreenId.BATCHES_DETAIL]: ['V'],
+    [ScreenId.EOL_QA_STATION]: ['V'], // Check test data
   },
 
   // C8: Compliance

@@ -16,7 +16,9 @@ export enum ScreenId {
   DISPATCH = 'DISPATCH',
   
   // Assure
-  EOL_QA = 'EOL_QA',
+  EOL_QA_STATION = 'EOL_QA_STATION', // Station UI
+  EOL_QA_STATION_SETUP = 'EOL_QA_STATION_SETUP',
+  EOL_QA_REVIEW = 'EOL_QA_REVIEW',
   
   // Resolve
   WARRANTY = 'WARRANTY',
@@ -33,7 +35,7 @@ export enum ScreenId {
 export const SCREEN_GROUPS = {
   OBSERVE: [ScreenId.DASHBOARD, ScreenId.TELEMETRY, ScreenId.ANALYTICS],
   OPERATE: [ScreenId.BATCHES_LIST, ScreenId.BATTERIES_LIST, ScreenId.PROVISIONING, ScreenId.PROVISIONING_STATION_SETUP, ScreenId.INVENTORY, ScreenId.DISPATCH],
-  ASSURE: [ScreenId.EOL_QA],
+  ASSURE: [ScreenId.EOL_QA_STATION, ScreenId.EOL_QA_STATION_SETUP, ScreenId.EOL_QA_REVIEW],
   RESOLVE: [ScreenId.WARRANTY],
   GOVERN: [ScreenId.COMPLIANCE, ScreenId.CUSTODY],
   ADMIN: [ScreenId.SETTINGS, ScreenId.RBAC_VIEW],

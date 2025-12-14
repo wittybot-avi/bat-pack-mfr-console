@@ -16,6 +16,8 @@ import BatteryDetail from './src/pages/BatteryDetail';
 import Telemetry from './src/pages/Telemetry';
 import ProvisioningConsole from './src/pages/ProvisioningConsole';
 import ProvisioningStationSetup from './src/pages/ProvisioningStationSetup';
+import EolStation from './src/pages/EolStation';
+import EolStationSetup from './src/pages/EolStationSetup';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
 
@@ -107,12 +109,14 @@ function App() {
           } />
 
           <Route path="eol" element={
-            <RouteGuard screen={ScreenId.EOL_QA}>
-               <Placeholder 
-                title="EOL QA & Certification" 
-                description="End-of-Line testing uploads, automated grading, and digital certificate generation."
-                features={["Test Log Upload", "Pass/Fail Criteria", "Certificate Generation", "Exception Handling"]}
-              />
+            <RouteGuard screen={ScreenId.EOL_QA_STATION}>
+               <EolStation />
+            </RouteGuard>
+          } />
+
+          <Route path="eol/setup" element={
+            <RouteGuard screen={ScreenId.EOL_QA_STATION_SETUP}>
+               <EolStationSetup />
             </RouteGuard>
           } />
 
