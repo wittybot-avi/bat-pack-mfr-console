@@ -1,5 +1,28 @@
 # Patch Log
 
+## UI_PATCH_GOVERN_CUSTODY_SUITE_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented "Custody" module for Chain-of-Custody tracking. Features include Overview, Shipments List, and Detail view with Receive/Accept/Reject workflows for external stakeholders (C9).
+- **Files changed**:
+  - src/domain/types.ts (Added CustodyStatus to DispatchOrder, refined CustodyEvent)
+  - src/rbac/screenIds.ts (Added CUSTODY_* IDs)
+  - src/rbac/policy.ts (Permissions for C9, C6, C8, C1)
+  - src/services/api.ts (Updated DispatchService and BatteryService for custody logic)
+  - src/services/custodyService.ts (New service for custody aggregation)
+  - src/pages/Custody.tsx (New overview page)
+  - src/pages/CustodyDetail.tsx (New detailed action page)
+  - App.tsx (New routes)
+  - src/components/Layout.tsx (Nav item)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as C9 (External) -> Verify "Custody" menu exists.
+  - [ ] C9 can see shipments list.
+  - [ ] C9 can click shipment -> See details.
+  - [ ] C9 can "Mark Received" for In-Transit items.
+  - [ ] C9 can "Accept" or "Reject" received items.
+  - [ ] Login as C6 (Logistics) -> Verify View-Only access to Custody (no action buttons).
+  - [ ] Verify Battery Detail page updates location and status after Custody actions.
+
 ## UI_PATCH_GOVERN_COMPLIANCE_FUTURE_READINESS_V1
 - **Date**: 2024-05-24
 - **Summary**: Added "Future Readiness" preview tab to Compliance module. Features previews for DPP (Digital Product Passport), Sustainability metrics, Recycling workflows, and Regulatory Export profiles.

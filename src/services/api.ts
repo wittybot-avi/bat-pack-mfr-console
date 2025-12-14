@@ -1,4 +1,4 @@
-import { Batch, BatchStatus, Battery, BatteryStatus, InventoryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry, EolMeasurements, QaDisposition, EolLogEntry, InventoryMovementEntry, DispatchOrder, DispatchStatus, CustodyStatus } from '../domain/types';
+import { Batch, BatchStatus, Battery, BatteryStatus, InventoryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry, EolMeasurements, QaDisposition, EolLogEntry, InventoryMovementEntry, DispatchOrder, DispatchStatus, CustodyStatus, CustodyEvent } from '../domain/types';
 
 /**
  * SERVICE INTERFACES
@@ -36,6 +36,7 @@ export interface IBatteryService {
   approveBattery(id: string, user: string): Promise<Battery>;
   dispatchBattery(id: string, location: string): Promise<Battery>;
   flagRework(id: string, notes: string, user: string): Promise<Battery>;
+  updateCustody(id: string, status: CustodyStatus, event: Partial<CustodyEvent>): Promise<Battery>;
 }
 
 export interface IProvisioningService {
@@ -219,16 +220,52 @@ const MOCK_DISPATCH_ORDERS: DispatchOrder[] = [
   {
     id: 'do-1',
     orderNumber: 'DO-2024-001',
-    status: DispatchStatus.DRAFT,
+    status: DispatchStatus.DISPATCHED,
+    custodyStatus: CustodyStatus.IN_TRANSIT,
     customerName: 'Mega Motors Inc.',
     destinationAddress: '123 EV Blvd, Detroit, MI',
     expectedShipDate: '2024-06-01',
-    batteryIds: [],
+    batteryIds: ['batt-10', 'batt-11'],
     createdBy: 'System',
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    dispatchedAt: new Date(Date.now() - 86400000).toISOString(), // 1 day ago
+    packingListRef: 'PL-001',
+    carrierName: 'FastTracks Logistics'
+  },
+  {
+    id: 'do-2',
+    orderNumber: 'DO-2024-002',
+    status: DispatchStatus.DISPATCHED,
+    custodyStatus: CustodyStatus.ACCEPTED,
+    customerName: 'PowerWall Home',
+    destinationAddress: '456 Green Way, Austin, TX',
+    expectedShipDate: '2024-05-20',
+    batteryIds: ['batt-12'],
+    createdBy: 'System',
+    createdAt: new Date(Date.now() - 500000000).toISOString(),
+    updatedAt: new Date().toISOString(),
+    dispatchedAt: new Date(Date.now() - 400000000).toISOString(),
+    deliveredAt: new Date(Date.now() - 300000000).toISOString(),
+    acceptedAt: new Date(Date.now() - 250000000).toISOString(),
+    packingListRef: 'PL-002',
+    carrierName: 'Global Cargo'
   }
 ];
+
+// Ensure mocked batteries for DO-1 and DO-2 have correct custody status
+MOCK_BATTERIES.forEach(b => {
+    if (b.id === 'batt-10' || b.id === 'batt-11') {
+        b.status = BatteryStatus.IN_TRANSIT;
+        b.custodyStatus = CustodyStatus.IN_TRANSIT;
+        b.dispatchId = 'do-1';
+    }
+    if (b.id === 'batt-12') {
+        b.status = BatteryStatus.DEPLOYED;
+        b.custodyStatus = CustodyStatus.ACCEPTED;
+        b.dispatchId = 'do-2';
+    }
+});
 
 /**
  * MOCK IMPLEMENTATIONS
@@ -548,6 +585,33 @@ class MockBatteryService implements IBatteryService {
       batt.reworkFlag = true;
       batt.notes.push({ id: Math.random().toString(), author: user, role: 'Operator', text: `REWORK FLAGGED: ${notes}`, timestamp: new Date().toISOString() });
       
+      return batt;
+  }
+
+  async updateCustody(id: string, status: CustodyStatus, event: Partial<CustodyEvent>): Promise<Battery> {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const batt = MOCK_BATTERIES.find(b => b.id === id);
+      if (!batt) throw new Error("Not found");
+
+      batt.custodyStatus = status;
+      if (event.location) batt.location = event.location;
+      
+      // Sync Lifecycle Status
+      if (status === CustodyStatus.ACCEPTED) batt.status = BatteryStatus.DEPLOYED;
+      if (status === CustodyStatus.REJECTED) batt.status = BatteryStatus.RMA;
+
+      if (!batt.custodyLog) batt.custodyLog = [];
+      batt.custodyLog.push({
+          id: `cust-evt-${Date.now()}-${Math.random().toString(36).substr(2,5)}`,
+          timestamp: new Date().toISOString(),
+          status,
+          location: event.location || 'Unknown',
+          handler: event.handler || 'System',
+          notes: event.notes,
+          dispatchId: event.dispatchId,
+          reasonCode: event.reasonCode
+      });
+
       return batt;
   }
 }
@@ -874,6 +938,7 @@ class MockDispatchService implements IDispatchService {
       id: `do-${Date.now()}`,
       orderNumber: `DO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
       status: DispatchStatus.DRAFT,
+      custodyStatus: CustodyStatus.AT_FACTORY,
       customerName: data.customerName || '',
       destinationAddress: data.destinationAddress || '',
       expectedShipDate: data.expectedShipDate || '',
@@ -962,6 +1027,7 @@ class MockDispatchService implements IDispatchService {
     
     const updatedOrder = await this.updateOrder(orderId, { 
       status: DispatchStatus.DISPATCHED,
+      custodyStatus: CustodyStatus.IN_TRANSIT,
       dispatchedAt: new Date().toISOString()
     }, operator);
     

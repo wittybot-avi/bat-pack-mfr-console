@@ -42,9 +42,9 @@ export enum DispatchStatus {
 export enum CustodyStatus {
   AT_FACTORY = 'At Factory',
   IN_TRANSIT = 'In Transit',
-  DELIVERED = 'Delivered',
-  ACCEPTED = 'Accepted',
-  REJECTED = 'Rejected'
+  DELIVERED = 'Delivered', // Physical arrival
+  ACCEPTED = 'Accepted',   // Signed off
+  REJECTED = 'Rejected'    // Returned/Issue
 }
 
 export enum QaDisposition {
@@ -211,12 +211,15 @@ export interface CustodyEvent {
   handler: string;
   signature?: string;
   dispatchId?: string;
+  notes?: string;
+  reasonCode?: string;
 }
 
 export interface DispatchOrder {
   id: string;
   orderNumber: string; // DO-2024-XXXX
   status: DispatchStatus;
+  custodyStatus?: CustodyStatus; // Aggregate state of the shipment
   
   // Header
   customerName: string;
@@ -238,6 +241,8 @@ export interface DispatchOrder {
   createdAt: string;
   updatedAt: string;
   dispatchedAt?: string;
+  deliveredAt?: string;
+  acceptedAt?: string;
   notes?: string;
 }
 

@@ -50,6 +50,8 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.COMPLIANCE_REG_EXPORT_PREVIEW]: ['V'],
     [ScreenId.COMPLIANCE_EXPORT]: ['X'],
     [ScreenId.CUSTODY]: ['V'],
+    [ScreenId.CUSTODY_OVERVIEW]: ['V'],
+    [ScreenId.CUSTODY_EXCEPTIONS]: ['V'],
     [ScreenId.SETTINGS]: ['V'],
     [ScreenId.RBAC_VIEW]: ['V'],
   },
@@ -161,6 +163,9 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DISPATCH_LIST]: ['V', 'C', 'E', 'X', 'A'], // Full dispatch control
     [ScreenId.DISPATCH_DETAIL]: ['V', 'C', 'E', 'X', 'A'],
     [ScreenId.CUSTODY]: ['V', 'C', 'A'],
+    [ScreenId.CUSTODY_OVERVIEW]: ['V'],
+    [ScreenId.CUSTODY_LIST]: ['V'],
+    [ScreenId.CUSTODY_DETAIL]: ['V'],
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.COMPLIANCE]: ['V'],
     [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'], // Logistics checks
@@ -197,6 +202,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.COMPLIANCE_RECYCLING_PREVIEW]: ['V'],
     [ScreenId.COMPLIANCE_REG_EXPORT_PREVIEW]: ['V'],
     [ScreenId.COMPLIANCE_EXPORT]: ['X'],
+    [ScreenId.CUSTODY]: ['V'],
+    [ScreenId.CUSTODY_LIST]: ['V'],
+    [ScreenId.CUSTODY_DETAIL]: ['V'],
+    [ScreenId.CUSTODY_EXCEPTIONS]: ['V'],
   },
 
   // C8: Compliance
@@ -223,7 +232,11 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.COMPLIANCE_REG_EXPORT_PREVIEW]: ['V'],
     [ScreenId.COMPLIANCE_EXPORT]: ['X'],
     [ScreenId.COMPLIANCE_FINDINGS_EDIT]: ['C', 'E', 'X'],
-    [ScreenId.CUSTODY]: ['V'], // Audit custody
+    [ScreenId.CUSTODY]: ['V'],
+    [ScreenId.CUSTODY_OVERVIEW]: ['V'],
+    [ScreenId.CUSTODY_LIST]: ['V'],
+    [ScreenId.CUSTODY_DETAIL]: ['V'],
+    [ScreenId.CUSTODY_EXPORT]: ['X'],
     [ScreenId.RBAC_VIEW]: ['V'], // Audit access
     [ScreenId.BATCHES_LIST]: ['V'], // Audit batches
     [ScreenId.BATCHES_DETAIL]: ['V'],
@@ -238,6 +251,11 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATCHES_LIST]: ['V'], // Limited View
     [ScreenId.BATCHES_DETAIL]: ['V', 'X'], // Limited Detail + Export Certs
     [ScreenId.DISPATCH]: ['V'], // Track my order
-    [ScreenId.CUSTODY]: ['V', 'A'], // Ack receipt
+    [ScreenId.CUSTODY]: ['V', 'C', 'E', 'A'], // Full actions on own shipments
+    [ScreenId.CUSTODY_LIST]: ['V'],
+    [ScreenId.CUSTODY_DETAIL]: ['V'],
+    [ScreenId.CUSTODY_RECEIVE_ACTION]: ['X'],
+    [ScreenId.CUSTODY_ACCEPT_REJECT_ACTION]: ['X'],
+    [ScreenId.CUSTODY_EXCEPTIONS]: ['V'],
   }
 };

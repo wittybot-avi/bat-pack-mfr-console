@@ -24,7 +24,9 @@ import DispatchList from './src/pages/DispatchList';
 import DispatchDetail from './src/pages/DispatchDetail';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
-import Compliance from './src/pages/Compliance'; // Updated Import
+import Compliance from './src/pages/Compliance';
+import Custody from './src/pages/Custody'; // New Import
+import CustodyDetail from './src/pages/CustodyDetail'; // New Import
 
 // Toast Component
 const ToastContainer = () => {
@@ -145,11 +147,13 @@ function App() {
 
           <Route path="custody" element={
             <RouteGuard screen={ScreenId.CUSTODY}>
-              <Placeholder 
-                title="Chain of Custody" 
-                description="Digital signatures and handover records for battery assets."
-                features={["Handover Logs", "Digital Signature", "Ownership History", "Audit Proof"]}
-              />
+              <Custody />
+            </RouteGuard>
+          } />
+
+          <Route path="custody/:dispatchId" element={
+            <RouteGuard screen={ScreenId.CUSTODY_DETAIL}>
+              <CustodyDetail />
             </RouteGuard>
           } />
           
