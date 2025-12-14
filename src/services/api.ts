@@ -1,16 +1,25 @@
-import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint } from '../domain/types';
+import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote } from '../domain/types';
 
 /**
  * SERVICE INTERFACES
  * ---------------------------------------------------------------------
- * These interfaces define the contract for the UI.
- * In the future, real HTTP services will implement these interfaces.
  */
 
 export interface IBatchService {
-  getBatches(): Promise<Batch[]>;
+  getBatches(filters?: any): Promise<Batch[]>;
   getBatchById(id: string): Promise<Batch | undefined>;
   createBatch(batch: Partial<Batch>): Promise<Batch>;
+  updateBatch(id: string, updates: Partial<Batch>): Promise<Batch>;
+  
+  // Workflow Actions
+  requestHold(id: string, reason: string, user: string): Promise<Batch>;
+  approveHold(id: string, reason: string, user: string): Promise<Batch>;
+  requestRelease(id: string, reason: string, user: string): Promise<Batch>;
+  approveRelease(id: string, reason: string, user: string): Promise<Batch>;
+  
+  requestCloseByProd(id: string, user: string): Promise<Batch>;
+  approveCloseByQA(id: string, user: string): Promise<Batch>;
+  forceClose(id: string, user: string): Promise<Batch>;
 }
 
 export interface IBatteryService {
@@ -33,18 +42,61 @@ const generateBatches = (count: number): Batch[] => {
   return Array.from({ length: count }).map((_, i) => ({
     id: `batch-${i + 1}`,
     batchNumber: `B-${2024000 + i}`,
+    plantId: 'PLANT-01',
+    lineId: i % 2 === 0 ? 'L1' : 'L2',
+    shiftId: 'SHIFT-A',
+    supervisorId: 'USER-101',
+    createdBy: 'Admin',
+    createdAt: new Date(Date.now() - i * 86400000).toISOString(),
+    
     sku: i % 2 === 0 ? 'VV360-LFP-48V' : 'EE360-NMC-72V',
-    quantity: 100 + (i * 10),
-    produced: 50 + (i * 5),
-    startDate: new Date(Date.now() - i * 86400000).toISOString(),
-    status: i === 0 ? BatchStatus.DRAFT : i < 5 ? BatchStatus.IN_PRODUCTION : BatchStatus.RELEASED,
-    supplierLots: ['L-9982', 'L-1234'],
-    riskLevel: i === 3 ? RiskLevel.HIGH : i === 7 ? RiskLevel.MEDIUM : RiskLevel.LOW
+    packModelId: i % 2 === 0 ? 'VV360' : 'EE360',
+    packVariant: 'Std',
+    chemistry: i % 2 === 0 ? 'LFP' : 'NMC',
+    seriesCount: 16,
+    parallelCount: 2,
+    nominalVoltageV: 48,
+    capacityAh: 100,
+    energyWh: 4800,
+    targetQuantity: 100 + (i * 10),
+    customerProgram: 'OEM-X',
+    
+    bomVersion: 'v1.2',
+    cellSpec: 'CATL-100Ah',
+    bmsSpec: 'Aayatana-BMS-v3',
+    mechanicalsSpec: 'Alu-Case-Gen2',
+    
+    supplierLots: [
+      { id: `lot-${i}-1`, lotType: 'Cell', supplierName: 'CATL', supplierLotId: `C-${i}99`, receivedDate: '2024-01-01', qtyConsumed: 1000 },
+      { id: `lot-${i}-2`, lotType: 'BMS', supplierName: 'Texas Inst', supplierLotId: `TI-${i}22`, receivedDate: '2024-01-02', qtyConsumed: 100 }
+    ],
+    
+    processRouteId: 'ROUTE-STD-01',
+    stationRecipeVersion: 'REC-v4.0',
+    startPlannedAt: new Date(Date.now() - i * 86400000).toISOString(),
+    
+    status: i === 0 ? BatchStatus.DRAFT : i < 5 ? BatchStatus.IN_PRODUCTION : BatchStatus.RELEASED_TO_INVENTORY,
+    
+    qtyStarted: 50 + i,
+    qtyBuilt: 45 + i,
+    qtyPassedEOL: 40 + i,
+    qtyFailedEOL: 2,
+    qtyReworked: 3,
+    yieldPct: 90,
+    eolPassRatePct: 95.5,
+    riskLevel: i === 3 ? RiskLevel.HIGH : i === 7 ? RiskLevel.MEDIUM : RiskLevel.LOW,
+    
+    holdRequestPending: false,
+    closeRequestByProd: false,
+    closeApprovedByQA: false,
+    
+    notes: []
   }));
 };
 
-const generateBatteries = (count: number): Battery[] => {
-  return Array.from({ length: count }).map((_, i) => ({
+const MOCK_BATCHES = generateBatches(20);
+// Add a few more supplier lots for demo
+const MOCK_BATTERIES: Battery[] = Array.from({ length: 150 }).map((_, i) => ({
     id: `batt-${i}`,
     serialNumber: `SN-${(100000 + i).toString(16).toUpperCase()}`,
     batchId: `batch-${Math.floor(i / 20) + 1}`,
@@ -56,23 +108,21 @@ const generateBatteries = (count: number): Battery[] => {
     manufacturingDate: new Date(Date.now() - Math.random() * 1000000000).toISOString(),
     lastSeen: new Date().toISOString()
   }));
-};
-
-const MOCK_BATCHES = generateBatches(20);
-const MOCK_BATTERIES = generateBatteries(150);
 
 /**
  * MOCK IMPLEMENTATIONS
  * ---------------------------------------------------------------------
- * Integration Note: Replace these classes with Http*Service classes
- * that use axios or fetch to call the backend API.
  */
 
 class MockBatchService implements IBatchService {
-  async getBatches(): Promise<Batch[]> {
+  async getBatches(filters?: any): Promise<Batch[]> {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 600));
-    return [...MOCK_BATCHES];
+    let res = [...MOCK_BATCHES];
+    if (filters?.status) {
+      res = res.filter(b => b.status === filters.status);
+    }
+    return res;
   }
 
   async getBatchById(id: string): Promise<Batch | undefined> {
@@ -81,21 +131,140 @@ class MockBatchService implements IBatchService {
   }
 
   async createBatch(data: Partial<Batch>): Promise<Batch> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 800));
     const newBatch: Batch = {
-      id: `batch-${MOCK_BATCHES.length + 1}`,
-      batchNumber: data.batchNumber || 'NEW-000',
-      sku: data.sku || 'UNKNOWN',
-      quantity: data.quantity || 0,
-      produced: 0,
-      startDate: new Date().toISOString(),
+      ...MOCK_BATCHES[0], // Copy defaults from first
+      id: `batch-${Date.now()}`,
+      createdAt: new Date().toISOString(),
       status: BatchStatus.DRAFT,
       supplierLots: [],
-      riskLevel: RiskLevel.LOW,
+      notes: [],
+      holdRequestPending: false,
+      closeRequestByProd: false,
+      closeApprovedByQA: false,
       ...data
     } as Batch;
     MOCK_BATCHES.unshift(newBatch);
     return newBatch;
+  }
+
+  async updateBatch(id: string, updates: Partial<Batch>): Promise<Batch> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const index = MOCK_BATCHES.findIndex(b => b.id === id);
+    if (index === -1) throw new Error("Batch not found");
+    
+    MOCK_BATCHES[index] = { ...MOCK_BATCHES[index], ...updates };
+    return MOCK_BATCHES[index];
+  }
+
+  // Workflow Actions
+  async requestHold(id: string, reason: string, user: string): Promise<Batch> {
+    return this.updateBatch(id, { 
+      holdRequestPending: true,
+      notes: [...(await this.getBatchById(id))!.notes, {
+        id: Math.random().toString(),
+        author: user,
+        role: 'Unknown',
+        text: `Hold Requested: ${reason}`,
+        timestamp: new Date().toISOString(),
+        type: 'Hold'
+      }]
+    });
+  }
+
+  async approveHold(id: string, reason: string, user: string): Promise<Batch> {
+    return this.updateBatch(id, {
+      status: BatchStatus.ON_HOLD,
+      holdRequestPending: false,
+      notes: [...(await this.getBatchById(id))!.notes, {
+        id: Math.random().toString(),
+        author: user,
+        role: 'Approver',
+        text: `Hold Approved: ${reason}`,
+        timestamp: new Date().toISOString(),
+        type: 'Hold'
+      }]
+    });
+  }
+
+  async requestRelease(id: string, reason: string, user: string): Promise<Batch> {
+    return this.updateBatch(id, {
+      notes: [...(await this.getBatchById(id))!.notes, {
+        id: Math.random().toString(),
+        author: user,
+        role: 'Requester',
+        text: `Release Requested: ${reason}`,
+        timestamp: new Date().toISOString(),
+        type: 'Release'
+      }]
+    });
+  }
+
+  async approveRelease(id: string, reason: string, user: string): Promise<Batch> {
+    // Return to IN_PRODUCTION or previous state logic (simplified here)
+    return this.updateBatch(id, {
+      status: BatchStatus.IN_PRODUCTION,
+      notes: [...(await this.getBatchById(id))!.notes, {
+        id: Math.random().toString(),
+        author: user,
+        role: 'Approver',
+        text: `Release Approved: ${reason}`,
+        timestamp: new Date().toISOString(),
+        type: 'Release'
+      }]
+    });
+  }
+
+  async requestCloseByProd(id: string, user: string): Promise<Batch> {
+    const batch = await this.getBatchById(id);
+    let newStatus = batch?.status;
+    if (batch?.closeApprovedByQA) newStatus = BatchStatus.CLOSED;
+
+    return this.updateBatch(id, {
+      closeRequestByProd: true,
+      status: newStatus,
+      notes: [...(batch?.notes || []), {
+        id: Math.random().toString(),
+        author: user,
+        role: 'Production',
+        text: 'Close Requested',
+        timestamp: new Date().toISOString(),
+        type: 'General'
+      }]
+    });
+  }
+
+  async approveCloseByQA(id: string, user: string): Promise<Batch> {
+    const batch = await this.getBatchById(id);
+    let newStatus = batch?.status;
+    if (batch?.closeRequestByProd) newStatus = BatchStatus.CLOSED;
+
+    return this.updateBatch(id, {
+      closeApprovedByQA: true,
+      status: newStatus,
+      notes: [...(batch?.notes || []), {
+        id: Math.random().toString(),
+        author: user,
+        role: 'QA',
+        text: 'Close Approved',
+        timestamp: new Date().toISOString(),
+        type: 'General'
+      }]
+    });
+  }
+
+  async forceClose(id: string, user: string): Promise<Batch> {
+    return this.updateBatch(id, {
+      status: BatchStatus.CLOSED,
+      notes: [...(await this.getBatchById(id))!.notes, {
+        id: Math.random().toString(),
+        author: user,
+        role: 'SuperAdmin',
+        text: 'Forced Close',
+        timestamp: new Date().toISOString(),
+        type: 'General'
+      }]
+    });
   }
 }
 

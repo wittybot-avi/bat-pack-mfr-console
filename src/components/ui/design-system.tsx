@@ -1,4 +1,4 @@
-import React, { ButtonHTMLAttributes, InputHTMLAttributes, forwardRef } from 'react';
+import React, { ButtonHTMLAttributes, InputHTMLAttributes, forwardRef, TableHTMLAttributes, HTMLAttributes, ThHTMLAttributes, TdHTMLAttributes } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -102,24 +102,24 @@ export const Badge = ({ children, variant = "default", className }: { children: 
 };
 
 // TABLE STUBS (Simple implementation for demo)
-export const Table = ({ children, className }: { children: React.ReactNode, className?: string }) => (
+export const Table = ({ children, className, ...props }: TableHTMLAttributes<HTMLTableElement>) => (
   <div className="w-full overflow-auto">
-    <table className={cn("w-full caption-bottom text-sm", className)}>{children}</table>
+    <table className={cn("w-full caption-bottom text-sm", className)} {...props}>{children}</table>
   </div>
 );
 
-export const TableHeader = ({ children }: { children: React.ReactNode }) => (
-  <thead className="[&_tr]:border-b">{children}</thead>
+export const TableHeader = ({ children, className, ...props }: HTMLAttributes<HTMLTableSectionElement>) => (
+  <thead className={cn("[&_tr]:border-b", className)} {...props}>{children}</thead>
 );
 
-export const TableRow = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-  <tr className={cn("border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted", className)}>{children}</tr>
+export const TableRow = ({ children, className, ...props }: HTMLAttributes<HTMLTableRowElement>) => (
+  <tr className={cn("border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted", className)} {...props}>{children}</tr>
 );
 
-export const TableHead = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-  <th className={cn("h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0", className)}>{children}</th>
+export const TableHead = ({ children, className, ...props }: ThHTMLAttributes<HTMLTableCellElement>) => (
+  <th className={cn("h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0", className)} {...props}>{children}</th>
 );
 
-export const TableCell = ({ children, className }: { children: React.ReactNode, className?: string }) => (
-  <td className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)}>{children}</td>
+export const TableCell = ({ children, className, ...props }: TdHTMLAttributes<HTMLTableCellElement>) => (
+  <td className={cn("p-4 align-middle [&:has([role=checkbox])]:pr-0", className)} {...props}>{children}</td>
 );

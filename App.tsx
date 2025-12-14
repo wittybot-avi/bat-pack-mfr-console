@@ -10,6 +10,7 @@ import { useAppStore } from './src/lib/store';
 import Login from './src/pages/Login';
 import Dashboard from './src/pages/Dashboard';
 import Batches from './src/pages/Batches';
+import BatchDetail from './src/pages/BatchDetail';
 import Telemetry from './src/pages/Telemetry';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
@@ -62,6 +63,12 @@ function App() {
           <Route path="batches" element={
             <RouteGuard screen={ScreenId.BATCHES_LIST}>
               <Batches />
+            </RouteGuard>
+          } />
+
+          <Route path="batches/:id" element={
+            <RouteGuard screen={ScreenId.BATCHES_DETAIL}>
+              <BatchDetail />
             </RouteGuard>
           } />
 
