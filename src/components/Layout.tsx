@@ -37,6 +37,7 @@ const NAV_CONFIG: Record<string, { icon: any, label: string, path: string }> = {
   [ScreenId.BATCHES_LIST]: { icon: Package, label: 'Batches', path: '/batches' },
   [ScreenId.BATTERIES_LIST]: { icon: Battery, label: 'Batteries', path: '/batteries' },
   [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning', path: '/provisioning' },
+  [ScreenId.PROVISIONING_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/provisioning/setup' },
   [ScreenId.INVENTORY]: { icon: Box, label: 'Inventory', path: '/inventory' },
   [ScreenId.DISPATCH]: { icon: Truck, label: 'Dispatch', path: '/dispatch' },
   [ScreenId.EOL_QA]: { icon: ClipboardCheck, label: 'EOL / QA', path: '/eol' },

@@ -1,4 +1,4 @@
-import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent } from '../domain/types';
+import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry } from '../domain/types';
 
 /**
  * SERVICE INTERFACES
@@ -25,6 +25,7 @@ export interface IBatchService {
 export interface IBatteryService {
   getBatteries(filter?: any): Promise<Battery[]>;
   getBatteryById(id: string): Promise<Battery | undefined>;
+  getBatteryBySN(sn: string): Promise<Battery | undefined>;
   getBatteryTelemetry(id: string): Promise<TelemetryPoint[]>;
   
   // Lifecycle Actions
@@ -35,6 +36,15 @@ export interface IBatteryService {
   approveBattery(id: string, user: string): Promise<Battery>;
   dispatchBattery(id: string, location: string): Promise<Battery>;
   flagRework(id: string, notes: string, user: string): Promise<Battery>;
+}
+
+export interface IProvisioningService {
+  bindBms(batteryId: string, bmsUid: string, operator: string): Promise<Battery>;
+  flashFirmware(batteryId: string, firmwareVersion: string, operator: string): Promise<Battery>;
+  triggerCalibration(batteryId: string, profile: string, operator: string): Promise<Battery>;
+  injectSecurity(batteryId: string, operator: string): Promise<Battery>;
+  runVerification(batteryId: string): Promise<{ handshake: boolean; telemetry: boolean; }>;
+  finalizeProvisioning(batteryId: string, result: 'PASS'|'FAIL', operator: string, notes?: string): Promise<Battery>;
 }
 
 export interface IDashboardService {
@@ -132,6 +142,9 @@ const generateBatteries = (count: number): Battery[] => {
             cryptoProvisioned: status !== BatteryStatus.ASSEMBLY,
             firmwareVersion: status === BatteryStatus.ASSEMBLY ? undefined : 'v2.1.4',
             bmsUid: status === BatteryStatus.ASSEMBLY ? undefined : `BMS-${(5000+i)}`,
+            calibrationProfile: status === BatteryStatus.ASSEMBLY ? undefined : 'CAL_LFP_16S_v1',
+            calibrationStatus: status === BatteryStatus.ASSEMBLY ? undefined : 'PASS',
+            provisioningLogs: [],
             
             soh: 95 + Math.random() * 5,
             soc: 30 + Math.random() * 60,
@@ -330,6 +343,12 @@ class MockBatteryService implements IBatteryService {
     return MOCK_BATTERIES.find(b => b.id === id);
   }
 
+  async getBatteryBySN(sn: string): Promise<Battery | undefined> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    // Case insensitive match
+    return MOCK_BATTERIES.find(b => b.serialNumber.toLowerCase() === sn.toLowerCase());
+  }
+
   async getBatteryTelemetry(id: string): Promise<TelemetryPoint[]> {
     // Generate 60 points of history
     const now = Date.now();
@@ -393,6 +412,7 @@ class MockBatteryService implements IBatteryService {
   }
 
   async provisionBattery(id: string, data: { bmsUid: string, firmware: string, profile: string }): Promise<Battery> {
+      // Deprecated wrapper for simple flow, ProvisioningService handles detailed flow now
       await new Promise(resolve => setTimeout(resolve, 800));
       const batt = MOCK_BATTERIES.find(b => b.id === id);
       if (!batt) throw new Error("Not found");
@@ -459,6 +479,95 @@ class MockBatteryService implements IBatteryService {
   }
 }
 
+class MockProvisioningService implements IProvisioningService {
+  private logStep(batt: Battery, step: string, outcome: 'PASS'|'FAIL'|'INFO', operator: string) {
+    if (!batt.provisioningLogs) batt.provisioningLogs = [];
+    batt.provisioningLogs.push({
+      id: Math.random().toString(36).substring(7),
+      timestamp: new Date().toISOString(),
+      stationId: 'P-01',
+      step,
+      outcome,
+      operator
+    });
+  }
+
+  async bindBms(batteryId: string, bmsUid: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+    
+    batt.bmsUid = bmsUid;
+    batt.status = BatteryStatus.PROVISIONING;
+    this.logStep(batt, 'Bind BMS', 'PASS', operator);
+    return batt;
+  }
+
+  async flashFirmware(batteryId: string, firmwareVersion: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate flashing time
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+    
+    batt.firmwareVersion = firmwareVersion;
+    this.logStep(batt, 'Flash Firmware', 'PASS', operator);
+    return batt;
+  }
+
+  async triggerCalibration(batteryId: string, profile: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate calib time
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+    
+    batt.calibrationProfile = profile;
+    batt.calibrationStatus = 'PASS';
+    this.logStep(batt, 'Calibration', 'PASS', operator);
+    return batt;
+  }
+
+  async injectSecurity(batteryId: string, operator: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+    
+    batt.cryptoProvisioned = true;
+    this.logStep(batt, 'Security Injection', 'PASS', operator);
+    return batt;
+  }
+
+  async runVerification(batteryId: string): Promise<{ handshake: boolean; telemetry: boolean; }> {
+    await new Promise(resolve => setTimeout(resolve, 1200));
+    return { handshake: true, telemetry: true };
+  }
+
+  async finalizeProvisioning(batteryId: string, result: 'PASS' | 'FAIL', operator: string, notes?: string): Promise<Battery> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
+    if (!batt) throw new Error("Not found");
+    
+    batt.provisioningStatus = result;
+    this.logStep(batt, 'Finalization', result, operator);
+    
+    if (result === 'PASS') {
+      // Typically moves to next stage, e.g. QA Testing
+      // But we leave status as PROVISIONING or move to QA_TESTING depending on workflow.
+      // Let's assume it stays in PROVISIONING until physically moved or EOL starts.
+    } else {
+      batt.reworkFlag = true;
+      if (notes) {
+        batt.notes.push({ 
+          id: Math.random().toString(), 
+          author: operator, 
+          role: 'Provisioning', 
+          text: `PROVISIONING FAILED: ${notes}`, 
+          timestamp: new Date().toISOString() 
+        });
+      }
+    }
+    
+    return batt;
+  }
+}
+
 class MockDashboardService implements IDashboardService {
   async getKPIs(): Promise<KPIData> {
     await new Promise(resolve => setTimeout(resolve, 400));
@@ -482,4 +591,5 @@ class MockDashboardService implements IDashboardService {
 // Export Singleton Instances
 export const batchService = new MockBatchService();
 export const batteryService = new MockBatteryService();
+export const provisioningService = new MockProvisioningService();
 export const dashboardService = new MockDashboardService();

@@ -14,6 +14,8 @@ import BatchDetail from './src/pages/BatchDetail';
 import Batteries from './src/pages/Batteries';
 import BatteryDetail from './src/pages/BatteryDetail';
 import Telemetry from './src/pages/Telemetry';
+import ProvisioningConsole from './src/pages/ProvisioningConsole';
+import ProvisioningStationSetup from './src/pages/ProvisioningStationSetup';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
 
@@ -94,11 +96,13 @@ function App() {
 
           <Route path="provisioning" element={
             <RouteGuard screen={ScreenId.PROVISIONING}>
-              <Placeholder 
-                title="BMS Provisioning" 
-                description="Securely inject credentials and bind BMS hardware to battery identity."
-                features={["Hardware Handshake", "Firmware Attestation", "Crypto Key Injection", "QA Checklist"]}
-              />
+              <ProvisioningConsole />
+            </RouteGuard>
+          } />
+
+          <Route path="provisioning/setup" element={
+            <RouteGuard screen={ScreenId.PROVISIONING_STATION_SETUP}>
+              <ProvisioningStationSetup />
             </RouteGuard>
           } />
 

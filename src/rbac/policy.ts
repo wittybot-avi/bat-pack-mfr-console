@@ -38,7 +38,6 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'X'],
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V', 'E'],
-    [ScreenId.PROVISIONING]: ['V', 'X'],
     [ScreenId.INVENTORY]: ['V'], // Can view inventory to find parts
   },
 
@@ -60,14 +59,16 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.SETTINGS]: ['V', 'M'],
     [ScreenId.RBAC_VIEW]: ['V', 'M'],
     [ScreenId.PROVISIONING]: ['V'],
+    [ScreenId.PROVISIONING_STATION_SETUP]: ['V', 'E', 'M'],
   },
 
   // C5: BMS/Firmware - Deep tech view
   C5: {
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.TELEMETRY]: ['V', 'X', 'M'],
+    [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V', 'E'], // Update firmware
-    [ScreenId.PROVISIONING]: ['V', 'E'],
+    [ScreenId.PROVISIONING]: ['V', 'C', 'E', 'X', 'A'],
   },
 
   // C6: Logistics - Move stuff

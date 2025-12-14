@@ -1,5 +1,25 @@
 # Patch Log
 
+## UI_PATCH_PROVISIONING_CONSOLE_STATION_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented "Station-Style" Provisioning Console with a multi-step workflow for scanning batteries, binding BMS, flashing firmware, simulated calibration, and security injection. Added `ProvisioningService` mock implementation.
+- **Files changed**:
+  - src/domain/types.ts (Added logs, calibration status)
+  - src/rbac/screenIds.ts (Added setup screen ID)
+  - src/rbac/policy.ts (Updated permissions for C4/C5/CS)
+  - src/services/api.ts (Implemented ProvisioningService)
+  - src/components/Layout.tsx (Added sidebar item for Setup)
+  - src/pages/ProvisioningConsole.tsx (New Stepper UI)
+  - src/pages/ProvisioningStationSetup.tsx (New Config Page)
+  - App.tsx (Routes)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as C5 (BMS) -> Access Provisioning -> Complete full flow (Scan -> Finalize).
+  - [ ] Verify Battery Detail page reflects new firmware/calibration status.
+  - [ ] Login as C4 (IT) -> Access Provisioning -> View only (buttons disabled or hidden actions).
+  - [ ] Login as C4 -> Access Station Setup -> Change Station ID -> Persists.
+  - [ ] Login as C2 (Mfg) -> Provisioning menu hidden or Access Denied.
+
 ## UI_PATCH_BATTERIES_ROUTE_WIRING_FIX_V1
 - **Date**: 2024-05-24
 - **Summary**: Connected the Batteries module routes to the actual implementation components (BatteriesListPage and BatteryDetailPage) instead of the Placeholder component.

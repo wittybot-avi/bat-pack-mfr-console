@@ -133,6 +133,16 @@ export interface BatteryNote {
   timestamp: string;
 }
 
+export interface ProvisioningLogEntry {
+  id: string;
+  timestamp: string;
+  stationId: string;
+  step: string;
+  outcome: 'PASS' | 'FAIL' | 'INFO';
+  operator: string;
+  details?: string;
+}
+
 export interface Battery {
   id: string; // Internal UUID
   
@@ -159,8 +169,10 @@ export interface Battery {
   bmsUid?: string;
   firmwareVersion?: string;
   calibrationProfile?: string;
+  calibrationStatus?: 'PENDING' | 'PASS' | 'FAIL';
   cryptoProvisioned: boolean;
   provisioningStatus: 'PENDING' | 'PASS' | 'FAIL';
+  provisioningLogs?: ProvisioningLogEntry[];
   
   // EOL / QA
   soh: number; // State of Health %
