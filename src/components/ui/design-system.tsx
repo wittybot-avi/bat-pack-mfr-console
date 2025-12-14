@@ -60,8 +60,8 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 
 // CARD
-export const Card = ({ className, children }: { className?: string; children: React.ReactNode }) => (
-  <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm bg-white dark:bg-slate-900", className)}>
+export const Card = ({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm bg-white dark:bg-slate-900", className)} {...props}>
     {children}
   </div>
 );

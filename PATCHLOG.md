@@ -1,5 +1,21 @@
 # Patch Log
 
+## UI_PATCH_OBSERVE_DASHBOARD_RBAC_V1
+- **Date**: 2024-05-24
+- **Summary**: Upgraded Dashboard to be role-aware using granular widget permissions. Implemented `DashboardMetricsService` to aggregate mock data from various services.
+- **Files changed**:
+  - src/rbac/screenIds.ts (Added DASHBOARD_* widget IDs)
+  - src/rbac/policy.ts (Updated policies for C1-C9)
+  - src/services/dashboardMetrics.ts (New service)
+  - src/pages/Dashboard.tsx (Refactored to modular widgets)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User (CS) -> Verify all widget sections (Prod, Quality, Log, Risk) visible.
+  - [ ] Login as C2 (Mfg) -> Verify Production charts visible, Logistics/Risk hidden.
+  - [ ] Login as C6 (Logistics) -> Verify Logistics widgets visible.
+  - [ ] Login as C9 (External) -> Verify minimal Executive Summary only.
+  - [ ] Check KPI card drilldowns navigate to correct lists.
+
 ## UI_PATCH_DISPATCH_NAV_FIX_V1
 - **Date**: 2024-05-24
 - **Summary**: Fixed navigation configuration to correctly display the "Dispatch" sidebar item. Mapped `DISPATCH_LIST` screen ID to the sidebar layout configuration.

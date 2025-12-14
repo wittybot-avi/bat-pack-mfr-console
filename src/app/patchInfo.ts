@@ -1,3 +1,3 @@
-export const APP_VERSION = '1.5.7';
-export const PATCH_LEVEL = 13;
-export const LAST_PATCH_ID = 'UI_PATCH_DISPATCH_NAV_FIX_V1';
+export const APP_VERSION = '1.6.0';
+export const PATCH_LEVEL = 14;
+export const LAST_PATCH_ID = 'UI_PATCH_OBSERVE_DASHBOARD_RBAC_V1';

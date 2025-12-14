@@ -1,12 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { dashboardService } from '../services/api';
-import { KPIData } from '../domain/types';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/design-system';
-import { Battery, Box, CheckCircle, Truck, AlertTriangle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
+import { useNavigate } from 'react-router-dom';
+import { dashboardMetricsService, DashboardMetrics } from '../services/dashboardMetrics';
+import { useAppStore } from '../lib/store';
+import { canView } from '../rbac/can';
+import { ScreenId } from '../rbac/screenIds';
+import { Card, CardContent, CardHeader, CardTitle, Badge } from '../components/ui/design-system';
+import { Battery, Box, CheckCircle, AlertTriangle, Truck, Layers, Activity, ShieldAlert, FileCheck, Package } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
-const KPICard = ({ title, value, icon: Icon, trend, color }: any) => (
-  <Card>
+// --- Widget Components ---
+
+const KPICard = ({ title, value, icon: Icon, trend, color, onClick }: any) => (
+  <Card className={`cursor-pointer hover:shadow-md transition-all border-l-4 border-l-${color}-500`} onClick={onClick}>
     <CardContent className="p-6">
       <div className="flex items-center justify-between space-y-0 pb-2">
         <p className="text-sm font-medium text-muted-foreground">{title}</p>
@@ -14,7 +19,7 @@ const KPICard = ({ title, value, icon: Icon, trend, color }: any) => (
       </div>
       <div className="flex items-center justify-between pt-2">
         <div className="text-2xl font-bold">{value}</div>
-        {trend && (
+        {trend !== undefined && (
           <div className={`text-xs ${trend > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
             {trend > 0 ? '+' : ''}{trend}%
           </div>
@@ -24,87 +29,262 @@ const KPICard = ({ title, value, icon: Icon, trend, color }: any) => (
   </Card>
 );
 
+const ProductionWidget = ({ data }: { data: DashboardMetrics['production'] }) => (
+  <Card className="col-span-1 lg:col-span-2">
+    <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Layers className="h-5 w-5" /> Production Output</CardTitle></CardHeader>
+    <CardContent>
+      <div className="h-[250px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data.outputTrend}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis fontSize={12} tickLine={false} axisLine={false} />
+            <Tooltip />
+            <Bar dataKey="built" fill="#4f46e5" radius={[4, 4, 0, 0]} name="Built" />
+            <Bar dataKey="target" fill="#e2e8f0" radius={[4, 4, 0, 0]} name="Target" />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-4 text-center text-sm">
+         <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded">
+            <span className="text-muted-foreground">WIP</span>
+            <div className="font-bold text-lg">{data.wipCount}</div>
+         </div>
+         <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded">
+            <span className="text-muted-foreground">Finished</span>
+            <div className="font-bold text-lg">{data.finishedCount}</div>
+         </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const ActiveBatchesWidget = ({ data }: { data: DashboardMetrics['production']['topActiveBatches'] }) => (
+    <Card>
+        <CardHeader><CardTitle className="text-lg">Active Batches</CardTitle></CardHeader>
+        <CardContent>
+            <div className="space-y-4">
+                {data.length === 0 ? <p className="text-sm text-muted-foreground">No active batches.</p> : 
+                 data.map(b => (
+                    <div key={b.id} className="flex items-center justify-between">
+                        <div>
+                            <div className="font-medium text-sm">{b.number}</div>
+                            <div className="text-xs text-muted-foreground">Progress</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-blue-500" style={{ width: `${b.progress}%`}} />
+                            </div>
+                            <span className="text-xs font-bold">{b.progress}%</span>
+                        </div>
+                    </div>
+                 ))
+                }
+            </div>
+        </CardContent>
+    </Card>
+);
+
+const QualityWidget = ({ data }: { data: DashboardMetrics['quality'] }) => (
+    <Card className="col-span-1 lg:col-span-2">
+        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Activity className="h-5 w-5" /> Quality Trends</CardTitle></CardHeader>
+        <CardContent>
+            <div className="h-[250px]">
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data.passFailTrend}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip />
+                        <Line type="monotone" dataKey="passed" stroke="#10b981" strokeWidth={2} dot={{r: 3}} name="Passed" />
+                        <Line type="monotone" dataKey="failed" stroke="#ef4444" strokeWidth={2} dot={{r: 3}} name="Failed" />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
+        </CardContent>
+    </Card>
+);
+
+const LogisticsWidget = ({ data }: { data: DashboardMetrics['logistics'] }) => (
+    <Card>
+        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Truck className="h-5 w-5" /> Logistics Status</CardTitle></CardHeader>
+        <CardContent className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 border rounded-md">
+                    <div className="text-xs text-muted-foreground uppercase">Available</div>
+                    <div className="text-2xl font-bold text-emerald-600">{data.inventoryAvailable}</div>
+                </div>
+                <div className="text-center p-3 border rounded-md">
+                    <div className="text-xs text-muted-foreground uppercase">In Transit</div>
+                    <div className="text-2xl font-bold text-blue-600">{data.inTransit}</div>
+                </div>
+            </div>
+            <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span>Reserved for Dispatch:</span> <span className="font-mono font-medium">{data.inventoryReserved}</span></div>
+                <div className="flex justify-between"><span>Ready to Ship Orders:</span> <span className="font-mono font-medium">{data.dispatchReady}</span></div>
+            </div>
+        </CardContent>
+    </Card>
+);
+
+const RiskWidget = ({ data }: { data: DashboardMetrics['risk'] }) => (
+    <Card>
+        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><ShieldAlert className="h-5 w-5" /> Risk & Compliance</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+             <div className="flex items-center justify-between p-3 bg-rose-50 dark:bg-rose-900/20 rounded border border-rose-100 dark:border-rose-900">
+                 <div className="flex items-center gap-2 text-rose-800 dark:text-rose-200">
+                     <AlertTriangle className="h-4 w-4" />
+                     <span className="text-sm font-medium">Quarantined</span>
+                 </div>
+                 <span className="font-bold text-lg text-rose-600">{data.quarantineCount}</span>
+             </div>
+             <div className="flex items-center justify-between p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-100 dark:border-amber-900">
+                 <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                     <Activity className="h-4 w-4" />
+                     <span className="text-sm font-medium">Provisioning Fail</span>
+                 </div>
+                 <span className="font-bold text-lg text-amber-600">{data.provisioningFailures}</span>
+             </div>
+             <div className="pt-2 border-t">
+                 <div className="flex justify-between text-sm items-center">
+                     <span className="text-muted-foreground">Digital Cert Coverage</span>
+                     <Badge variant={data.certCoveragePct > 90 ? 'success' : 'warning'}>{data.certCoveragePct}%</Badge>
+                 </div>
+                 <div className="w-full h-1.5 bg-slate-100 rounded-full mt-2 overflow-hidden">
+                     <div className="h-full bg-emerald-500" style={{ width: `${data.certCoveragePct}%`}} />
+                 </div>
+             </div>
+        </CardContent>
+    </Card>
+);
+
+// --- Main Page ---
+
 export default function Dashboard() {
-  const [kpi, setKpi] = useState<KPIData | null>(null);
+  const navigate = useNavigate();
+  const { currentCluster } = useAppStore();
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // RBAC Checks
+  const showExec = canView(currentCluster?.id || '', ScreenId.DASHBOARD_EXEC_SUMMARY);
+  const showProd = canView(currentCluster?.id || '', ScreenId.DASHBOARD_PRODUCTION);
+  const showQual = canView(currentCluster?.id || '', ScreenId.DASHBOARD_QUALITY);
+  const showLogs = canView(currentCluster?.id || '', ScreenId.DASHBOARD_LOGISTICS);
+  const showRisk = canView(currentCluster?.id || '', ScreenId.DASHBOARD_RISK_COMPLIANCE);
+  
+  const isExternal = currentCluster?.id === 'C9';
+
   useEffect(() => {
-    dashboardService.getKPIs().then(data => {
-      setKpi(data);
+    dashboardMetricsService.getMetrics().then(data => {
+      setMetrics(data);
       setLoading(false);
     });
   }, []);
 
-  const chartData = [
-    { name: 'Mon', passed: 40, failed: 2 },
-    { name: 'Tue', passed: 30, failed: 1 },
-    { name: 'Wed', passed: 45, failed: 3 },
-    { name: 'Thu', passed: 50, failed: 0 },
-    { name: 'Fri', passed: 60, failed: 2 },
-    { name: 'Sat', passed: 20, failed: 0 },
-    { name: 'Sun', passed: 10, failed: 0 },
-  ];
-
-  const healthData = [
-    { name: 'Batch A', soh: 98 },
-    { name: 'Batch B', soh: 97 },
-    { name: 'Batch C', soh: 94 },
-    { name: 'Batch D', soh: 99 },
-    { name: 'Batch E', soh: 96 },
-  ];
-
-  if (loading) return <div className="flex items-center justify-center h-full">Loading dashboard...</div>;
+  if (loading || !metrics) return <div className="flex items-center justify-center h-[50vh]">Loading dashboard...</div>;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">Overview of manufacturing operations and battery health.</p>
+        <p className="text-muted-foreground">Operational overview and key performance indicators.</p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <KPICard title="Total Batteries" value={kpi?.totalBatteries} icon={Battery} trend={12} color="indigo" />
-        <KPICard title="Active Batches" value={kpi?.activeBatches} icon={Box} trend={0} color="blue" />
-        <KPICard title="EOL Pass Rate" value={`${kpi?.eolPassRate}%`} icon={CheckCircle} trend={0.5} color="emerald" />
-        <KPICard title="Open Exceptions" value={kpi?.exceptions} icon={AlertTriangle} trend={-20} color="amber" />
-      </div>
+      {/* Executive Summary Row */}
+      {showExec && (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <KPICard 
+            title={isExternal ? "My Batteries" : "Total Batteries"} 
+            value={isExternal ? metrics.kpis.shippedCount : metrics.kpis.totalBatteries} 
+            icon={Battery} 
+            color="indigo"
+            onClick={() => navigate('/batteries')}
+          />
+          {!isExternal && (
+            <KPICard 
+                title="Active Batches" 
+                value={metrics.kpis.activeBatches} 
+                icon={Box} 
+                color="blue"
+                onClick={() => navigate('/batches')}
+            />
+          )}
+          <KPICard 
+            title="EOL Pass Rate" 
+            value={`${metrics.kpis.eolPassRate}%`} 
+            icon={CheckCircle} 
+            color="emerald" 
+            onClick={() => navigate('/eol')} // Safe nav
+          />
+          {!isExternal && (
+            <KPICard 
+                title="Open Exceptions" 
+                value={metrics.kpis.openExceptions} 
+                icon={AlertTriangle} 
+                color="amber"
+                onClick={() => navigate('/batteries')} // Ideally filtered
+            />
+          )}
+          {isExternal && (
+             <KPICard 
+                title="Certified Units" 
+                value={`${metrics.risk.certCoveragePct}%`} 
+                icon={FileCheck} 
+                color="teal"
+            />
+          )}
+        </div>
+      )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>EOL Production Output</CardTitle>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                <YAxis fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                <Tooltip cursor={{fill: 'transparent'}} />
-                <Bar dataKey="passed" fill="#4f46e5" radius={[4, 4, 0, 0]} name="Passed" />
-                <Bar dataKey="failed" fill="#ef4444" radius={[4, 4, 0, 0]} name="Failed" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Main Widgets Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Average Batch SOH</CardTitle>
-          </CardHeader>
-          <CardContent>
-             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={healthData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="name" fontSize={12} />
-                <YAxis domain={[90, 100]} fontSize={12} />
-                <Tooltip />
-                <Line type="monotone" dataKey="soh" stroke="#10b981" strokeWidth={2} dot={{r: 4}} />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+        {/* Production Column */}
+        {showProd && (
+            <div className="col-span-1 lg:col-span-2 grid grid-cols-1 gap-6">
+                <ProductionWidget data={metrics.production} />
+            </div>
+        )}
+        
+        {/* Side Column for Lists */}
+        {showProd && (
+            <div className="col-span-1">
+                <ActiveBatchesWidget data={metrics.production.topActiveBatches} />
+            </div>
+        )}
+
+        {/* Quality Section */}
+        {showQual && (
+             <QualityWidget data={metrics.quality} />
+        )}
+
+        {/* Logistics & Risk Column Group */}
+        {(showLogs || showRisk) && (
+            <div className="col-span-1 lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {showLogs && <LogisticsWidget data={metrics.logistics} />}
+                {showRisk && <RiskWidget data={metrics.risk} />}
+                {/* Fallback or additional widget slot */}
+                {showLogs && !showRisk && (
+                    <Card className="flex items-center justify-center text-muted-foreground p-6 border-dashed">
+                        <div className="text-center">
+                            <Package className="h-10 w-10 mx-auto mb-2 opacity-20" />
+                            <p>Upcoming Shipments</p>
+                        </div>
+                    </Card>
+                )}
+            </div>
+        )}
+
       </div>
+      
+      {!showExec && !showProd && !showQual && !showLogs && !showRisk && (
+          <div className="p-10 text-center text-muted-foreground border rounded bg-slate-50 dark:bg-slate-900">
+              <ShieldAlert className="h-10 w-10 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium">Access Restricted</h3>
+              <p>Your role does not have permission to view dashboard widgets.</p>
+          </div>
+      )}
     </div>
   );
 }

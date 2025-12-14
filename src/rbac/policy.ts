@@ -14,6 +14,11 @@ export const RBAC_POLICY: PolicyMap = {
   // C1: Executive - View All, minimal edit
   C1: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
+    [ScreenId.DASHBOARD_PRODUCTION]: ['V'],
+    [ScreenId.DASHBOARD_QUALITY]: ['V'],
+    [ScreenId.DASHBOARD_LOGISTICS]: ['V'],
+    [ScreenId.DASHBOARD_RISK_COMPLIANCE]: ['V'],
     [ScreenId.TELEMETRY]: ['V'],
     [ScreenId.ANALYTICS]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V'],
@@ -35,6 +40,8 @@ export const RBAC_POLICY: PolicyMap = {
   // C2: Manufacturing - Shopfloor execution
   C2: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
+    [ScreenId.DASHBOARD_PRODUCTION]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V', 'C', 'E', 'X'],
     [ScreenId.BATCHES_CREATE]: ['C'],
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'X'],
@@ -48,6 +55,9 @@ export const RBAC_POLICY: PolicyMap = {
   // C3: QA - Testing & Approval
   C3: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
+    [ScreenId.DASHBOARD_QUALITY]: ['V'],
+    [ScreenId.DASHBOARD_RISK_COMPLIANCE]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V'],
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'A'], // QA Edit/Approve
     [ScreenId.BATTERIES_LIST]: ['V'],
@@ -64,6 +74,8 @@ export const RBAC_POLICY: PolicyMap = {
   // C4: Engineering/IT - Admin & Config
   C4: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
+    [ScreenId.DASHBOARD_PRODUCTION]: ['V'],
     [ScreenId.TELEMETRY]: ['V'],
     [ScreenId.SETTINGS]: ['V', 'M'],
     [ScreenId.RBAC_VIEW]: ['V', 'M'],
@@ -77,6 +89,8 @@ export const RBAC_POLICY: PolicyMap = {
   // C5: BMS/Firmware - Deep tech view
   C5: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
+    [ScreenId.DASHBOARD_PRODUCTION]: ['V'],
     [ScreenId.TELEMETRY]: ['V', 'X', 'M'],
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V', 'E'], // Update firmware
@@ -87,6 +101,8 @@ export const RBAC_POLICY: PolicyMap = {
   // C6: Logistics - Move stuff
   C6: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
+    [ScreenId.DASHBOARD_LOGISTICS]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V'], // Added access
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'X'], // Edit Suppliers, Export
     [ScreenId.INVENTORY]: ['V', 'C', 'E', 'M', 'X'], // Full inventory control
@@ -100,6 +116,9 @@ export const RBAC_POLICY: PolicyMap = {
   // C7: Warranty
   C7: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
+    [ScreenId.DASHBOARD_RISK_COMPLIANCE]: ['V'],
+    [ScreenId.DASHBOARD_QUALITY]: ['V'],
     [ScreenId.WARRANTY]: ['V', 'C', 'E', 'A'],
     [ScreenId.BATTERIES_DETAIL]: ['V'], // Trace history
     [ScreenId.TELEMETRY]: ['V'], // Debug
@@ -113,6 +132,8 @@ export const RBAC_POLICY: PolicyMap = {
   // C8: Compliance
   C8: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
+    [ScreenId.DASHBOARD_RISK_COMPLIANCE]: ['V'],
     [ScreenId.COMPLIANCE]: ['V', 'C', 'A', 'M'],
     [ScreenId.CUSTODY]: ['V'], // Audit custody
     [ScreenId.RBAC_VIEW]: ['V'], // Audit access
@@ -125,6 +146,7 @@ export const RBAC_POLICY: PolicyMap = {
   // C9: External
   C9: {
     [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'], // Limited summary only
     [ScreenId.BATCHES_LIST]: ['V'], // Limited View
     [ScreenId.BATCHES_DETAIL]: ['V', 'X'], // Limited Detail + Export Certs
     [ScreenId.DISPATCH]: ['V'], // Track my order
