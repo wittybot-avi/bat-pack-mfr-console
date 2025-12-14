@@ -14,7 +14,7 @@ import BatchDetail from './src/pages/BatchDetail';
 import Batteries from './src/pages/Batteries';
 import BatteryDetail from './src/pages/BatteryDetail';
 import Telemetry from './src/pages/Telemetry';
-import Analytics from './src/pages/Analytics'; // Imported
+import Analytics from './src/pages/Analytics';
 import ProvisioningConsole from './src/pages/ProvisioningConsole';
 import ProvisioningStationSetup from './src/pages/ProvisioningStationSetup';
 import EolStation from './src/pages/EolStation';
@@ -24,6 +24,7 @@ import DispatchList from './src/pages/DispatchList';
 import DispatchDetail from './src/pages/DispatchDetail';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
+import Compliance from './src/pages/Compliance'; // Updated Import
 
 // Toast Component
 const ToastContainer = () => {
@@ -164,11 +165,7 @@ function App() {
 
           <Route path="compliance" element={
             <RouteGuard screen={ScreenId.COMPLIANCE}>
-              <Placeholder 
-                title="Compliance & Digital Record" 
-                description="EU Battery Passport / DPP compliance data aggregation and export."
-                features={["DPP Data Model", "Sustainability Metrics", "Recycling Info", "Regulatory Export"]}
-              />
+              <Compliance />
             </RouteGuard>
           } />
           

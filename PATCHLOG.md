@@ -1,5 +1,23 @@
 # Patch Log
 
+## UI_PATCH_GOVERN_COMPLIANCE_SUITE_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented full Compliance module with RBAC-gated tabs (Overview, Checks, Findings, Evidence). Added rules engine, scoring logic, and findings management with local persistence.
+- **Files changed**:
+  - src/rbac/screenIds.ts (Added COMPLIANCE_* IDs)
+  - src/rbac/policy.ts (Updated policies for C8, C1, C3, C6, etc.)
+  - src/services/complianceService.ts (New service for rules/evidence)
+  - src/services/findingsStore.ts (New service for findings)
+  - src/pages/Compliance.tsx (New tabbed page)
+  - App.tsx (Updated route)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User (CS) -> Verify all Compliance tabs visible.
+  - [ ] Login as C8 (Compliance) -> Create a finding, close it. Generate Evidence Pack.
+  - [ ] Login as C1 (Exec) -> Verify read-only access to Overview and Findings.
+  - [ ] Login as C6 (Logistics) -> Verify only Checks/Audit tabs visible (checks filtered).
+  - [ ] Generate Evidence Pack for a known battery (e.g., batt-0) and download JSON.
+
 ## UI_PATCH_OBSERVE_ANALYTICS_RENDER_FIX_V1
 - **Date**: 2024-05-24
 - **Summary**: Fixed wiring of Analytics page in router to replace placeholder. Improved tab resilience on Analytics page.

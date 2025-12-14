@@ -40,6 +40,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.EOL_QA_STATION]: ['V'],
     [ScreenId.WARRANTY]: ['V'],
     [ScreenId.COMPLIANCE]: ['V'],
+    [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_FINDINGS_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_EXPORT]: ['X'],
     [ScreenId.CUSTODY]: ['V'],
     [ScreenId.SETTINGS]: ['V'],
     [ScreenId.RBAC_VIEW]: ['V'],
@@ -61,9 +65,13 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'X'],
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V', 'E'],
+    [ScreenId.PROVISIONING]: ['V'], // Read only access to console to see status
     [ScreenId.INVENTORY]: ['V'], // Can view inventory to find parts
     [ScreenId.DISPATCH_LIST]: ['V'],
     [ScreenId.DISPATCH_DETAIL]: ['V'],
+    [ScreenId.COMPLIANCE]: ['V'],
+    [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
   },
 
   // C3: QA - Testing & Approval
@@ -93,6 +101,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.INVENTORY]: ['V', 'E'], // QA can Quarantine/Release
     [ScreenId.DISPATCH_LIST]: ['V'], // QA audits shipments
     [ScreenId.DISPATCH_DETAIL]: ['V'],
+    [ScreenId.COMPLIANCE]: ['V'],
+    [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_FINDINGS_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_AUDIT_TRAIL_TAB]: ['V'],
   },
 
   // C4: Engineering/IT - Admin & Config
@@ -145,6 +157,9 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DISPATCH_DETAIL]: ['V', 'C', 'E', 'X', 'A'],
     [ScreenId.CUSTODY]: ['V', 'C', 'A'],
     [ScreenId.BATTERIES_LIST]: ['V'],
+    [ScreenId.COMPLIANCE]: ['V'],
+    [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'], // Logistics checks
+    [ScreenId.COMPLIANCE_AUDIT_TRAIL_TAB]: ['V'],
   },
 
   // C7: Warranty
@@ -167,6 +182,12 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.EOL_QA_STATION]: ['V'], // Check test data
     [ScreenId.INVENTORY]: ['V'],
     [ScreenId.DISPATCH_LIST]: ['V'],
+    [ScreenId.COMPLIANCE]: ['V'],
+    [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_FINDINGS_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_AUDIT_TRAIL_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_EVIDENCE_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_EXPORT]: ['X'],
   },
 
   // C8: Compliance
@@ -181,6 +202,13 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.ANALYTICS_REPORTS_TAB]: ['V'],
     [ScreenId.ANALYTICS_EXPORT]: ['X'],
     [ScreenId.COMPLIANCE]: ['V', 'C', 'A', 'M'],
+    [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_FINDINGS_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_EVIDENCE_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_AUDIT_TRAIL_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_EXPORT]: ['X'],
+    [ScreenId.COMPLIANCE_FINDINGS_EDIT]: ['C', 'E', 'X'],
     [ScreenId.CUSTODY]: ['V'], // Audit custody
     [ScreenId.RBAC_VIEW]: ['V'], // Audit access
     [ScreenId.BATCHES_LIST]: ['V'], // Audit batches
