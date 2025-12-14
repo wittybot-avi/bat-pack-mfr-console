@@ -1,5 +1,51 @@
 # Patch Log
 
+## UI_PATCH_BATTERIES_ROUTE_WIRING_FIX_V1
+- **Date**: 2024-05-24
+- **Summary**: Connected the Batteries module routes to the actual implementation components (BatteriesListPage and BatteryDetailPage) instead of the Placeholder component.
+- **Files changed**:
+  - App.tsx (Imported new pages, updated /batteries and /batteries/:id routes)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Navigate to "Batteries" via sidebar -> Should see List UI (Table), not "Coming Features".
+  - [ ] Click a battery row -> Should navigate to Detail UI.
+  - [ ] Direct link /batteries/batt-1 works.
+
+## UI_PATCH_BATTERIES_LIST_AND_DETAIL_V2
+- **Date**: 2024-05-24
+- **Summary**: Enhanced Batteries module to V2 with clickable Batch linkage, direct row actions for operations (Provision, Dispatch, Export), and stricter RBAC visibility for external (C9) users on the list view.
+- **Files changed**:
+  - src/pages/Batteries.tsx (Added Batch Link, Action Icons, C9 column rules)
+  - src/pages/BatteryDetail.tsx (Added clickable Batch ID)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as Super User -> Click Batch ID in Battery List -> Navigates to Batch Detail.
+  - [ ] Login as C5 (BMS) -> See Provision icon in row -> Click triggers provision.
+  - [ ] Login as C6 (Logistics) -> See Dispatch icon in row -> Click triggers dispatch prompt.
+  - [ ] Login as C9 (External) -> Verify Provisioning/Internal Status columns are hidden.
+  - [ ] Login as C9 -> Verify no action icons except View/Export are visible.
+- **Rollback instructions**: Restore folder snapshot or revert commits associated with UI_PATCH_BATTERIES_LIST_AND_DETAIL_V2.
+
+## UI_PATCH_BATTERIES_MODULE_RBAC_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented full Batteries module with comprehensive domain model, scan-first List page, and detailed Tabbed View. Enforced strict section-level RBAC for Assembly, Provisioning, QA, and Logistics data.
+- **Files changed**:
+  - src/domain/types.ts (Added lineId, stationId)
+  - src/services/api.ts (Mock service expansion)
+  - src/components/ui/design-system.tsx (Added Tooltip)
+  - src/pages/Batteries.tsx (List View)
+  - src/pages/BatteryDetail.tsx (Detail View with Action Panel)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as CS (Super User) -> Verify all tabs and actions visible.
+  - [ ] Login as C2 (Mfg) -> Can see Assembly tab, can click "Mark Rework". Cannot see "Upload EOL".
+  - [ ] Login as C3 (QA) -> Can see QA tab, can "Upload EOL" and "Approve".
+  - [ ] Login as C5 (BMS) -> Can see Provisioning tab, can "Provision BMS".
+  - [ ] Login as C6 (Logistics) -> Can see Logistics tab, can "Dispatch".
+  - [ ] Login as C9 (External) -> Only sees Overview + QA tabs. No restricted actions.
+  - [ ] Verify "Register" modal on list page works for C2.
+- **Rollback instructions**: Restore folder snapshot or revert commits associated with UI_PATCH_BATTERIES_MODULE_RBAC_V1.
+
 ## UI_PATCH_RBAC_FIX_BATCH_VISIBILITY_C6_C9_V1
 - **Date**: 2024-05-23
 - **Summary**: Fixed RBAC policy to allow C6 (Logistics) and C9 (External) access to Batches module. Added BATCHES_DETAIL screen ID for granular control. Restricted tabs and actions for C9 (View Only, limited sections).

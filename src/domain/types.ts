@@ -20,7 +20,8 @@ export enum BatteryStatus {
   IN_TRANSIT = 'In Transit',
   DEPLOYED = 'Deployed',
   RMA = 'RMA',
-  RETIRED = 'Retired'
+  RETIRED = 'Retired',
+  SCRAPPED = 'Scrapped'
 }
 
 export enum UserRole {
@@ -115,17 +116,69 @@ export interface Batch {
   notes: BatchNote[];
 }
 
+export interface AssemblyEvent {
+  id: string;
+  stationId: string;
+  operatorId: string;
+  eventType: 'Assembly Start' | 'Cell Stacking' | 'Welding' | 'BMS Install' | 'Housing Close' | 'Rework';
+  timestamp: string;
+  details?: string;
+}
+
+export interface BatteryNote {
+  id: string;
+  author: string;
+  role: string;
+  text: string;
+  timestamp: string;
+}
+
 export interface Battery {
   id: string; // Internal UUID
+  
+  // Identity
   serialNumber: string; // Human readable
   batchId: string;
+  qrCode: string;
+  manufacturedAt?: string;
+  plantId: string;
+  lineId?: string;
+  stationId?: string;
+  
+  // Status
   status: BatteryStatus;
-  firmwareVersion: string;
+  location: string;
+  lastSeen: string;
+  
+  // Assembly
+  assemblyEvents: AssemblyEvent[];
+  reworkFlag: boolean;
+  scrapFlag: boolean;
+  
+  // Provisioning & BMS
+  bmsUid?: string;
+  firmwareVersion?: string;
+  calibrationProfile?: string;
+  cryptoProvisioned: boolean;
+  provisioningStatus: 'PENDING' | 'PASS' | 'FAIL';
+  
+  // EOL / QA
   soh: number; // State of Health %
   soc: number; // State of Charge %
-  location: string;
-  manufacturingDate: string;
-  lastSeen: string;
+  voltage?: number;
+  capacityAh?: number;
+  internalResistance?: number;
+  thermalResult?: 'PASS' | 'FAIL';
+  eolResult?: 'PASS' | 'FAIL';
+  qaApproverId?: string;
+  certificateRef?: string;
+  
+  // Lifecycle
+  dispatchStatus?: 'Pending' | 'Ready' | 'Shipped';
+  custodyStatus?: string;
+  returnReason?: string;
+  
+  notes: BatteryNote[];
 }
 
 export interface TelemetryPoint {

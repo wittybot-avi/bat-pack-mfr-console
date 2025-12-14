@@ -11,6 +11,8 @@ import Login from './src/pages/Login';
 import Dashboard from './src/pages/Dashboard';
 import Batches from './src/pages/Batches';
 import BatchDetail from './src/pages/BatchDetail';
+import Batteries from './src/pages/Batteries';
+import BatteryDetail from './src/pages/BatteryDetail';
 import Telemetry from './src/pages/Telemetry';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
@@ -80,11 +82,13 @@ function App() {
 
           <Route path="batteries" element={
             <RouteGuard screen={ScreenId.BATTERIES_LIST}>
-              <Placeholder 
-                title="Battery Inventory" 
-                description="Central repository of all battery packs, with lifecycle tracking from assembly to retirement."
-                features={["Serial Number Search", "SOH/SOC Overview", "Firmware Version", "History Log"]}
-              />
+              <Batteries />
+            </RouteGuard>
+          } />
+
+          <Route path="batteries/:id" element={
+            <RouteGuard screen={ScreenId.BATTERIES_DETAIL}>
+              <BatteryDetail />
             </RouteGuard>
           } />
 

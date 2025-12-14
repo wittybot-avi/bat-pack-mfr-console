@@ -7,6 +7,18 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// TOOLTIP
+export const Tooltip = ({ content, children }: { content: string, children: React.ReactNode }) => {
+  return (
+    <div className="group relative inline-block w-full">
+      {children}
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block px-2 py-1 bg-black text-white text-xs rounded whitespace-nowrap z-50 pointer-events-none">
+        {content}
+      </div>
+    </div>
+  );
+};
+
 // BUTTON
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';

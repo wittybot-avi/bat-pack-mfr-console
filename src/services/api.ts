@@ -1,4 +1,4 @@
-import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote } from '../domain/types';
+import { Batch, BatchStatus, Battery, BatteryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent } from '../domain/types';
 
 /**
  * SERVICE INTERFACES
@@ -23,10 +23,18 @@ export interface IBatchService {
 }
 
 export interface IBatteryService {
-  getBatteries(filter?: string): Promise<Battery[]>;
+  getBatteries(filter?: any): Promise<Battery[]>;
   getBatteryById(id: string): Promise<Battery | undefined>;
   getBatteryTelemetry(id: string): Promise<TelemetryPoint[]>;
-  registerBattery(battery: Partial<Battery>): Promise<Battery>;
+  
+  // Lifecycle Actions
+  registerBatteries(batchId: string, quantity: number, user: string): Promise<Battery[]>;
+  addAssemblyEvent(id: string, event: Partial<AssemblyEvent>): Promise<Battery>;
+  provisionBattery(id: string, data: { bmsUid: string, firmware: string, profile: string }): Promise<Battery>;
+  uploadEOLResult(id: string, data: { soh: number, capacity: number, resistance: number, result: 'PASS'|'FAIL' }): Promise<Battery>;
+  approveBattery(id: string, user: string): Promise<Battery>;
+  dispatchBattery(id: string, location: string): Promise<Battery>;
+  flagRework(id: string, notes: string, user: string): Promise<Battery>;
 }
 
 export interface IDashboardService {
@@ -95,19 +103,49 @@ const generateBatches = (count: number): Batch[] => {
 };
 
 const MOCK_BATCHES = generateBatches(20);
-// Add a few more supplier lots for demo
-const MOCK_BATTERIES: Battery[] = Array.from({ length: 150 }).map((_, i) => ({
-    id: `batt-${i}`,
-    serialNumber: `SN-${(100000 + i).toString(16).toUpperCase()}`,
-    batchId: `batch-${Math.floor(i / 20) + 1}`,
-    status: [BatteryStatus.ASSEMBLY, BatteryStatus.QA_TESTING, BatteryStatus.IN_INVENTORY, BatteryStatus.DEPLOYED][Math.floor(Math.random() * 4)],
-    firmwareVersion: 'v2.1.4',
-    soh: 95 + Math.random() * 5,
-    soc: 30 + Math.random() * 60,
-    location: i % 3 === 0 ? 'Warehouse A, Zone 2' : 'Assembly Line 1',
-    manufacturingDate: new Date(Date.now() - Math.random() * 1000000000).toISOString(),
-    lastSeen: new Date().toISOString()
-  }));
+
+const generateBatteries = (count: number): Battery[] => {
+    return Array.from({ length: count }).map((_, i) => {
+        const batchId = `batch-${Math.floor(i / 10) + 1}`;
+        const status = [BatteryStatus.ASSEMBLY, BatteryStatus.PROVISIONING, BatteryStatus.QA_TESTING, BatteryStatus.IN_INVENTORY, BatteryStatus.DEPLOYED][Math.floor(Math.random() * 5)];
+        
+        return {
+            id: `batt-${i}`,
+            serialNumber: `SN-${(100000 + i).toString(16).toUpperCase()}`,
+            batchId: batchId,
+            qrCode: `QR-${100000+i}`,
+            plantId: 'PLANT-01',
+            lineId: 'L1',
+            stationId: 'ST-04',
+            status: status as BatteryStatus,
+            location: status === BatteryStatus.DEPLOYED ? 'Customer Site' : 'Warehouse A, Zone 2',
+            lastSeen: new Date().toISOString(),
+            manufacturedAt: new Date(Date.now() - Math.random() * 1000000000).toISOString(),
+            
+            assemblyEvents: [
+                { id: `evt-${i}-1`, stationId: 'ST-01', operatorId: 'OP-55', eventType: 'Assembly Start', timestamp: new Date(Date.now() - 86400000).toISOString() }
+            ],
+            reworkFlag: Math.random() > 0.9,
+            scrapFlag: false,
+            
+            provisioningStatus: status === BatteryStatus.ASSEMBLY ? 'PENDING' : 'PASS',
+            cryptoProvisioned: status !== BatteryStatus.ASSEMBLY,
+            firmwareVersion: status === BatteryStatus.ASSEMBLY ? undefined : 'v2.1.4',
+            bmsUid: status === BatteryStatus.ASSEMBLY ? undefined : `BMS-${(5000+i)}`,
+            
+            soh: 95 + Math.random() * 5,
+            soc: 30 + Math.random() * 60,
+            voltage: 48 + Math.random(),
+            eolResult: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? 'PASS' : undefined,
+            certificateRef: (status === BatteryStatus.IN_INVENTORY || status === BatteryStatus.DEPLOYED) ? `CERT-${i}` : undefined,
+            
+            notes: []
+        };
+    });
+};
+
+// Global mutable store for mocks
+let MOCK_BATTERIES = generateBatteries(150);
 
 /**
  * MOCK IMPLEMENTATIONS
@@ -269,16 +307,26 @@ class MockBatchService implements IBatchService {
 }
 
 class MockBatteryService implements IBatteryService {
-  async getBatteries(filter?: string): Promise<Battery[]> {
+  async getBatteries(filters?: any): Promise<Battery[]> {
     await new Promise(resolve => setTimeout(resolve, 500));
-    if (!filter) return MOCK_BATTERIES;
-    return MOCK_BATTERIES.filter(b => 
-      b.serialNumber.toLowerCase().includes(filter.toLowerCase()) || 
-      b.status.toLowerCase().includes(filter.toLowerCase())
-    );
+    let res = [...MOCK_BATTERIES];
+    
+    if (filters?.search) {
+        const term = filters.search.toLowerCase();
+        res = res.filter(b => b.serialNumber.toLowerCase().includes(term) || b.batchId.toLowerCase().includes(term));
+    }
+    if (filters?.status && filters.status !== 'All') {
+        res = res.filter(b => b.status === filters.status);
+    }
+    if (filters?.eolResult && filters.eolResult !== 'All') {
+        res = res.filter(b => b.eolResult === filters.eolResult);
+    }
+    
+    return res;
   }
 
   async getBatteryById(id: string): Promise<Battery | undefined> {
+    await new Promise(resolve => setTimeout(resolve, 300));
     return MOCK_BATTERIES.find(b => b.id === id);
   }
 
@@ -296,10 +344,118 @@ class MockBatteryService implements IBatteryService {
     }));
   }
   
-  async registerBattery(data: Partial<Battery>): Promise<Battery> {
-    await new Promise(resolve => setTimeout(resolve, 800));
-    // Implementation stub
-    return MOCK_BATTERIES[0];
+  async registerBatteries(batchId: string, quantity: number, user: string): Promise<Battery[]> {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    const newBatteries: Battery[] = [];
+    const startIndex = MOCK_BATTERIES.length;
+    
+    for (let i = 0; i < quantity; i++) {
+        const idx = startIndex + i;
+        newBatteries.push({
+            id: `batt-${idx}`,
+            serialNumber: `SN-${(100000 + idx).toString(16).toUpperCase()}`,
+            batchId,
+            qrCode: `QR-${100000+idx}`,
+            plantId: 'PLANT-01',
+            status: BatteryStatus.ASSEMBLY,
+            location: 'Assembly Line 1',
+            lastSeen: new Date().toISOString(),
+            assemblyEvents: [],
+            reworkFlag: false,
+            scrapFlag: false,
+            provisioningStatus: 'PENDING',
+            cryptoProvisioned: false,
+            soh: 100,
+            soc: 0,
+            notes: [{ id: Math.random().toString(), author: user, role: 'Creator', text: 'Registered', timestamp: new Date().toISOString() }]
+        });
+    }
+    
+    MOCK_BATTERIES = [...newBatteries, ...MOCK_BATTERIES];
+    return newBatteries;
+  }
+
+  async addAssemblyEvent(id: string, event: Partial<AssemblyEvent>): Promise<Battery> {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const batt = MOCK_BATTERIES.find(b => b.id === id);
+      if (!batt) throw new Error("Not found");
+      
+      batt.assemblyEvents.push({
+          id: Math.random().toString(),
+          stationId: 'ST-XX',
+          operatorId: 'OP-XX',
+          eventType: 'Cell Stacking',
+          timestamp: new Date().toISOString(),
+          ...event
+      } as AssemblyEvent);
+      
+      return batt;
+  }
+
+  async provisionBattery(id: string, data: { bmsUid: string, firmware: string, profile: string }): Promise<Battery> {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const batt = MOCK_BATTERIES.find(b => b.id === id);
+      if (!batt) throw new Error("Not found");
+      
+      batt.status = BatteryStatus.PROVISIONING;
+      batt.bmsUid = data.bmsUid;
+      batt.firmwareVersion = data.firmware;
+      batt.calibrationProfile = data.profile;
+      batt.provisioningStatus = 'PASS';
+      batt.cryptoProvisioned = true;
+      
+      return batt;
+  }
+
+  async uploadEOLResult(id: string, data: { soh: number, capacity: number, resistance: number, result: 'PASS'|'FAIL' }): Promise<Battery> {
+      await new Promise(resolve => setTimeout(resolve, 800));
+      const batt = MOCK_BATTERIES.find(b => b.id === id);
+      if (!batt) throw new Error("Not found");
+
+      batt.status = BatteryStatus.QA_TESTING;
+      batt.soh = data.soh;
+      batt.capacityAh = data.capacity;
+      batt.internalResistance = data.resistance;
+      batt.eolResult = data.result;
+      
+      return batt;
+  }
+
+  async approveBattery(id: string, user: string): Promise<Battery> {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const batt = MOCK_BATTERIES.find(b => b.id === id);
+      if (!batt) throw new Error("Not found");
+      
+      if (batt.eolResult !== 'PASS') throw new Error("Cannot approve battery that hasn't passed EOL");
+      
+      batt.status = BatteryStatus.IN_INVENTORY;
+      batt.qaApproverId = user;
+      batt.certificateRef = `CERT-${Math.random().toString(36).substring(7).toUpperCase()}`;
+      
+      return batt;
+  }
+
+  async dispatchBattery(id: string, location: string): Promise<Battery> {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const batt = MOCK_BATTERIES.find(b => b.id === id);
+      if (!batt) throw new Error("Not found");
+      
+      batt.status = BatteryStatus.IN_TRANSIT;
+      batt.dispatchStatus = 'Shipped';
+      batt.location = location;
+      
+      return batt;
+  }
+  
+  async flagRework(id: string, notes: string, user: string): Promise<Battery> {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      const batt = MOCK_BATTERIES.find(b => b.id === id);
+      if (!batt) throw new Error("Not found");
+      
+      batt.reworkFlag = true;
+      batt.notes.push({ id: Math.random().toString(), author: user, role: 'Operator', text: `REWORK FLAGGED: ${notes}`, timestamp: new Date().toISOString() });
+      
+      return batt;
   }
 }
 
