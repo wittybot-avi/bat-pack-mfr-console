@@ -39,6 +39,9 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DISPATCH_DETAIL]: ['V'],
     [ScreenId.EOL_QA_STATION]: ['V'],
     [ScreenId.WARRANTY]: ['V'],
+    [ScreenId.WARRANTY_OVERVIEW]: ['V'],
+    [ScreenId.WARRANTY_CLAIMS_LIST]: ['V'],
+    [ScreenId.WARRANTY_CLAIM_DETAIL]: ['V'],
     [ScreenId.COMPLIANCE]: ['V'],
     [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
     [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
@@ -79,6 +82,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.COMPLIANCE]: ['V'],
     [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
     [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
+    [ScreenId.WARRANTY]: ['V'],
+    [ScreenId.WARRANTY_CLAIMS_LIST]: ['V'],
+    [ScreenId.WARRANTY_CLAIM_DETAIL]: ['V'],
+    [ScreenId.WARRANTY_UPDATE_CLAIM_INTERNAL]: ['E'], // Add comments/evidence
   },
 
   // C3: QA - Testing & Approval
@@ -112,6 +119,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
     [ScreenId.COMPLIANCE_FINDINGS_TAB]: ['V'],
     [ScreenId.COMPLIANCE_AUDIT_TRAIL_TAB]: ['V'],
+    [ScreenId.WARRANTY]: ['V'],
+    [ScreenId.WARRANTY_CLAIMS_LIST]: ['V'],
+    [ScreenId.WARRANTY_CLAIM_DETAIL]: ['V'],
+    [ScreenId.WARRANTY_UPDATE_CLAIM_INTERNAL]: ['E'], // Add comments/evidence
   },
 
   // C4: Engineering/IT - Admin & Config
@@ -170,6 +181,9 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.COMPLIANCE]: ['V'],
     [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'], // Logistics checks
     [ScreenId.COMPLIANCE_AUDIT_TRAIL_TAB]: ['V'],
+    [ScreenId.WARRANTY]: ['V'],
+    [ScreenId.WARRANTY_CLAIMS_LIST]: ['V'],
+    [ScreenId.WARRANTY_CLAIM_DETAIL]: ['V'],
   },
 
   // C7: Warranty
@@ -185,7 +199,15 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.ANALYTICS_QUALITY_TAB]: ['V'],
     [ScreenId.ANALYTICS_LOCATION_TAB]: ['V'],
     [ScreenId.ANALYTICS_REPORTS_TAB]: ['V'],
-    [ScreenId.WARRANTY]: ['V', 'C', 'E', 'A'],
+    [ScreenId.WARRANTY]: ['V', 'C', 'E', 'A', 'X', 'M'], // Full Warranty Control
+    [ScreenId.WARRANTY_OVERVIEW]: ['V'],
+    [ScreenId.WARRANTY_CLAIMS_LIST]: ['V'],
+    [ScreenId.WARRANTY_CLAIM_DETAIL]: ['V', 'E'],
+    [ScreenId.WARRANTY_CREATE_CLAIM_INTERNAL]: ['C'],
+    [ScreenId.WARRANTY_UPDATE_CLAIM_INTERNAL]: ['E'],
+    [ScreenId.WARRANTY_DECIDE_DISPOSITION]: ['A'],
+    [ScreenId.WARRANTY_CLOSE_CLAIM]: ['X'],
+    [ScreenId.WARRANTY_EXPORT]: ['X'],
     [ScreenId.BATTERIES_DETAIL]: ['V'], // Trace history
     [ScreenId.BATCHES_LIST]: ['V'], // Reference checks
     [ScreenId.BATCHES_DETAIL]: ['V'],
@@ -242,6 +264,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATCHES_DETAIL]: ['V'],
     [ScreenId.INVENTORY]: ['V'],
     [ScreenId.DISPATCH_LIST]: ['V'],
+    [ScreenId.WARRANTY]: ['V'],
+    [ScreenId.WARRANTY_CLAIMS_LIST]: ['V'],
+    [ScreenId.WARRANTY_CLAIM_DETAIL]: ['V'],
+    [ScreenId.WARRANTY_EXPORT]: ['X'],
   },
 
   // C9: External
@@ -257,5 +283,9 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.CUSTODY_RECEIVE_ACTION]: ['X'],
     [ScreenId.CUSTODY_ACCEPT_REJECT_ACTION]: ['X'],
     [ScreenId.CUSTODY_EXCEPTIONS]: ['V'],
+    [ScreenId.WARRANTY]: ['V', 'C'],
+    [ScreenId.WARRANTY_EXTERNAL_INTAKE]: ['C', 'V'],
+    [ScreenId.WARRANTY_CLAIMS_LIST]: ['V'],
+    [ScreenId.WARRANTY_CLAIM_DETAIL]: ['V'], // View own claims status
   }
 };

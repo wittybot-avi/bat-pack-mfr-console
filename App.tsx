@@ -25,8 +25,11 @@ import DispatchDetail from './src/pages/DispatchDetail';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Placeholder from './src/pages/Placeholder';
 import Compliance from './src/pages/Compliance';
-import Custody from './src/pages/Custody'; // New Import
-import CustodyDetail from './src/pages/CustodyDetail'; // New Import
+import Custody from './src/pages/Custody';
+import CustodyDetail from './src/pages/CustodyDetail';
+import Warranty from './src/pages/Warranty'; // New
+import WarrantyDetail from './src/pages/WarrantyDetail'; // New
+import WarrantyIntake from './src/pages/WarrantyIntake'; // New
 
 // Toast Component
 const ToastContainer = () => {
@@ -159,11 +162,19 @@ function App() {
           
           <Route path="warranty" element={
             <RouteGuard screen={ScreenId.WARRANTY}>
-              <Placeholder 
-                title="Warranty Claims" 
-                description="Process RMA requests, triage field failures, and analyze root causes."
-                features={["Claims Inbox", "Evidence Pack", "RMA Decision", "Replacement Logic"]}
-              />
+              <Warranty />
+            </RouteGuard>
+          } />
+
+          <Route path="warranty/claims/:claimId" element={
+            <RouteGuard screen={ScreenId.WARRANTY_CLAIM_DETAIL}>
+              <WarrantyDetail />
+            </RouteGuard>
+          } />
+
+          <Route path="warranty/intake" element={
+            <RouteGuard screen={ScreenId.WARRANTY_EXTERNAL_INTAKE}>
+              <WarrantyIntake />
             </RouteGuard>
           } />
 

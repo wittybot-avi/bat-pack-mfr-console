@@ -1,5 +1,26 @@
 # Patch Log
 
+## UI_PATCH_RESOLVE_WARRANTY_SUITE_V1
+- **Date**: 2024-05-24
+- **Summary**: Implemented complete Warranty module with role-based access. Includes Overview dashboard, Claims List, and Detailed View with RCA/Disposition workflow. Added external intake portal for C9 cluster.
+- **Files changed**:
+  - src/domain/types.ts (Added WarrantyClaim and related enums)
+  - src/rbac/screenIds.ts (Added WARRANTY_* IDs)
+  - src/rbac/policy.ts (Permissions for C7, C9, C6, C1, etc.)
+  - src/services/warrantyService.ts (New service with localStorage and logic)
+  - src/pages/Warranty.tsx (New main page)
+  - src/pages/WarrantyDetail.tsx (New detail page)
+  - src/pages/WarrantyIntake.tsx (New external intake page)
+  - App.tsx (Routes)
+  - src/components/Layout.tsx (Sidebar update)
+  - src/app/patchInfo.ts
+- **Manual test checklist**:
+  - [ ] Login as C7 (Warranty) -> Create/Edit claims, decide disposition, close.
+  - [ ] Login as C9 (External) -> Access Intake, submit claim, view own claims only.
+  - [ ] Login as C6 (Logistics) -> View only Logistics Damage claims.
+  - [ ] Verify claims can only be created for ACCEPTED/DELIVERED batteries.
+  - [ ] Check evidence links to Telemetry/Custody pages work.
+
 ## UI_PATCH_GOVERN_CUSTODY_SUITE_V1
 - **Date**: 2024-05-24
 - **Summary**: Implemented "Custody" module for Chain-of-Custody tracking. Features include Overview, Shipments List, and Detail view with Receive/Accept/Reject workflows for external stakeholders (C9).

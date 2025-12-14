@@ -55,6 +55,46 @@ export enum QaDisposition {
   SCRAP = 'SCRAP'
 }
 
+export enum ClaimStatus {
+  OPEN = 'Open',
+  UNDER_ANALYSIS = 'Under Analysis',
+  AWAITING_EVIDENCE = 'Awaiting Evidence',
+  DECIDED = 'Decided',
+  CLOSED = 'Closed'
+}
+
+export enum ClaimPriority {
+  LOW = 'Low',
+  MEDIUM = 'Medium',
+  HIGH = 'High',
+  CRITICAL = 'Critical'
+}
+
+export enum FailureCategory {
+  MANUFACTURING_DEFECT = 'Manufacturing Defect',
+  QA_ESCAPE = 'QA Escape',
+  LOGISTICS_DAMAGE = 'Logistics Damage',
+  FIELD_MISUSE = 'Field Misuse',
+  AGING_WEAR = 'Aging / Wear',
+  UNKNOWN = 'Unknown'
+}
+
+export enum ClaimDisposition {
+  REPLACE = 'Replace',
+  REPAIR = 'Repair',
+  CREDIT = 'Credit',
+  REJECT = 'Reject Claim',
+  NO_FAULT_FOUND = 'No Fault Found',
+  RECYCLE_FUTURE = 'Recycle (Future Credit)'
+}
+
+export enum LiabilityAttribution {
+  MANUFACTURER = 'Manufacturer',
+  LOGISTICS = 'Logistics Provider',
+  CUSTOMER = 'Customer',
+  UNKNOWN = 'Unknown'
+}
+
 export enum UserRole {
   MANUFACTURER_ADMIN = 'Manufacturer Admin',
   QA_ENGINEER = 'QA Engineer',
@@ -244,6 +284,56 @@ export interface DispatchOrder {
   deliveredAt?: string;
   acceptedAt?: string;
   notes?: string;
+}
+
+export interface WarrantyClaim {
+  claimId: string;
+  batteryId: string;
+  batchId?: string;
+  customerName: string;
+  
+  status: ClaimStatus;
+  priority: ClaimPriority;
+  failureCategory: FailureCategory;
+  symptoms: string;
+  
+  reportedAt: string;
+  createdByRole: string;
+  createdByName: string;
+  
+  assignedToRole?: string;
+  assignedToName?: string;
+  
+  evidenceAttachments: Array<{
+    id: string;
+    fileName: string;
+    type: 'PHOTO' | 'LOG' | 'PDF' | 'OTHER';
+    uploadedAt: string;
+    notes?: string;
+  }>;
+  
+  rca?: {
+    suspectedCause: FailureCategory;
+    contributingFactors: string[];
+    analystNotes: string;
+    analyzedAt: string;
+    analyzedBy: string;
+  };
+  
+  references?: {
+    telemetryRef?: string;
+    qaRef?: string;
+    custodyRef?: string;
+  };
+  
+  disposition?: ClaimDisposition;
+  liabilityAttribution?: LiabilityAttribution;
+  decisionNotes?: string;
+  decidedAt?: string;
+  decidedBy?: string;
+  
+  closedAt?: string;
+  closureNotes?: string;
 }
 
 export interface Battery {

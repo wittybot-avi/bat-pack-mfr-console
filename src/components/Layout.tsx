@@ -42,9 +42,9 @@ const NAV_CONFIG: Record<string, { icon: any, label: string, path: string }> = {
   [ScreenId.DISPATCH_LIST]: { icon: Truck, label: 'Dispatch', path: '/dispatch' },
   [ScreenId.EOL_QA_STATION]: { icon: ClipboardCheck, label: 'EOL / QA', path: '/eol' },
   [ScreenId.EOL_QA_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/eol/setup' },
-  [ScreenId.WARRANTY]: { icon: AlertOctagon, label: 'Warranty', path: '/warranty' },
+  [ScreenId.WARRANTY]: { icon: AlertOctagon, label: 'Warranty', path: '/warranty' }, // Mapped
   [ScreenId.COMPLIANCE]: { icon: ShieldCheck, label: 'Compliance', path: '/compliance' },
-  [ScreenId.CUSTODY]: { icon: Container, label: 'Custody', path: '/custody' }, // Mapped CUSTODY screen ID to path
+  [ScreenId.CUSTODY]: { icon: Container, label: 'Custody', path: '/custody' }, 
   [ScreenId.SETTINGS]: { icon: Settings, label: 'Settings', path: '/settings' },
   [ScreenId.RBAC_VIEW]: { icon: Lock, label: 'Access Control', path: '/admin/rbac' },
 };
