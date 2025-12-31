@@ -6,6 +6,7 @@ import { AuthGate } from './src/components/AuthGate';
 import { ScreenId } from './src/rbac/screenIds';
 import { useAppStore } from './src/lib/store';
 import { DIAGNOSTIC_MODE } from './src/app/diagnostics';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 // Pages
 import Login from './src/pages/Login';
@@ -24,7 +25,6 @@ import InventoryList from './src/pages/InventoryList';
 import DispatchList from './src/pages/DispatchList';
 import DispatchDetail from './src/pages/DispatchDetail';
 import RbacAdmin from './src/pages/RbacAdmin';
-import Placeholder from './src/pages/Placeholder';
 import Compliance from './src/pages/Compliance';
 import Custody from './src/pages/Custody';
 import CustodyDetail from './src/pages/CustodyDetail';
@@ -34,13 +34,20 @@ import WarrantyIntake from './src/pages/WarrantyIntake';
 import Settings from './src/pages/Settings';
 import DiagnosticsPage from './src/pages/DiagnosticsPage';
 
+// SKU Pages (Patch A/A.3 Stabilized)
+import SkuList from './src/pages/SkuList';
+import SkuDetail from './src/pages/SkuDetail';
+
+// Trace Pages
+import CellLots from './src/pages/CellLots';
+import CellLotDetail from './src/pages/CellLotDetail';
+import LineageView from './src/pages/LineageView';
+
 // Toast Component
 const ToastContainer = () => {
   const notifications = useAppStore(state => state.notifications);
   const removeNotification = useAppStore(state => state.removeNotification);
-
   if (notifications.length === 0) return null;
-
   return (
     <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
       {notifications.map((n) => (
@@ -63,158 +70,56 @@ const ToastContainer = () => {
 function App() {
   return (
     <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        {/* Protected Routes */}
-        <Route path="/" element={
-          <AuthGate>
-            <Layout />
-          </AuthGate>
-        }>
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={
+            <AuthGate>
+              <Layout />
+            </AuthGate>
+          }>
+            <Route index element={<RouteGuard screen={ScreenId.DASHBOARD}><Dashboard /></RouteGuard>} />
+            
+            {/* Design Group (Patch A/A.3 Hard Stabilization) */}
+            <Route path="sku" element={<RouteGuard screen={ScreenId.SKU_LIST}><SkuList /></RouteGuard>} />
+            <Route path="sku/:id" element={<RouteGuard screen={ScreenId.SKU_DETAIL}><SkuDetail /></RouteGuard>} />
+
+            {/* Trace Group */}
+            <Route path="trace/cells" element={<RouteGuard screen={ScreenId.CELL_LOTS}><CellLots /></RouteGuard>} />
+            <Route path="trace/cells/:id" element={<RouteGuard screen={ScreenId.CELL_LOT_DETAIL}><CellLotDetail /></RouteGuard>} />
+            <Route path="trace/lineage/:id" element={<RouteGuard screen={ScreenId.LINEAGE_VIEW}><LineageView /></RouteGuard>} />
+
+            <Route path="batches" element={<RouteGuard screen={ScreenId.BATCHES_LIST}><Batches /></RouteGuard>} />
+            <Route path="batches/:id" element={<RouteGuard screen={ScreenId.BATCHES_DETAIL}><BatchDetail /></RouteGuard>} />
+            <Route path="telemetry" element={<RouteGuard screen={ScreenId.TELEMETRY}><Telemetry /></RouteGuard>} />
+            <Route path="batteries" element={<RouteGuard screen={ScreenId.BATTERIES_LIST}><Batteries /></RouteGuard>} />
+            <Route path="batteries/:id" element={<RouteGuard screen={ScreenId.BATTERIES_DETAIL}><BatteryDetail /></RouteGuard>} />
+            <Route path="provisioning" element={<RouteGuard screen={ScreenId.PROVISIONING}><ProvisioningConsole /></RouteGuard>} />
+            <Route path="provisioning/setup" element={<RouteGuard screen={ScreenId.PROVISIONING_STATION_SETUP}><ProvisioningStationSetup /></RouteGuard>} />
+            <Route path="eol" element={<RouteGuard screen={ScreenId.EOL_QA_STATION}><EolStation /></RouteGuard>} />
+            <Route path="eol/setup" element={<RouteGuard screen={ScreenId.EOL_QA_STATION_SETUP}><EolStationSetup /></RouteGuard>} />
+            <Route path="inventory" element={<RouteGuard screen={ScreenId.INVENTORY}><InventoryList /></RouteGuard>} />
+            <Route path="dispatch" element={<RouteGuard screen={ScreenId.DISPATCH_LIST}><DispatchList /></RouteGuard>} />
+            <Route path="dispatch/:id" element={<RouteGuard screen={ScreenId.DISPATCH_DETAIL}><DispatchDetail /></RouteGuard>} />
+            <Route path="custody" element={<RouteGuard screen={ScreenId.CUSTODY}><Custody /></RouteGuard>} />
+            <Route path="custody/:dispatchId" element={<RouteGuard screen={ScreenId.CUSTODY_DETAIL}><CustodyDetail /></RouteGuard>} />
+            <Route path="warranty" element={<RouteGuard screen={ScreenId.WARRANTY}><Warranty /></RouteGuard>} />
+            <Route path="warranty/claims/:claimId" element={<RouteGuard screen={ScreenId.WARRANTY_CLAIM_DETAIL}><WarrantyDetail /></RouteGuard>} />
+            <Route path="warranty/intake" element={<RouteGuard screen={ScreenId.WARRANTY_EXTERNAL_INTAKE}><WarrantyIntake /></RouteGuard>} />
+            <Route path="compliance" element={<RouteGuard screen={ScreenId.COMPLIANCE}><Compliance /></RouteGuard>} />
+            <Route path="analytics" element={<RouteGuard screen={ScreenId.ANALYTICS}><Analytics /></RouteGuard>} />
+            <Route path="settings" element={<RouteGuard screen={ScreenId.SETTINGS}><Settings /></RouteGuard>} />
+            <Route path="admin/rbac" element={<RouteGuard screen={ScreenId.RBAC_VIEW}><RbacAdmin /></RouteGuard>} />
+            {DIAGNOSTIC_MODE && <Route path="__diagnostics/pages" element={<DiagnosticsPage />} />}
+            
+            {/* Fallback Catch-all inside Layout */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
           
-          <Route index element={
-            <RouteGuard screen={ScreenId.DASHBOARD}>
-              <Dashboard />
-            </RouteGuard>
-          } />
-
-          <Route path="batches" element={
-            <RouteGuard screen={ScreenId.BATCHES_LIST}>
-              <Batches />
-            </RouteGuard>
-          } />
-
-          <Route path="batches/:id" element={
-            <RouteGuard screen={ScreenId.BATCHES_DETAIL}>
-              <BatchDetail />
-            </RouteGuard>
-          } />
-
-          <Route path="telemetry" element={
-            <RouteGuard screen={ScreenId.TELEMETRY}>
-              <Telemetry />
-            </RouteGuard>
-          } />
-
-          <Route path="batteries" element={
-            <RouteGuard screen={ScreenId.BATTERIES_LIST}>
-              <Batteries />
-            </RouteGuard>
-          } />
-
-          <Route path="batteries/:id" element={
-            <RouteGuard screen={ScreenId.BATTERIES_DETAIL}>
-              <BatteryDetail />
-            </RouteGuard>
-          } />
-
-          <Route path="provisioning" element={
-            <RouteGuard screen={ScreenId.PROVISIONING}>
-              <ProvisioningConsole />
-            </RouteGuard>
-          } />
-
-          <Route path="provisioning/setup" element={
-            <RouteGuard screen={ScreenId.PROVISIONING_STATION_SETUP}>
-              <ProvisioningStationSetup />
-            </RouteGuard>
-          } />
-
-          <Route path="eol" element={
-            <RouteGuard screen={ScreenId.EOL_QA_STATION}>
-               <EolStation />
-            </RouteGuard>
-          } />
-
-          <Route path="eol/setup" element={
-            <RouteGuard screen={ScreenId.EOL_QA_STATION_SETUP}>
-               <EolStationSetup />
-            </RouteGuard>
-          } />
-
-          <Route path="inventory" element={
-            <RouteGuard screen={ScreenId.INVENTORY}>
-              <InventoryList />
-            </RouteGuard>
-          } />
-          
-          <Route path="dispatch" element={
-            <RouteGuard screen={ScreenId.DISPATCH_LIST}>
-              <DispatchList />
-            </RouteGuard>
-          } />
-
-          <Route path="dispatch/:id" element={
-            <RouteGuard screen={ScreenId.DISPATCH_DETAIL}>
-              <DispatchDetail />
-            </RouteGuard>
-          } />
-
-          <Route path="custody" element={
-            <RouteGuard screen={ScreenId.CUSTODY}>
-              <Custody />
-            </RouteGuard>
-          } />
-
-          <Route path="custody/:dispatchId" element={
-            <RouteGuard screen={ScreenId.CUSTODY_DETAIL}>
-              <CustodyDetail />
-            </RouteGuard>
-          } />
-          
-          <Route path="warranty" element={
-            <RouteGuard screen={ScreenId.WARRANTY}>
-              <Warranty />
-            </RouteGuard>
-          } />
-
-          <Route path="warranty/claims/:claimId" element={
-            <RouteGuard screen={ScreenId.WARRANTY_CLAIM_DETAIL}>
-              <WarrantyDetail />
-            </RouteGuard>
-          } />
-
-          <Route path="warranty/intake" element={
-            <RouteGuard screen={ScreenId.WARRANTY_EXTERNAL_INTAKE}>
-              <WarrantyIntake />
-            </RouteGuard>
-          } />
-
-          <Route path="compliance" element={
-            <RouteGuard screen={ScreenId.COMPLIANCE}>
-              <Compliance />
-            </RouteGuard>
-          } />
-          
-          <Route path="analytics" element={
-            <RouteGuard screen={ScreenId.ANALYTICS}>
-               <Analytics />
-            </RouteGuard>
-          } />
-
-          <Route path="settings" element={
-            <RouteGuard screen={ScreenId.SETTINGS}>
-               <Settings />
-            </RouteGuard>
-          } />
-
-          <Route path="admin/rbac" element={
-            <RouteGuard screen={ScreenId.RBAC_VIEW}>
-              <RbacAdmin />
-            </RouteGuard>
-          } />
-
-          {DIAGNOSTIC_MODE && (
-            <Route path="__diagnostics/pages" element={
-              // Guard with Admin or just Auth? Let's use Auth only for ease of access during check
-              <DiagnosticsPage />
-            } />
-          )}
-
+          {/* Fallback Catch-all outside AuthGate */}
           <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
+        </Routes>
+      </ErrorBoundary>
       <ToastContainer />
     </Router>
   );

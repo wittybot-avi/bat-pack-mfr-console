@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { batchService } from '../services/api';
@@ -9,7 +10,8 @@ import { useForm } from 'react-hook-form';
 
 // --- Components for Sections ---
 
-const NoteItem = ({ note }: { note: BatchNote }) => (
+// Fix: Add optional key prop to handle React list rendering in TS
+const NoteItem = ({ note }: { note: BatchNote, key?: any }) => (
   <div className="border-b last:border-0 pb-3 mb-3">
     <div className="flex justify-between items-start mb-1">
       <span className="font-semibold text-sm">{note.author} <span className="text-xs font-normal text-muted-foreground">({note.role})</span></span>

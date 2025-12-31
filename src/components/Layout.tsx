@@ -17,8 +17,10 @@ import { ScreenId, SCREEN_GROUPS } from '../rbac/screenIds';
 import { canView } from '../rbac/can';
 import { APP_ROUTES, checkConsistency } from '../app/routeRegistry';
 import { DIAGNOSTIC_MODE } from '../app/diagnostics';
+import { safeStorage } from '../utils/safeStorage';
 
-const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean }) => (
+// Fix: Add optional key to component props to satisfy TS when used in list mapping
+const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean, key?: any }) => (
   <Link to={path}>
     <div className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all ${active ? 'bg-primary/10 text-primary font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
       <Icon size={18} />
@@ -53,7 +55,16 @@ export const Layout = () => {
 
   const renderNavGroup = (groupName: string, screenIds: ScreenId[]) => {
     if (!currentCluster) return null;
-    const visibleItems = screenIds.filter(id => canView(currentCluster.id, id));
+    
+    // Patch A.1: Super user and dev toggle override
+    const isSuperUser = currentCluster.id === 'CS';
+    const devForceShowSku = safeStorage.getItem('DEV_FORCE_SHOW_SKU') === '1';
+
+    const visibleItems = screenIds.filter(id => {
+      if (id === ScreenId.SKU_LIST && (isSuperUser || devForceShowSku)) return true;
+      return canView(currentCluster.id, id);
+    });
+
     if (visibleItems.length === 0) return null;
 
     return (
@@ -95,6 +106,8 @@ export const Layout = () => {
 
         <div className="flex-1 overflow-y-auto py-6 px-3">
           {renderNavGroup('Observe', SCREEN_GROUPS.OBSERVE)}
+          {renderNavGroup('Design', SCREEN_GROUPS.DESIGN)}
+          {renderNavGroup('Trace', SCREEN_GROUPS.TRACE)}
           {renderNavGroup('Operate', SCREEN_GROUPS.OPERATE)}
           {renderNavGroup('Assure', SCREEN_GROUPS.ASSURE)}
           {renderNavGroup('Resolve', SCREEN_GROUPS.RESOLVE)}

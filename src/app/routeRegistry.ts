@@ -12,7 +12,10 @@ import {
   FileText,
   Lock,
   Container,
-  AlertOctagon
+  AlertOctagon,
+  Wand2,
+  Fingerprint,
+  Link2
 } from 'lucide-react';
 import { ScreenId } from '../rbac/screenIds';
 
@@ -21,14 +24,23 @@ export interface RouteConfig {
   path: string;
   label: string;
   icon: any;
-  componentName: string; // Used for diagnostics
+  componentName: string; 
 }
 
-// Extracted from Layout.tsx for centralized management
 export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.DASHBOARD]: { icon: LayoutDashboard, label: 'Dashboard', path: '/', screenId: ScreenId.DASHBOARD, componentName: 'Dashboard.tsx' },
   [ScreenId.TELEMETRY]: { icon: Activity, label: 'Telemetry', path: '/telemetry', screenId: ScreenId.TELEMETRY, componentName: 'Telemetry.tsx' },
   [ScreenId.ANALYTICS]: { icon: FileText, label: 'Analytics', path: '/analytics', screenId: ScreenId.ANALYTICS, componentName: 'Analytics.tsx' },
+  
+  // Design Group
+  [ScreenId.SKU_LIST]: { icon: Wand2, label: 'SKU Design', path: '/sku', screenId: ScreenId.SKU_LIST, componentName: 'SkuList.tsx' },
+  [ScreenId.SKU_DETAIL]: { icon: Wand2, label: 'SKU Detail', path: '/sku/:id', screenId: ScreenId.SKU_DETAIL, componentName: 'SkuDetail.tsx' },
+  
+  // Trace Group
+  [ScreenId.CELL_LOTS]: { icon: Fingerprint, label: 'Cells', path: '/trace/cells', screenId: ScreenId.CELL_LOTS, componentName: 'CellLots.tsx' },
+  [ScreenId.CELL_LOT_DETAIL]: { icon: Fingerprint, label: 'Cell Lot Detail', path: '/trace/cells/:id', screenId: ScreenId.CELL_LOT_DETAIL, componentName: 'CellLotDetail.tsx' },
+  [ScreenId.LINEAGE_VIEW]: { icon: Link2, label: 'Lineage', path: '/trace/lineage/:id', screenId: ScreenId.LINEAGE_VIEW, componentName: 'LineageView.tsx' },
+
   [ScreenId.BATCHES_LIST]: { icon: Package, label: 'Batches', path: '/batches', screenId: ScreenId.BATCHES_LIST, componentName: 'Batches.tsx' },
   [ScreenId.BATTERIES_LIST]: { icon: Battery, label: 'Batteries', path: '/batteries', screenId: ScreenId.BATTERIES_LIST, componentName: 'Batteries.tsx' },
   [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning', path: '/provisioning', screenId: ScreenId.PROVISIONING, componentName: 'ProvisioningConsole.tsx' },
@@ -42,7 +54,8 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.CUSTODY]: { icon: Container, label: 'Custody', path: '/custody', screenId: ScreenId.CUSTODY, componentName: 'Custody.tsx' }, 
   [ScreenId.SETTINGS]: { icon: Settings, label: 'Settings', path: '/settings', screenId: ScreenId.SETTINGS, componentName: 'Settings.tsx' },
   [ScreenId.RBAC_VIEW]: { icon: Lock, label: 'Access Control', path: '/admin/rbac', screenId: ScreenId.RBAC_VIEW, componentName: 'RbacAdmin.tsx' },
-  // Detail pages (not in sidebar, but tracked)
+  
+  // Detail pages
   [ScreenId.BATCHES_DETAIL]: { icon: Package, label: 'Batch Detail', path: '/batches/:id', screenId: ScreenId.BATCHES_DETAIL, componentName: 'BatchDetail.tsx' },
   [ScreenId.BATTERIES_DETAIL]: { icon: Battery, label: 'Battery Detail', path: '/batteries/:id', screenId: ScreenId.BATTERIES_DETAIL, componentName: 'BatteryDetail.tsx' },
   [ScreenId.DISPATCH_DETAIL]: { icon: Truck, label: 'Dispatch Detail', path: '/dispatch/:id', screenId: ScreenId.DISPATCH_DETAIL, componentName: 'DispatchDetail.tsx' },
@@ -53,13 +66,10 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
 
 export const checkConsistency = () => {
   const warnings: string[] = [];
-  
-  // 1. Check if all keys match screenId
   Object.entries(APP_ROUTES).forEach(([key, config]) => {
     if (key !== config.screenId) {
       warnings.push(`Mismatch: Key ${key} does not match screenId ${config.screenId}`);
     }
   });
-
   return warnings;
 };

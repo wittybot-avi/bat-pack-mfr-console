@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../lib/store';
 import { complianceService, ComplianceScore, ComplianceCheck, EvidencePack } from '../services/complianceService';
@@ -332,7 +333,8 @@ const AuditTrailTab = () => (
 
 // --- Future Readiness Components ---
 
-const FutureField = ({ field }: { field: ReadinessField }) => (
+// Fix: Add optional key to component props to satisfy TS when used in list mapping
+const FutureField = ({ field }: { field: ReadinessField, key?: any }) => (
     <div className="flex justify-between items-center text-sm py-1 border-b last:border-0 border-dashed border-slate-100 dark:border-slate-800">
         <span className="text-muted-foreground">{field.label}</span>
         <div className="flex items-center gap-2">
@@ -430,22 +432,22 @@ const FutureReadinessTab = () => {
                                     <div>
                                         <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Identity & Conformity</h4>
                                         <div className="space-y-1">
-                                            {readiness.identity.map((f, i) => <FutureField key={i} field={f} />)}
-                                            {readiness.conformity.map((f, i) => <FutureField key={i} field={f} />)}
+                                            {readiness.identity.map((f, i) => <FutureField key={`identity-${i}`} field={f} />)}
+                                            {readiness.conformity.map((f, i) => <FutureField key={`conformity-${i}`} field={f} />)}
                                         </div>
                                     </div>
                                     <div>
                                         <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Traceability & Composition</h4>
                                         <div className="space-y-1">
-                                            {readiness.traceability.map((f, i) => <FutureField key={i} field={f} />)}
-                                            {readiness.composition.map((f, i) => <FutureField key={i} field={f} />)}
+                                            {readiness.traceability.map((f, i) => <FutureField key={`traceability-${i}`} field={f} />)}
+                                            {readiness.composition.map((f, i) => <FutureField key={`composition-${i}`} field={f} />)}
                                         </div>
                                     </div>
                                 </div>
                                 <div>
                                     <h4 className="text-xs font-bold uppercase text-muted-foreground mb-3">Circularity (Future)</h4>
                                     <div className="space-y-1">
-                                        {readiness.circularity.map((f, i) => <FutureField key={i} field={f} />)}
+                                        {readiness.circularity.map((f, i) => <FutureField key={`circularity-${i}`} field={f} />)}
                                     </div>
                                 </div>
                             </CardContent>

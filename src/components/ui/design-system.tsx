@@ -1,3 +1,4 @@
+
 import React, { ButtonHTMLAttributes, InputHTMLAttributes, forwardRef, TableHTMLAttributes, HTMLAttributes, ThHTMLAttributes, TdHTMLAttributes } from 'react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -60,21 +61,22 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button";
 
 // CARD
+// Fix: children should be optional for Card and its sub-components to prevent TS errors when used dynamically
 export const Card = ({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("rounded-lg border bg-card text-card-foreground shadow-sm bg-white dark:bg-slate-900", className)} {...props}>
     {children}
   </div>
 );
 
-export const CardHeader = ({ className, children }: { className?: string; children: React.ReactNode }) => (
+export const CardHeader = ({ className, children }: { className?: string; children?: React.ReactNode }) => (
   <div className={cn("flex flex-col space-y-1.5 p-6", className)}>{children}</div>
 );
 
-export const CardTitle = ({ className, children }: { className?: string; children: React.ReactNode }) => (
+export const CardTitle = ({ className, children }: { className?: string; children?: React.ReactNode }) => (
   <h3 className={cn("text-2xl font-semibold leading-none tracking-tight", className)}>{children}</h3>
 );
 
-export const CardContent = ({ className, children }: { className?: string; children: React.ReactNode }) => (
+export const CardContent = ({ className, children }: { className?: string; children?: React.ReactNode }) => (
   <div className={cn("p-6 pt-0", className)}>{children}</div>
 );
 
@@ -97,7 +99,8 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 Input.displayName = "Input";
 
 // BADGE
-export const Badge = ({ children, variant = "default", className }: { children: React.ReactNode, variant?: 'default' | 'outline' | 'secondary' | 'success' | 'warning' | 'destructive', className?: string }) => {
+// Fix: children should be optional for Badge component
+export const Badge = ({ children, variant = "default", className }: { children?: React.ReactNode, variant?: 'default' | 'outline' | 'secondary' | 'success' | 'warning' | 'destructive', className?: string }) => {
   const variants = {
     default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
     secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",

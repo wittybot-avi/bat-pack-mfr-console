@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAppStore } from '../lib/store';
 import { RBAC_POLICY } from '../rbac/policy';
@@ -184,7 +185,7 @@ export default function RbacAdmin() {
                                <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-800 font-medium w-full text-center">ALL ACTIONS ENABLED</span> 
                                :
                                verbs?.map(v => (
-                                  <Tooltip key={v} content={VERB_LABELS[v]}>
+                                  <Tooltip key={`${screen}-${v}`} content={VERB_LABELS[v]}>
                                       <span className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded border border-primary/20 font-mono cursor-help">
                                         {v}
                                       </span>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '../lib/store';
 import { telemetryService, TelemetryHistory, TelemetryEvent } from '../services/telemetryService';
@@ -25,7 +26,8 @@ const MetricCard = ({ label, value, unit, color, icon: Icon, simple }: any) => (
   </Card>
 );
 
-const EventMarker = ({ event }: { event: TelemetryEvent }) => (
+// Fix: Add optional key prop to satisfy TS when used in list mapping
+const EventMarker = ({ event }: { event: TelemetryEvent, key?: any }) => (
     <div className="flex gap-2 items-start text-xs border-l-2 border-primary pl-2 py-1 mb-2">
         <div className="text-muted-foreground w-20 shrink-0">{new Date(event.timestamp).toLocaleTimeString()}</div>
         <div>

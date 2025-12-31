@@ -4,7 +4,7 @@ import { batteryService } from '../services/api';
 import { Battery, BatteryStatus } from '../domain/types';
 import { useAppStore } from '../lib/store';
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Input, Table, TableHeader, TableRow, TableHead, TableCell, Tooltip } from '../components/ui/design-system';
-import { ArrowLeft, AlertTriangle, CheckCircle, Download, Truck, Cpu, ClipboardCheck, Lock } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, CheckCircle, Download, Truck, Cpu, ClipboardCheck, Lock, Link2 } from 'lucide-react';
 
 // Helpers
 const InfoRow = ({ label, value, isLink = false, linkTo = '' }: { label: string, value: any, isLink?: boolean, linkTo?: string }) => (
@@ -98,7 +98,6 @@ export default function BatteryDetail() {
               addNotification({ title: "Success", message: "BMS Provisioned & Bound", type: "success" });
           } 
           else if (action === 'uploadEOL') {
-               // Mocking a file upload / form entry
                await batteryService.uploadEOLResult(battery.id, { soh: 99, capacity: 105, resistance: 22, result: 'PASS' });
                addNotification({ title: "Success", message: "EOL Results Uploaded", type: "success" });
           } 
@@ -131,7 +130,7 @@ export default function BatteryDetail() {
   const showProvisioning = isSuperUser || isC2 || isC5 || isC3;
   const showQA = isSuperUser || isC1 || isC2 || isC3 || isC5 || isC7 || isC8 || isC9;
   const showLogistics = isSuperUser || isC6 || isC1 || isC2;
-  const showAudit = !isC9; // C9 restricted
+  const showAudit = !isC9; 
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-100px)]">
@@ -195,7 +194,12 @@ export default function BatteryDetail() {
             {/* ASSEMBLY TAB */}
             {activeTab === 'assembly' && showAssembly && (
                 <Card>
-                    <CardHeader><CardTitle className="text-lg">Assembly Trace</CardTitle></CardHeader>
+                    <CardHeader className="flex items-center justify-between">
+                        <CardTitle className="text-lg">Assembly Trace</CardTitle>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/trace/lineage/${battery.serialNumber}`)}>
+                          <Link2 className="h-4 w-4 mr-2" /> Full Lineage Audit
+                        </Button>
+                    </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader><TableRow><TableHead>Time</TableHead><TableHead>Station</TableHead><TableHead>Event</TableHead><TableHead>Operator</TableHead></TableRow></TableHeader>
@@ -305,7 +309,6 @@ export default function BatteryDetail() {
          <Card>
              <CardHeader className="pb-3"><CardTitle className="text-base">Operations</CardTitle></CardHeader>
              <CardContent className="space-y-2">
-                 {/* C2: Rework */}
                  <ActionButton 
                     icon={AlertTriangle} 
                     label="Mark Rework" 
@@ -315,7 +318,6 @@ export default function BatteryDetail() {
                     variant="ghost"
                  />
                  
-                 {/* C5: Provision */}
                  <ActionButton 
                     icon={Cpu} 
                     label="Provision BMS" 
@@ -324,7 +326,6 @@ export default function BatteryDetail() {
                     roleRequired="BMS Eng (C5)"
                  />
 
-                 {/* C3: Upload EOL */}
                  <ActionButton 
                     icon={ClipboardCheck} 
                     label="Upload EOL Data" 
@@ -333,7 +334,6 @@ export default function BatteryDetail() {
                     roleRequired="QA (C3)"
                  />
 
-                 {/* C3: Approve */}
                  <ActionButton 
                     icon={CheckCircle} 
                     label="Approve for Stock" 
@@ -343,7 +343,6 @@ export default function BatteryDetail() {
                     variant={battery.eolResult === 'PASS' && battery.status !== 'In Inventory' ? "default" : "outline"}
                  />
 
-                 {/* C6: Dispatch */}
                  <ActionButton 
                     icon={Truck} 
                     label="Dispatch" 
@@ -352,7 +351,6 @@ export default function BatteryDetail() {
                     roleRequired="Logistics (C6)"
                  />
                  
-                 {/* C1/C3/C7/C8/C9: Export */}
                  <div className="border-t pt-2 mt-2">
                      <ActionButton 
                         icon={Download} 
