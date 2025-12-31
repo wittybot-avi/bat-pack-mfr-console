@@ -1,3 +1,4 @@
+
 import { ScreenId } from './screenIds';
 import { PermissionVerb } from './verbs';
 
@@ -24,11 +25,13 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.ANALYTICS]: ['V'],
     [ScreenId.SKU_LIST]: ['V'],
     [ScreenId.SKU_DETAIL]: ['V'],
-    [ScreenId.CELL_LOTS]: ['V'],
+    [ScreenId.CELL_LOTS_LIST]: ['V'],
     [ScreenId.CELL_LOT_DETAIL]: ['V'],
     [ScreenId.LINEAGE_VIEW]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V'],
     [ScreenId.BATCHES_DETAIL]: ['V'],
+    [ScreenId.MODULE_ASSEMBLY_LIST]: ['V'],
+    [ScreenId.PACK_ASSEMBLY_LIST]: ['V'],
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V'],
     [ScreenId.INVENTORY]: ['V'],
@@ -42,16 +45,22 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.RBAC_VIEW]: ['V'],
   },
 
-  // C2: Manufacturing - Shopfloor execution
+  // C2: Manufacturing - Shopfloor execution (Production Manager Role)
   C2: {
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.SKU_LIST]: ['V', 'C', 'E'],
     [ScreenId.SKU_DETAIL]: ['V', 'E'],
-    [ScreenId.CELL_LOTS]: ['V', 'C'],
-    [ScreenId.CELL_LOT_DETAIL]: ['V', 'E'],
+    [ScreenId.CELL_LOTS_LIST]: ['V', 'C', 'E', 'X'],
+    [ScreenId.CELL_LOT_DETAIL]: ['V', 'E', 'X'],
+    [ScreenId.CELL_SERIALIZE]: ['V', 'X'],
+    [ScreenId.CELL_SCAN_BIND]: ['V', 'X'],
     [ScreenId.LINEAGE_VIEW]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V', 'C', 'E', 'X'],
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'X'],
+    [ScreenId.MODULE_ASSEMBLY_LIST]: ['V', 'C', 'E', 'X'],
+    [ScreenId.MODULE_ASSEMBLY_DETAIL]: ['V', 'E', 'X'],
+    [ScreenId.PACK_ASSEMBLY_LIST]: ['V', 'C', 'E', 'X'],
+    [ScreenId.PACK_ASSEMBLY_DETAIL]: ['V', 'E', 'X'],
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V', 'E'],
     [ScreenId.PROVISIONING]: ['V'],
@@ -65,11 +74,15 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.SKU_LIST]: ['V'],
     [ScreenId.SKU_DETAIL]: ['V'],
-    [ScreenId.CELL_LOTS]: ['V'],
+    [ScreenId.CELL_LOTS_LIST]: ['V'],
     [ScreenId.CELL_LOT_DETAIL]: ['V'],
+    [ScreenId.CELL_SCAN_BIND]: ['V', 'X'],
     [ScreenId.LINEAGE_VIEW]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V'],
     [ScreenId.BATCHES_DETAIL]: ['V', 'E', 'A'],
+    [ScreenId.MODULE_ASSEMBLY_LIST]: ['V'],
+    [ScreenId.PACK_ASSEMBLY_LIST]: ['V'],
+    [ScreenId.PACK_ASSEMBLY_DETAIL]: ['V', 'E', 'A'],
     [ScreenId.EOL_QA_STATION]: ['V', 'C', 'E', 'A', 'X'],
     [ScreenId.COMPLIANCE]: ['V'],
     [ScreenId.WARRANTY]: ['V'],
@@ -80,7 +93,7 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.SKU_LIST]: ['V', 'E'],
     [ScreenId.SKU_DETAIL]: ['V', 'E'],
-    [ScreenId.CELL_LOTS]: ['V'],
+    [ScreenId.CELL_LOTS_LIST]: ['V'],
     [ScreenId.SETTINGS]: ['V', 'M'],
     [ScreenId.RBAC_VIEW]: ['V', 'M'],
   },
@@ -97,7 +110,7 @@ export const RBAC_POLICY: PolicyMap = {
   // C6: Logistics
   C6: {
     [ScreenId.DASHBOARD]: ['V'],
-    [ScreenId.CELL_LOTS]: ['V', 'C', 'E'],
+    [ScreenId.CELL_LOTS_LIST]: ['V', 'C', 'E'],
     [ScreenId.CELL_LOT_DETAIL]: ['V', 'E'],
     [ScreenId.INVENTORY]: ['V', 'C', 'E', 'M', 'X'],
     [ScreenId.DISPATCH_LIST]: ['V', 'C', 'E', 'X', 'A'],
@@ -115,7 +128,7 @@ export const RBAC_POLICY: PolicyMap = {
   C8: {
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.SKU_LIST]: ['V'],
-    [ScreenId.CELL_LOTS]: ['V'],
+    [ScreenId.CELL_LOTS_LIST]: ['V'],
     [ScreenId.LINEAGE_VIEW]: ['V'],
     [ScreenId.COMPLIANCE]: ['V', 'C', 'A', 'M'],
   },

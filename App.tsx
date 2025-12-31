@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './src/components/Layout';
@@ -34,14 +35,23 @@ import WarrantyIntake from './src/pages/WarrantyIntake';
 import Settings from './src/pages/Settings';
 import DiagnosticsPage from './src/pages/DiagnosticsPage';
 
-// SKU Pages (Patch A/A.3 Stabilized)
+// SKU Pages
 import SkuList from './src/pages/SkuList';
 import SkuDetail from './src/pages/SkuDetail';
 
 // Trace Pages
-import CellLots from './src/pages/CellLots';
+import CellLotsList from './src/pages/CellLotsList';
+import CreateCellLot from './src/pages/CreateCellLot';
 import CellLotDetail from './src/pages/CellLotDetail';
+import CellSerialize from './src/pages/CellSerialize';
+import CellScanBind from './src/pages/CellScanBind';
 import LineageView from './src/pages/LineageView';
+
+// Assembly Pages (Patch C)
+import ModuleAssemblyList from './src/pages/ModuleAssemblyList';
+import ModuleAssemblyDetail from './src/pages/ModuleAssemblyDetail';
+import PackAssemblyList from './src/pages/PackAssemblyList';
+import PackAssemblyDetail from './src/pages/PackAssemblyDetail';
 
 // Toast Component
 const ToastContainer = () => {
@@ -80,14 +90,23 @@ function App() {
           }>
             <Route index element={<RouteGuard screen={ScreenId.DASHBOARD}><Dashboard /></RouteGuard>} />
             
-            {/* Design Group (Patch A/A.3 Hard Stabilization) */}
+            {/* Design Group */}
             <Route path="sku" element={<RouteGuard screen={ScreenId.SKU_LIST}><SkuList /></RouteGuard>} />
             <Route path="sku/:id" element={<RouteGuard screen={ScreenId.SKU_DETAIL}><SkuDetail /></RouteGuard>} />
 
             {/* Trace Group */}
-            <Route path="trace/cells" element={<RouteGuard screen={ScreenId.CELL_LOTS}><CellLots /></RouteGuard>} />
-            <Route path="trace/cells/:id" element={<RouteGuard screen={ScreenId.CELL_LOT_DETAIL}><CellLotDetail /></RouteGuard>} />
+            <Route path="trace/cells" element={<RouteGuard screen={ScreenId.CELL_LOTS_LIST}><CellLotsList /></RouteGuard>} />
+            <Route path="trace/cells/new" element={<RouteGuard screen={ScreenId.CELL_LOTS_LIST}><CreateCellLot /></RouteGuard>} />
+            <Route path="trace/cells/:lotId" element={<RouteGuard screen={ScreenId.CELL_LOT_DETAIL}><CellLotDetail /></RouteGuard>} />
+            <Route path="trace/cells/:lotId/serialize" element={<RouteGuard screen={ScreenId.CELL_SERIALIZE}><CellSerialize /></RouteGuard>} />
+            <Route path="trace/cells/:lotId/scan" element={<RouteGuard screen={ScreenId.CELL_SCAN_BIND}><CellScanBind /></RouteGuard>} />
             <Route path="trace/lineage/:id" element={<RouteGuard screen={ScreenId.LINEAGE_VIEW}><LineageView /></RouteGuard>} />
+            
+            {/* Assembly Group (Patch C) */}
+            <Route path="operate/modules" element={<RouteGuard screen={ScreenId.MODULE_ASSEMBLY_LIST}><ModuleAssemblyList /></RouteGuard>} />
+            <Route path="operate/modules/:id" element={<RouteGuard screen={ScreenId.MODULE_ASSEMBLY_DETAIL}><ModuleAssemblyDetail /></RouteGuard>} />
+            <Route path="operate/packs" element={<RouteGuard screen={ScreenId.PACK_ASSEMBLY_LIST}><PackAssemblyList /></RouteGuard>} />
+            <Route path="operate/packs/:id" element={<RouteGuard screen={ScreenId.PACK_ASSEMBLY_DETAIL}><PackAssemblyDetail /></RouteGuard>} />
 
             <Route path="batches" element={<RouteGuard screen={ScreenId.BATCHES_LIST}><Batches /></RouteGuard>} />
             <Route path="batches/:id" element={<RouteGuard screen={ScreenId.BATCHES_DETAIL}><BatchDetail /></RouteGuard>} />

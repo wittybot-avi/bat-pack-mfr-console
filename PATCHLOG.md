@@ -1,33 +1,30 @@
+
 # Patch Log
 
-## UI_PATCH_A4_SKU_RESTORE
+## UI_PATCH_C_MODULE_PACK_ASSEMBLY_V1
 - **Date**: 2024-05-24
-- **Summary**: Full restoration of SKU Design Studio UI after hard router stabilization.
-  - Replaced `SafePlaceholder` components in `src/pages/SkuList.tsx` and `src/pages/SkuDetail.tsx` with production implementations.
-  - SKU List: Features search, creation modal, and cloning functionality.
-  - SKU Detail: Features tabbed interface for Overview, Electrical, Physical, Rules (Gating), and Version History.
-  - Enhanced SKU Detail sidebar with "Blueprint IQ" summary and energy calculations.
-  - Added non-intrusive "Restored (A.4)" marker in SKU List footer.
+- **Summary**: Implemented the Module and Pack Assembly workflow modules.
+  - Added new screens: `MODULE_ASSEMBLY_LIST`, `MODULE_ASSEMBLY_DETAIL`, `PACK_ASSEMBLY_LIST`, `PACK_ASSEMBLY_DETAIL`.
+  - Implemented `moduleService` for managing sub-assembly work orders and cell binding.
+  - Implemented `packService` for final assembly management and BMS/Firmware linkage.
+  - Module Assembly: Features stepper-based UI for SKU selection, cell scanning (bulk/single), and sealing.
+  - Pack Assembly: Features linkage of SEALED modules, BMS serial assignment, and finalized record generation.
+  - Updated RBAC policy to grant production roles creation/edit rights and QA roles approval rights.
 - **Files changed**:
-  - src/pages/SkuList.tsx
-  - src/pages/SkuDetail.tsx
-  - src/app/patchInfo.ts
-
-## UI_PATCH_A3_ROUTER_PLACEHOLDER_FIX
-- **Date**: 2024-05-24
-- **Summary**: Implemented hard router stabilization to prevent runtime crashes during navigation.
-  - Replaced SKU Design Studio components with `SafePlaceholder` to isolate them from service/hook dependencies during stabilization.
-  - Created `src/pages/SafePlaceholder.tsx` as a guaranteed-safe landing component.
-  - Relocated `ErrorBoundary` inside `Router` to properly catch component-level lifecycle errors without breaking the routing context.
-  - Verified all module routes in `App.tsx` use direct imports and resolve correctly.
-- **Files changed**:
-  - src/pages/SafePlaceholder.tsx
-  - src/pages/SkuList.tsx
-  - src/pages/SkuDetail.tsx
+  - src/domain/types.ts
+  - src/rbac/screenIds.ts
+  - src/rbac/policy.ts
+  - src/app/routeRegistry.ts
   - App.tsx
+  - src/services/moduleService.ts (New)
+  - src/services/packService.ts (New)
+  - src/pages/ModuleAssemblyList.tsx (New)
+  - src/pages/ModuleAssemblyDetail.tsx (New)
+  - src/pages/PackAssemblyList.tsx (New)
+  - src/pages/PackAssemblyDetail.tsx (New)
   - src/app/patchInfo.ts
 
-## UI_PATCH_A2_ROUTER_STABILITY_AND_ERROR_BOUNDARY
+## UI_PATCH_B0_TRACE_ROUTE_MISMATCH_FIX
 - **Date**: 2024-05-24
-- **Summary**: Stabilized application navigation and implemented global error handling.
+- **Summary**: Aligned TRACE module routes (Cells and Lineage) to a canonical namespace to resolve Diagnostic Mode mismatches.
 ... (existing logs) ...

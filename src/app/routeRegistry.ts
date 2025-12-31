@@ -1,3 +1,4 @@
+
 import { 
   LayoutDashboard, 
   Package, 
@@ -15,7 +16,9 @@ import {
   AlertOctagon,
   Wand2,
   Fingerprint,
-  Link2
+  Link2,
+  Layers,
+  Archive
 } from 'lucide-react';
 import { ScreenId } from '../rbac/screenIds';
 
@@ -37,11 +40,18 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.SKU_DETAIL]: { icon: Wand2, label: 'SKU Detail', path: '/sku/:id', screenId: ScreenId.SKU_DETAIL, componentName: 'SkuDetail.tsx' },
   
   // Trace Group
-  [ScreenId.CELL_LOTS]: { icon: Fingerprint, label: 'Cells', path: '/trace/cells', screenId: ScreenId.CELL_LOTS, componentName: 'CellLots.tsx' },
-  [ScreenId.CELL_LOT_DETAIL]: { icon: Fingerprint, label: 'Cell Lot Detail', path: '/trace/cells/:id', screenId: ScreenId.CELL_LOT_DETAIL, componentName: 'CellLotDetail.tsx' },
+  [ScreenId.CELL_LOTS_LIST]: { icon: Fingerprint, label: 'Cells', path: '/trace/cells', screenId: ScreenId.CELL_LOTS_LIST, componentName: 'CellLotsList.tsx' },
+  [ScreenId.CELL_LOT_DETAIL]: { icon: Fingerprint, label: 'Cell Lot Detail', path: '/trace/cells/:lotId', screenId: ScreenId.CELL_LOT_DETAIL, componentName: 'CellLotDetail.tsx' },
   [ScreenId.LINEAGE_VIEW]: { icon: Link2, label: 'Lineage', path: '/trace/lineage/:id', screenId: ScreenId.LINEAGE_VIEW, componentName: 'LineageView.tsx' },
 
   [ScreenId.BATCHES_LIST]: { icon: Package, label: 'Batches', path: '/batches', screenId: ScreenId.BATCHES_LIST, componentName: 'Batches.tsx' },
+  
+  // Assembly Group (Patch C)
+  [ScreenId.MODULE_ASSEMBLY_LIST]: { icon: Archive, label: 'Module Assembly', path: '/operate/modules', screenId: ScreenId.MODULE_ASSEMBLY_LIST, componentName: 'ModuleAssemblyList.tsx' },
+  [ScreenId.MODULE_ASSEMBLY_DETAIL]: { icon: Archive, label: 'Module Detail', path: '/operate/modules/:id', screenId: ScreenId.MODULE_ASSEMBLY_DETAIL, componentName: 'ModuleAssemblyDetail.tsx' },
+  [ScreenId.PACK_ASSEMBLY_LIST]: { icon: Layers, label: 'Pack Assembly', path: '/operate/packs', screenId: ScreenId.PACK_ASSEMBLY_LIST, componentName: 'PackAssemblyList.tsx' },
+  [ScreenId.PACK_ASSEMBLY_DETAIL]: { icon: Layers, label: 'Pack Detail', path: '/operate/packs/:id', screenId: ScreenId.PACK_ASSEMBLY_DETAIL, componentName: 'PackAssemblyDetail.tsx' },
+
   [ScreenId.BATTERIES_LIST]: { icon: Battery, label: 'Batteries', path: '/batteries', screenId: ScreenId.BATTERIES_LIST, componentName: 'Batteries.tsx' },
   [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning', path: '/provisioning', screenId: ScreenId.PROVISIONING, componentName: 'ProvisioningConsole.tsx' },
   [ScreenId.PROVISIONING_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/provisioning/setup', screenId: ScreenId.PROVISIONING_STATION_SETUP, componentName: 'ProvisioningStationSetup.tsx' },

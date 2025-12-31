@@ -1,3 +1,4 @@
+
 // Status Enums
 export enum BatchStatus {
   DRAFT = 'Draft',
@@ -439,4 +440,52 @@ export interface Alert {
   message: string;
   timestamp: string;
   batteryId?: string;
+}
+
+/**
+ * MODULE & PACK ASSEMBLY TYPES (Patch C)
+ * ---------------------------------------------------------------------
+ */
+
+export enum ModuleStatus {
+  DRAFT = 'DRAFT',
+  IN_PROGRESS = 'IN_PROGRESS',
+  SEALED = 'SEALED',
+  CONSUMED = 'CONSUMED',
+  QUARANTINED = 'QUARANTINED'
+}
+
+export enum PackStatus {
+  DRAFT = 'DRAFT',
+  IN_PROGRESS = 'IN_PROGRESS',
+  FINALIZED = 'FINALIZED',
+  DECOMMISSIONED = 'DECOMMISSIONED'
+}
+
+export interface ModuleInstance {
+  id: string;
+  skuId: string;
+  skuCode: string;
+  targetCells: number;
+  boundCellSerials: string[];
+  status: ModuleStatus;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PackInstance {
+  id: string;
+  skuId: string;
+  skuCode: string;
+  moduleIds: string[];
+  status: PackStatus;
+  packSerial: string;
+  bmsSerial: string;
+  firmwareVersion: string;
+  qcStatus: 'PENDING' | 'PASSED' | 'FAILED';
+  destination?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
 }

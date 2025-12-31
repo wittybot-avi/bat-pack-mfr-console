@@ -74,13 +74,16 @@ export const Layout = () => {
           {visibleItems.map(id => {
             const config = APP_ROUTES[id];
             if (!config) return null;
+            
+            const path = config.path;
+
             return (
               <SidebarItem 
                 key={id}
                 icon={config.icon} 
                 label={config.label} 
-                path={config.path} 
-                active={location.pathname === config.path || (location.pathname.startsWith(config.path) && config.path !== '/')}
+                path={path} 
+                active={location.pathname === path || (location.pathname.startsWith(path) && path !== '/')}
               />
             );
           })}
