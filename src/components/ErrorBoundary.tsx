@@ -1,5 +1,5 @@
 
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle } from './ui/design-system';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home } from 'lucide-react';
 
@@ -14,11 +14,15 @@ interface State {
   showDetails: boolean;
 }
 
-// Fixed: Correctly extending Component with generics to ensure TypeScript recognizes state, props, and setState
-class ErrorBoundary extends Component<Props, State> {
+/**
+ * Standard React Error Boundary component.
+ * Fixed property access errors by ensuring inheritance from React.Component is correctly typed.
+ */
+// Fix: Correctly extending React.Component with generics to ensure TypeScript recognizes state, props, and setState
+class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // Correctly initialize state as a property of the class instance
+    // Fix: Correctly initialize state as a property of the class instance
     this.state = {
       hasError: false,
       error: null,
@@ -28,11 +32,12 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public static getDerivedStateFromError(error: Error): State {
+    // Update state so the next render will show the fallback UI
     return { hasError: true, error, errorInfo: null, showDetails: false };
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // setState is now correctly recognized as inherited from Component
+    // Fix: setState is now correctly recognized as inherited from React.Component
     this.setState({ error, errorInfo });
     console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
@@ -42,12 +47,12 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   private toggleDetails = () => {
-    // setState is now correctly recognized as inherited from Component
+    // Fix: setState is now correctly recognized as inherited from React.Component
     this.setState(prev => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
-    // state property access is now correctly recognized via Component inheritance
+    // Fix: state property access is now correctly recognized via Component inheritance
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
@@ -68,16 +73,16 @@ class ErrorBoundary extends Component<Props, State> {
                   onClick={this.toggleDetails}
                   className="w-full flex items-center gap-2 p-2 bg-slate-800 dark:bg-slate-900 hover:bg-slate-700 dark:hover:bg-slate-800 text-slate-400 transition-colors border-b border-slate-700 dark:border-slate-800"
                 >
-                  {/* Correctly accessing showDetails from state */}
+                  {/* Fix: Correctly accessing showDetails from state */}
                   {this.state.showDetails ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   Diagnostics
                 </button>
-                {/* Correctly accessing showDetails from state */}
+                {/* Fix: Correctly accessing showDetails from state */}
                 {this.state.showDetails && (
                   <div className="p-3 overflow-auto max-h-[300px]">
-                    {/* Correctly accessing error from state */}
+                    {/* Fix: Correctly accessing error from state */}
                     <p className="text-rose-400 mb-2 font-bold">{this.state.error?.toString()}</p>
-                    {/* Correctly accessing errorInfo from state */}
+                    {/* Fix: Correctly accessing errorInfo from state */}
                     <pre className="whitespace-pre-wrap text-slate-500">
                       {this.state.errorInfo?.componentStack}
                     </pre>
@@ -99,7 +104,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Correctly accessing children from props via Component inheritance
+    // Fix: Correctly accessing children from props via Component inheritance
     return this.props.children;
   }
 }

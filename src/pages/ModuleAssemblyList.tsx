@@ -3,17 +3,19 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { moduleService } from '../services/moduleService';
 import { ModuleInstance, ModuleStatus } from '../domain/types';
-import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button } from '../components/ui/design-system';
-import { Plus, Eye, Archive, User, Calendar, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button, Tooltip } from '../components/ui/design-system';
+import { Plus, Eye, Archive, User, Calendar, Loader2, History } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { canDo } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
+import { TraceDrawer } from '../components/TraceDrawer';
 
 export default function ModuleAssemblyList() {
   const navigate = useNavigate();
   const { currentCluster } = useAppStore();
   const [modules, setModules] = useState<ModuleInstance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [traceId, setTraceId] = useState<string | null>(null);
 
   const canCreate = canDo(currentCluster?.id || '', ScreenId.MODULE_ASSEMBLY_LIST, 'C');
 
@@ -91,7 +93,12 @@ export default function ModuleAssemblyList() {
                        </div>
                     </TableCell>
                     <TableCell className="text-right">
-                       <Button variant="ghost" size="sm" className="gap-2">Open <Eye size={14} /></Button>
+                       <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                           <Tooltip content="Quick Trace">
+                               <Button variant="ghost" size="icon" onClick={() => setTraceId(m.id)}><History size={14} /></Button>
+                           </Tooltip>
+                           <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate(`/operate/modules/${m.id}`)}>Open <Eye size={14} /></Button>
+                       </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -101,10 +108,12 @@ export default function ModuleAssemblyList() {
         </CardContent>
       </Card>
 
-      <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-md border border-dashed text-xs text-muted-foreground font-mono">
-        INTEGRATION NOTE: This module interacts with the SKU Blueprint service to enforce cell counts and chemistry rules. 
-        Module sealing triggers readiness for Pack Assembly linkage.
-      </div>
+      <TraceDrawer 
+        isOpen={!!traceId} 
+        onClose={() => setTraceId(null)} 
+        assetId={traceId || ''} 
+        assetType="MODULE" 
+      />
     </div>
   );
 }

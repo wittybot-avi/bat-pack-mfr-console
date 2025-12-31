@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
   Menu,
@@ -18,8 +19,8 @@ import { canView } from '../rbac/can';
 import { APP_ROUTES, checkConsistency } from '../app/routeRegistry';
 import { DIAGNOSTIC_MODE } from '../app/diagnostics';
 import { safeStorage } from '../utils/safeStorage';
+import { traceSearchService } from '../services/traceSearchService';
 
-// Fix: Add optional key to component props to satisfy TS when used in list mapping
 const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean, key?: any }) => (
   <Link to={path}>
     <div className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all ${active ? 'bg-primary/10 text-primary font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
@@ -30,11 +31,12 @@ const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: st
 );
 
 export const Layout = () => {
-  const { theme, toggleTheme, currentRole, currentCluster, logout, sidebarOpen, toggleSidebar } = useAppStore();
+  const { theme, toggleTheme, currentRole, currentCluster, logout, sidebarOpen, toggleSidebar, addNotification } = useAppStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searching, setSearching] = useState(false);
 
-  // Diagnostic Check on Mount
   useEffect(() => {
     if (DIAGNOSTIC_MODE) {
       const warnings = checkConsistency();
@@ -49,14 +51,23 @@ export const Layout = () => {
     navigate('/login');
   };
 
-  const handleSwitchRole = () => {
-    navigate('/login');
+  const handleGlobalSearch = async (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+        setSearching(true);
+        const resolution = await traceSearchService.resolveIdentifier(searchQuery);
+        setSearching(false);
+        if (resolution) {
+            addNotification({ title: 'Jump To', message: `Found ${resolution.type}: ${resolution.label}`, type: 'success' });
+            navigate(resolution.route);
+            setSearchQuery('');
+        } else {
+            addNotification({ title: 'Not Found', message: 'Identifier not recognized in global registry.', type: 'error' });
+        }
+    }
   };
 
   const renderNavGroup = (groupName: string, screenIds: ScreenId[]) => {
     if (!currentCluster) return null;
-    
-    // Patch A.1: Super user and dev toggle override
     const isSuperUser = currentCluster.id === 'CS';
     const devForceShowSku = safeStorage.getItem('DEV_FORCE_SHOW_SKU') === '1';
 
@@ -74,9 +85,7 @@ export const Layout = () => {
           {visibleItems.map(id => {
             const config = APP_ROUTES[id];
             if (!config) return null;
-            
             const path = config.path;
-
             return (
               <SidebarItem 
                 key={id}
@@ -98,7 +107,6 @@ export const Layout = () => {
 
   return (
     <div className={`min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-900 dark:text-slate-100`}>
-      {/* Sidebar */}
       <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} fixed inset-y-0 z-50 flex flex-col transition-all duration-300 border-r bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden`}>
         <div className="h-16 flex items-center px-6 border-b dark:border-slate-800 shrink-0">
           <div className={`h-8 w-8 rounded mr-3 flex items-center justify-center text-white font-bold ${isSuperUser ? 'bg-amber-500' : 'bg-primary'}`}>
@@ -123,12 +131,7 @@ export const Layout = () => {
                     <AlertTriangle size={10} /> Diagnostics
                 </h3>
                 <div className="space-y-1">
-                    <SidebarItem 
-                        icon={AlertTriangle} 
-                        label="System Health" 
-                        path="/__diagnostics/pages" 
-                        active={location.pathname === '/__diagnostics/pages'}
-                    />
+                    <SidebarItem icon={AlertTriangle} label="System Health" path="/__diagnostics/pages" active={location.pathname === '/__diagnostics/pages'} />
                 </div>
              </div>
           )}
@@ -151,17 +154,22 @@ export const Layout = () => {
         </div>
       </aside>
 
-      {/* Main Content */}
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
-        {/* Header */}
         <header className="h-16 border-b bg-white dark:bg-slate-900 dark:border-slate-800 sticky top-0 z-40 px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={toggleSidebar}>
               <Menu size={20} />
             </Button>
             <div className="relative hidden md:block w-96">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Search..." className="pl-9 bg-slate-100 dark:bg-slate-800 border-none" />
+              <Search className={`absolute left-2.5 top-2.5 h-4 w-4 ${searching ? 'text-primary animate-pulse' : 'text-muted-foreground'}`} />
+              <Input 
+                type="search" 
+                placeholder="Global Trace Search (IDs, Serials, Lots)..." 
+                className="pl-9 bg-slate-100 dark:bg-slate-800 border-none" 
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={handleGlobalSearch}
+              />
             </div>
           </div>
 
@@ -169,30 +177,22 @@ export const Layout = () => {
             <Button variant="ghost" size="icon">
               <Bell size={20} />
             </Button>
-            
             <div className="flex items-center border rounded-md p-1 bg-slate-100 dark:bg-slate-800">
-              <button 
-                onClick={toggleTheme}
-                className="px-2 py-1 text-xs rounded shadow-sm bg-white dark:bg-slate-700 font-medium"
-              >
+              <button onClick={toggleTheme} className="px-2 py-1 text-xs rounded shadow-sm bg-white dark:bg-slate-700 font-medium">
                 {theme === 'light' ? 'Light' : 'Dark'}
               </button>
             </div>
-
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
-
             <div className="flex items-center gap-2">
               <Badge variant="outline" className={`hidden sm:flex items-center gap-1 font-normal ${isSuperUser ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400' : 'bg-slate-50 dark:bg-slate-800'}`}>
                 {isSuperUser && <Zap size={12} fill="currentColor" />}
                 <span className="font-semibold">{currentCluster.id}</span>
                 <span className="truncate max-w-[100px]">{currentRole.name}</span>
               </Badge>
-              
-              <Button variant="ghost" size="sm" onClick={handleSwitchRole} title="Switch Identity">
+              <Button variant="ghost" size="sm" onClick={() => navigate('/login')} title="Switch Identity">
                 <UserCircle className="h-4 w-4 mr-1" />
                 <span className="hidden sm:inline">Switch</span>
               </Button>
-              
               <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -200,12 +200,10 @@ export const Layout = () => {
           </div>
         </header>
 
-        {/* Page Content */}
         <main className="flex-1 p-6 overflow-auto">
           <Outlet />
         </main>
 
-        {/* Diagnostic Footer */}
         {DIAGNOSTIC_MODE && (
             <footer className="h-8 bg-slate-900 text-slate-400 text-[10px] font-mono flex items-center justify-between px-6 border-t border-slate-800 shrink-0">
                 <span>DIAGNOSTIC MODE ACTIVE</span>

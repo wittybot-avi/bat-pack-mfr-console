@@ -4,11 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { packAssemblyService } from '../services/packAssemblyService';
 import { skuService, Sku } from '../services/skuService';
 import { PackInstance, PackStatus } from '../domain/types';
-import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button } from '../components/ui/design-system';
-import { Plus, Eye, Layers, Battery, ClipboardCheck, Loader2, ArrowRight } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button, Tooltip } from '../components/ui/design-system';
+import { Plus, Eye, Layers, Battery, ClipboardCheck, Loader2, ArrowRight, History } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { canDo } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
+import { TraceDrawer } from '../components/TraceDrawer';
 
 export default function PackAssemblyList() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function PackAssemblyList() {
   const [loading, setLoading] = useState(true);
   const [isStartModalOpen, setIsStartModalOpen] = useState(false);
   const [selectedSku, setSelectedSku] = useState('');
+  const [traceId, setTraceId] = useState<string | null>(null);
 
   const canCreate = canDo(currentCluster?.id || '', ScreenId.PACK_ASSEMBLY_LIST, 'C');
 
@@ -110,7 +112,12 @@ export default function PackAssemblyList() {
                     </TableCell>
                     <TableCell>{getStatusBadge(p.status)}</TableCell>
                     <TableCell className="text-right">
-                       <Button variant="ghost" size="sm" className="gap-2">Open <ArrowRight size={14} /></Button>
+                       <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                           <Tooltip content="Quick Trace">
+                               <Button variant="ghost" size="icon" onClick={() => setTraceId(p.id)}><History size={14} /></Button>
+                           </Tooltip>
+                           <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate(`/operate/packs/${p.id}`)}>Open <ArrowRight size={14} /></Button>
+                       </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -120,10 +127,11 @@ export default function PackAssemblyList() {
         </CardContent>
       </Card>
 
-      {/* Start Modal */}
+      <TraceDrawer isOpen={!!traceId} onClose={() => setTraceId(null)} assetId={traceId || ''} assetType="PACK" />
+
       {isStartModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-              <Card className="w-[400px]">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+              <Card className="w-[400px] shadow-2xl">
                   <CardHeader><CardTitle className="text-lg">New Build Order</CardTitle></CardHeader>
                   <CardContent className="space-y-4">
                       <div className="space-y-2">
