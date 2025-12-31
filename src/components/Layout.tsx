@@ -9,7 +9,9 @@ import {
   LogOut,
   UserCircle,
   Zap,
-  AlertTriangle
+  AlertTriangle,
+  History,
+  X
 } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { Button, Input, Badge } from './ui/design-system';
@@ -34,8 +36,10 @@ export const Layout = () => {
   const { theme, toggleTheme, currentRole, currentCluster, logout, sidebarOpen, toggleSidebar, addNotification } = useAppStore();
   const location = useLocation();
   const navigate = useNavigate();
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
+  const [showNoMatch, setShowNoMatch] = useState(false);
 
   useEffect(() => {
     if (DIAGNOSTIC_MODE) {
@@ -51,18 +55,25 @@ export const Layout = () => {
     navigate('/login');
   };
 
-  const handleGlobalSearch = async (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-        setSearching(true);
+  const handleGlobalSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim() || searching) return;
+
+    setSearching(true);
+    setShowNoMatch(false);
+    try {
         const resolution = await traceSearchService.resolveIdentifier(searchQuery);
-        setSearching(false);
         if (resolution) {
             addNotification({ title: 'Jump To', message: `Found ${resolution.type}: ${resolution.label}`, type: 'success' });
             navigate(resolution.route);
             setSearchQuery('');
         } else {
-            addNotification({ title: 'Not Found', message: 'Identifier not recognized in global registry.', type: 'error' });
+            setShowNoMatch(true);
         }
+    } catch (err) {
+        console.error("Search failed:", err);
+    } finally {
+        setSearching(false);
     }
   };
 
@@ -156,21 +167,40 @@ export const Layout = () => {
 
       <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarOpen ? 'pl-64' : 'pl-0'}`}>
         <header className="h-16 border-b bg-white dark:bg-slate-900 dark:border-slate-800 sticky top-0 z-40 px-6 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 relative">
             <Button variant="ghost" size="icon" onClick={toggleSidebar}>
               <Menu size={20} />
             </Button>
-            <div className="relative hidden md:block w-96">
+            <form onSubmit={handleGlobalSearch} className="relative hidden md:block w-96">
               <Search className={`absolute left-2.5 top-2.5 h-4 w-4 ${searching ? 'text-primary animate-pulse' : 'text-muted-foreground'}`} />
               <Input 
                 type="search" 
                 placeholder="Global Trace Search (IDs, Serials, Lots)..." 
-                className="pl-9 bg-slate-100 dark:bg-slate-800 border-none" 
+                className="pl-9 bg-slate-100 dark:bg-slate-800 border-none h-10" 
                 value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={handleGlobalSearch}
+                onChange={e => {
+                    setSearchQuery(e.target.value);
+                    if (showNoMatch) setShowNoMatch(false);
+                }}
               />
-            </div>
+              {showNoMatch && (
+                  <div className="absolute top-12 left-0 w-full bg-white dark:bg-slate-900 border rounded-lg shadow-2xl p-4 z-[100] animate-in slide-in-from-top-2">
+                      <div className="flex justify-between items-start mb-2">
+                          <h4 className="text-sm font-bold flex items-center gap-2"><XCircle size={14} className="text-rose-500" /> No Record Found</h4>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowNoMatch(false)}><X size={14}/></Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mb-3">Identifier not recognized in current ledger. Ensure query matches an ID, Serial, or SKU.</p>
+                      <div className="space-y-1">
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Valid Examples</p>
+                          <ul className="text-[10px] space-y-1">
+                              <li className="flex justify-between border-b pb-1"><span>Cell Serial</span> <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-primary">CATL-1001</code></li>
+                              <li className="flex justify-between border-b pb-1"><span>Pack ID</span> <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-primary">PB-938210</code></li>
+                              <li className="flex justify-between border-b pb-1"><span>SKU Code</span> <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-primary">VV360-LFP-48V</code></li>
+                          </ul>
+                      </div>
+                  </div>
+              )}
+            </form>
           </div>
 
           <div className="flex items-center gap-3">
@@ -215,3 +245,7 @@ export const Layout = () => {
     </div>
   );
 };
+
+const XCircle = ({ size, className }: any) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+);

@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { cellTraceabilityService } from '../services/cellTraceabilityService';
 import { CellLot } from '../domain/types';
 import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button, Input, Tooltip } from '../components/ui/design-system';
@@ -10,9 +10,11 @@ import { TraceDrawer } from '../components/TraceDrawer';
 
 export default function CellLotsList() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentCluster } = useAppStore();
+  
   const [lots, setLots] = useState<CellLot[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(searchParams.get('q') || '');
   const [loading, setLoading] = useState(true);
   const [traceId, setTraceId] = useState<string | null>(null);
 
@@ -51,27 +53,27 @@ export default function CellLotsList() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Card className="bg-primary/5 border-primary/10">
-              <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground uppercase font-bold">Total Lots</p>
-                  <p className="text-2xl font-bold">{lots.length}</p>
+              <CardContent className="p-4 text-center">
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Total Lots</p>
+                  <p className="text-3xl font-bold text-primary">{lots.length}</p>
               </CardContent>
           </Card>
           <Card>
-              <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground uppercase font-bold">Total Cells</p>
-                  <p className="text-2xl font-bold">{lots.reduce((acc, l) => acc + l.quantityReceived, 0).toLocaleString()}</p>
+              <CardContent className="p-4 text-center">
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Population</p>
+                  <p className="text-3xl font-bold">{lots.reduce((acc, l) => acc + l.quantityReceived, 0).toLocaleString()}</p>
               </CardContent>
           </Card>
           <Card>
-              <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground uppercase font-bold">Active Serialization</p>
-                  <p className="text-2xl font-bold text-amber-500">{lots.filter(l => l.status === 'DRAFT').length}</p>
+              <CardContent className="p-4 text-center">
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">WIP serialization</p>
+                  <p className="text-3xl font-bold text-amber-500">{lots.filter(l => l.status === 'DRAFT').length}</p>
               </CardContent>
           </Card>
           <Card>
-              <CardContent className="p-4">
-                  <p className="text-xs text-muted-foreground uppercase font-bold">Ready to Bind</p>
-                  <p className="text-2xl font-bold text-emerald-500">{lots.filter(l => l.status === 'PUBLISHED' || l.status === 'READY_TO_BIND').length}</p>
+              <CardContent className="p-4 text-center">
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Gated & Ready</p>
+                  <p className="text-3xl font-bold text-emerald-500">{lots.filter(l => l.status === 'PUBLISHED' || l.status === 'READY_TO_BIND').length}</p>
               </CardContent>
           </Card>
       </div>
@@ -107,20 +109,20 @@ export default function CellLotsList() {
               </TableHeader>
               <tbody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-20"><Loader2 className="animate-spin mx-auto opacity-20" /></TableCell></TableRow>
                 ) : filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No matching cell lots found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-20 text-muted-foreground">No matching cell lots found in decentralized ledger.</TableCell></TableRow>
                 ) : (
                   filtered.map(lot => (
                     <TableRow key={lot.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800" onClick={() => navigate(`/trace/cells/${lot.id}`)}>
                       <TableCell className="font-mono font-bold text-primary">{lot.lotCode}</TableCell>
                       <TableCell>{lot.supplierName}</TableCell>
                       <TableCell>{lot.quantityReceived}</TableCell>
-                      <TableCell className="text-xs font-mono">{lot.generatedCount}</TableCell>
+                      <TableCell className="text-xs font-mono text-slate-500">{lot.generatedCount}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                           <span className="text-xs font-mono">{Math.round((lot.scannedCount / (lot.generatedCount || 1)) * 100)}%</span>
-                           <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
+                           <span className="text-xs font-mono w-8">{Math.round((lot.scannedCount / (lot.generatedCount || 1)) * 100)}%</span>
+                           <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                              <div className="h-full bg-emerald-500" style={{ width: `${(lot.scannedCount / (lot.generatedCount || 1)) * 100}%` }} />
                            </div>
                         </div>
@@ -130,10 +132,10 @@ export default function CellLotsList() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
-                            <Tooltip content="Quick Trace">
-                                <Button variant="ghost" size="icon" onClick={() => setTraceId(lot.id)}><History size={14} /></Button>
+                            <Tooltip content="Trace Genealogy">
+                                <Button variant="ghost" size="icon" onClick={() => setTraceId(lot.id)} className="text-indigo-500"><History size={16} /></Button>
                             </Tooltip>
-                            <Button variant="ghost" size="sm" onClick={() => navigate(`/trace/cells/${lot.id}`)}>Open <ArrowRight size={14} /></Button>
+                            <Button variant="ghost" size="sm" onClick={() => navigate(`/trace/cells/${lot.id}`)} className="gap-2">Manage <ArrowRight size={14} /></Button>
                         </div>
                       </TableCell>
                     </TableRow>

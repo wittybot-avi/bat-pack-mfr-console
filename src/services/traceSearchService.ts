@@ -16,38 +16,41 @@ class TraceSearchService {
         const q = query.trim();
         if (!q) return null;
 
-        // 1. Check SKU (usually starts with blueprint prefixes or matches code)
+        // 1. Check SKU (matches code or starts with prefix)
         const skus = await skuService.listSkus();
         const foundSku = skus.find(s => s.skuCode.toLowerCase() === q.toLowerCase() || s.id === q);
         if (foundSku) {
             return { route: `/sku/${foundSku.id}`, type: 'SKU', id: foundSku.id, label: foundSku.skuCode };
         }
 
-        // 2. Check Pack (Starts with PB- or matches Serial SN-)
+        // 2. Check Pack (matches ID PB- or serial SN-)
         const packs = await packAssemblyService.listPacks();
-        const foundPack = packs.find(p => p.id.toLowerCase() === q.toLowerCase() || (p.packSerial && p.packSerial.toLowerCase() === q.toLowerCase()));
+        const foundPack = packs.find(p => 
+            p.id.toLowerCase() === q.toLowerCase() || 
+            (p.packSerial && p.packSerial.toLowerCase() === q.toLowerCase())
+        );
         if (foundPack) {
             return { route: `/operate/packs/${foundPack.id}`, type: 'PACK', id: foundPack.id, label: foundPack.packSerial || foundPack.id };
         }
 
-        // 3. Check Module (Starts with MOD-)
+        // 3. Check Module (starts with MOD- or matches ID)
         const modules = await moduleAssemblyService.listModules();
         const foundMod = modules.find(m => m.id.toLowerCase() === q.toLowerCase());
         if (foundMod) {
             return { route: `/operate/modules/${foundMod.id}`, type: 'MODULE', id: foundMod.id, label: foundMod.id };
         }
 
-        // 4. Check Lot (Starts with clot- or matches Lot Code)
+        // 4. Check Lot (starts with clot- or matches code)
         const lots = await cellTraceabilityService.listLots();
         const foundLot = lots.find(l => l.id.toLowerCase() === q.toLowerCase() || l.lotCode.toLowerCase() === q.toLowerCase());
         if (foundLot) {
             return { route: `/trace/cells/${foundLot.id}`, type: 'LOT', id: foundLot.id, label: foundLot.lotCode };
         }
 
-        // 5. Check Cell Serial (Global Lookup)
+        // 5. Check Cell Serial (Global Traceability lookup)
         const cellLookup = await cellTraceabilityService.findSerialGlobal(q);
         if (cellLookup) {
-            // If found a cell, we usually want to jump to its lineage
+            // Found a cell serial, route to lineage for context
             return { route: `/trace/lineage/${cellLookup.serial.serial}`, type: 'CELL', id: cellLookup.serial.serial, label: cellLookup.serial.serial };
         }
 

@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle } from './ui/design-system';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home } from 'lucide-react';
 
@@ -16,13 +16,12 @@ interface State {
 
 /**
  * Standard React Error Boundary component.
- * Fixed property access errors by ensuring inheritance from React.Component is correctly typed.
+ * Fixed property access errors by ensuring inheritance from Component is correctly recognized.
  */
-// Fix: Correctly extending React.Component with generics to ensure TypeScript recognizes state, props, and setState
-class ErrorBoundary extends React.Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // Fix: Correctly initialize state as a property of the class instance
+    // Initialize state
     this.state = {
       hasError: false,
       error: null,
@@ -37,7 +36,7 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Fix: setState is now correctly recognized as inherited from React.Component
+    // Correctly accessing setState from Component base class
     this.setState({ error, errorInfo });
     console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
@@ -47,12 +46,12 @@ class ErrorBoundary extends React.Component<Props, State> {
   };
 
   private toggleDetails = () => {
-    // Fix: setState is now correctly recognized as inherited from React.Component
+    // Correctly accessing setState from Component base class
     this.setState(prev => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
-    // Fix: state property access is now correctly recognized via Component inheritance
+    // Correctly accessing state from Component base class
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
@@ -73,16 +72,12 @@ class ErrorBoundary extends React.Component<Props, State> {
                   onClick={this.toggleDetails}
                   className="w-full flex items-center gap-2 p-2 bg-slate-800 dark:bg-slate-900 hover:bg-slate-700 dark:hover:bg-slate-800 text-slate-400 transition-colors border-b border-slate-700 dark:border-slate-800"
                 >
-                  {/* Fix: Correctly accessing showDetails from state */}
                   {this.state.showDetails ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                   Diagnostics
                 </button>
-                {/* Fix: Correctly accessing showDetails from state */}
                 {this.state.showDetails && (
                   <div className="p-3 overflow-auto max-h-[300px]">
-                    {/* Fix: Correctly accessing error from state */}
                     <p className="text-rose-400 mb-2 font-bold">{this.state.error?.toString()}</p>
-                    {/* Fix: Correctly accessing errorInfo from state */}
                     <pre className="whitespace-pre-wrap text-slate-500">
                       {this.state.errorInfo?.componentStack}
                     </pre>
@@ -104,7 +99,7 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Correctly accessing children from props via Component inheritance
+    // Correctly accessing children from props
     return this.props.children;
   }
 }

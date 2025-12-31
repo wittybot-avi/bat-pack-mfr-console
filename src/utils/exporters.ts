@@ -21,6 +21,10 @@ export const exportAsCsv = (headers: string[], rows: any[][], fileName: string) 
     downloadFile(content, `${fileName}.csv`, "text/csv");
 };
 
+/**
+ * Generates a mock "Digital Product Passport" (DPP-lite) based on EU structure.
+ * This is a demo placeholder for future regulatory requirements.
+ */
 export const exportAsDppLite = (subject: any, children: any[], sku: any, events: any[]) => {
     const dpp = {
         "@context": "https://aayatana.tech/contexts/dpp-v1.jsonld",
@@ -34,24 +38,32 @@ export const exportAsDppLite = (subject: any, children: any[], sku: any, events:
             "chemistry": sku?.chemistry || "LFP"
         },
         "manufacturingTrace": {
-            "facility": "Aayatana Bangalore Plant A",
+            "facility": "Aayatana Bangalore Plant Alpha",
             "batch": subject.batchId || "N/A",
             "timestamp": subject.createdAt || subject.generatedAt
         },
         "composition": {
-            "type": subject.type,
+            "type": subject.type || "ASSET",
             "componentsCount": children.length,
-            "components": children.map(c => ({ id: c.id || c.serial, type: c.type }))
+            "components": children.map(c => ({ 
+                id: c.id || c.serial, 
+                type: c.type || "COMPONENT" 
+            }))
         },
         "compliance": {
-            "status": subject.status || "Active",
+            "readinessStatus": subject.status || "Active",
             "qualityDecision": subject.qcStatus || "PASS",
-            "events": events.map(e => ({ type: e.type, ts: e.timestamp, actor: e.actor }))
+            "eventsCount": events.length,
+            "lifecycleEvents": events.map(e => ({ 
+                type: e.type, 
+                ts: e.timestamp, 
+                actor: e.actor 
+            }))
         },
         "circularity": {
-            "reproducibilityScore": "High",
+            "carbonFootprint": "Estimated 85kg CO2e",
             "recyclingInstructions": "Standard industrial LFP recovery protocol.",
-            "carbonFootprint": "Estimated 85kg CO2e"
+            "reproducibilityScore": "High (Level 4)"
         }
     };
     exportAsJson(dpp, `DPP_Lite_${subject.id || subject.serial}`);

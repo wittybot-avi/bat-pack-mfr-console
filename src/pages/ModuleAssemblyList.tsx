@@ -32,6 +32,7 @@ export default function ModuleAssemblyList() {
       case ModuleStatus.IN_PROGRESS: return <Badge variant="default">IN PROGRESS</Badge>;
       case ModuleStatus.DRAFT: return <Badge variant="outline">DRAFT</Badge>;
       case ModuleStatus.QUARANTINED: return <Badge variant="destructive">QUARANTINED</Badge>;
+      case ModuleStatus.CONSUMED: return <Badge variant="secondary">CONSUMED</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
     }
   };
@@ -44,7 +45,7 @@ export default function ModuleAssemblyList() {
           <p className="text-muted-foreground">Monitor sub-assembly work orders and cell binding progress.</p>
         </div>
         {canCreate && (
-          <Button onClick={() => navigate('/operate/modules/new')} className="gap-2">
+          <Button onClick={() => navigate('/operate/modules/new')} className="gap-2 shadow-lg">
             <Plus className="h-4 w-4" /> Start Assembly
           </Button>
         )}
@@ -53,7 +54,7 @@ export default function ModuleAssemblyList() {
       <Card>
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead>Work Order ID</TableHead>
                 <TableHead>SKU Blueprint</TableHead>
@@ -71,7 +72,7 @@ export default function ModuleAssemblyList() {
                 <TableRow><TableCell colSpan={7} className="text-center py-20 text-muted-foreground">No active module work orders found.</TableCell></TableRow>
               ) : (
                 modules.map(m => (
-                  <TableRow key={m.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => navigate(`/operate/modules/${m.id}`)}>
+                  <TableRow key={m.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group" onClick={() => navigate(`/operate/modules/${m.id}`)}>
                     <TableCell className="font-mono font-bold text-primary">{m.id}</TableCell>
                     <TableCell>
                       <div className="text-sm font-medium">{m.skuCode}</div>
@@ -79,23 +80,23 @@ export default function ModuleAssemblyList() {
                     <TableCell className="text-xs">{m.targetCells} Cells</TableCell>
                     <TableCell>
                        <div className="flex items-center gap-2">
-                          <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                              <div className="h-full bg-emerald-500" style={{ width: `${(m.boundCellSerials.length / m.targetCells) * 100}%` }} />
                           </div>
-                          <span className="text-xs font-mono">{m.boundCellSerials.length}/{m.targetCells}</span>
+                          <span className="text-xs font-mono w-10">{m.boundCellSerials.length}/{m.targetCells}</span>
                        </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(m.status)}</TableCell>
                     <TableCell>
-                       <div className="flex flex-col text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(m.updatedAt).toLocaleDateString()}</span>
+                       <div className="flex flex-col text-[11px] text-muted-foreground">
+                          <span className="flex items-center gap-1 font-medium text-slate-600 dark:text-slate-400"><Calendar size={10} /> {new Date(m.updatedAt).toLocaleDateString()}</span>
                           <span className="flex items-center gap-1"><User size={10} /> {m.createdBy}</span>
                        </div>
                     </TableCell>
                     <TableCell className="text-right">
-                       <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                            <Tooltip content="Quick Trace">
-                               <Button variant="ghost" size="icon" onClick={() => setTraceId(m.id)}><History size={14} /></Button>
+                               <Button variant="ghost" size="icon" onClick={() => setTraceId(m.id)} className="text-indigo-500"><History size={16} /></Button>
                            </Tooltip>
                            <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate(`/operate/modules/${m.id}`)}>Open <Eye size={14} /></Button>
                        </div>

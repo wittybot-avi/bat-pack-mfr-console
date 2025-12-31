@@ -14,6 +14,7 @@ import { TraceDrawer } from '../components/TraceDrawer';
 export default function PackAssemblyList() {
   const navigate = useNavigate();
   const { currentCluster, currentRole, addNotification } = useAppStore();
+  
   const [packs, setPacks] = useState<PackInstance[]>([]);
   const [skus, setSkus] = useState<Sku[]>([]);
   const [loading, setLoading] = useState(true);
@@ -68,7 +69,7 @@ export default function PackAssemblyList() {
           <p className="text-muted-foreground">Main assembly line: linking modules into final battery packs.</p>
         </div>
         {canCreate && (
-          <Button onClick={() => setIsStartModalOpen(true)} className="gap-2">
+          <Button onClick={() => setIsStartModalOpen(true)} className="gap-2 shadow-lg">
             <Plus className="h-4 w-4" /> Start Pack Build
           </Button>
         )}
@@ -77,7 +78,7 @@ export default function PackAssemblyList() {
       <Card>
         <CardContent className="p-0">
           <Table>
-            <TableHeader>
+            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead>Build ID</TableHead>
                 <TableHead>SKU Blueprint</TableHead>
@@ -92,29 +93,29 @@ export default function PackAssemblyList() {
               {loading ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-20"><Loader2 className="animate-spin h-8 w-8 mx-auto opacity-20" /></TableCell></TableRow>
               ) : packs.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-20 text-muted-foreground">No active pack work orders.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-20 text-muted-foreground">No active pack work orders found.</TableCell></TableRow>
               ) : (
                 packs.map(p => (
-                  <TableRow key={p.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => navigate(`/operate/packs/${p.id}`)}>
+                  <TableRow key={p.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group" onClick={() => navigate(`/operate/packs/${p.id}`)}>
                     <TableCell className="font-mono font-bold text-primary">{p.id}</TableCell>
                     <TableCell>{p.skuCode}</TableCell>
                     <TableCell>
                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono">{p.moduleIds.length}/{p.requiredModules || 1}</span>
-                          <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden">
+                          <span className="text-xs font-mono w-10">{p.moduleIds.length}/{p.requiredModules || 1}</span>
+                          <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                              <div className="h-full bg-blue-500" style={{ width: `${(p.moduleIds.length / (p.requiredModules || 1)) * 100}%` }} />
                           </div>
                        </div>
                     </TableCell>
-                    <TableCell className="font-mono text-[10px]">{p.packSerial || '-'}</TableCell>
+                    <TableCell className="font-mono text-xs font-semibold">{p.packSerial || '-'}</TableCell>
                     <TableCell>
                        <Badge variant={p.qcStatus === 'PASSED' ? 'success' : 'outline'}>{p.qcStatus}</Badge>
                     </TableCell>
                     <TableCell>{getStatusBadge(p.status)}</TableCell>
                     <TableCell className="text-right">
-                       <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
-                           <Tooltip content="Quick Trace">
-                               <Button variant="ghost" size="icon" onClick={() => setTraceId(p.id)}><History size={14} /></Button>
+                       <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                           <Tooltip content="Trace Genealogy">
+                               <Button variant="ghost" size="icon" onClick={() => setTraceId(p.id)} className="text-indigo-500"><History size={16} /></Button>
                            </Tooltip>
                            <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate(`/operate/packs/${p.id}`)}>Open <ArrowRight size={14} /></Button>
                        </div>
