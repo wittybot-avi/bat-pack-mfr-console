@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../lib/store';
 import { canView, canDo } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
 import { generateSettingsSpec } from '../services/settingsSpec';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge, Table, TableHeader, TableRow, TableHead, TableCell, Tooltip } from '../components/ui/design-system';
-import { Settings as SettingsIcon, Users, Key, Bell, Webhook, Building, Lock, Download, AlertTriangle, Info, ToggleLeft, ToggleRight, Trash2, RefreshCw } from 'lucide-react';
+import { Settings as SettingsIcon, Users, Key, Bell, Webhook, Building, Lock, Download, AlertTriangle, Info, ToggleLeft, ToggleRight, Trash2, RefreshCw, CheckCircle } from 'lucide-react';
 
 const DisabledInput = (props: any) => (
     <div className="relative">
@@ -20,7 +21,8 @@ const DisabledToggle = ({ label, checked }: { label?: string, checked: boolean }
     </div>
 );
 
-const BackendRequiredTooltip = ({ children }: { children: React.ReactNode }) => (
+/* Updated BackendRequiredTooltip to use React.FC for better children prop detection */
+const BackendRequiredTooltip: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     <Tooltip content="Action disabled: Backend IAM/Secret Manager integration required.">
         <div className="opacity-60 pointer-events-none">{children}</div>
     </Tooltip>
@@ -136,8 +138,6 @@ const UsersTab = () => (
         </Card>
     </div>
 );
-
-import { CheckCircle } from 'lucide-react'; // Fix missing import
 
 const ApiKeysTab = () => (
     <div className="space-y-6 animate-in fade-in">
@@ -331,7 +331,7 @@ export default function Settings() {
             else if (showNotifs) setActiveTab('notifications');
             else if (showWebhooks) setActiveTab('webhooks');
         }
-    }, [showProfile, showUsers, showKeys, showNotifs, showWebhooks]);
+    }, [showProfile, showUsers, showKeys, showNotifs, showWebhooks, activeTab]);
 
     const handleExport = () => {
         const spec = generateSettingsSpec();

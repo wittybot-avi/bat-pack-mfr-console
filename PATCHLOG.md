@@ -1,22 +1,22 @@
 
 # Patch Log
 
-## UI_PATCH_E_MODULE_BIND_V1
+## UI_PATCH_H_ASSEMBLY_BINDING_LINEAGE_V1
 - **Date**: 2024-05-24
-- **Summary**: Implemented the Cell-to-Module assembly binding workflow.
-  - Enhanced `ModuleAssemblyDetail` with operational Scan-to-Bind interface.
-  - Implemented `moduleAssemblyService` to manage binding lifecycle, SKU target enforcement, and chemistry validation.
-  - Integrated `cellTraceabilityService` for global serial lookup and status synchronization (`BOUND` state).
-  - Enforced RBAC: Operators can bind/seal, QA can raise exceptions, Super Admin can override constraints.
-  - Updated `LineageView` to dynamically display component graph based on ledger bindings.
+- **Summary**: Implemented the end-to-end assembly binding workflow and enhanced the lineage audit engine.
+  - **Module Detail**: Added an interactive "Binding" UI where operators can scan cell serials into a module. Enforces SKU target counts and chemistry consistency.
+  - **Pack Detail**: Added module linkage UI. Links "SEALED" modules to a pack build. Implemented QC status management (Pass/Fail) and build finalization.
+  - **Lineage Engine**: Created an append-only event ledger for all assembly actions. Lineage events now capture actor roles and workstation contexts.
+  - **Lineage View**: Upgraded the visualization from placeholders to a functional genealogy explorer. Users can now search for any ID and see the full upstream (Parent) and downstream (Children) tree.
+  - **Rule Gating**: Integrated SKU-based validation rules into the binding process to prevent mis-assembly in real-time.
 - **Files changed**:
-  - src/domain/types.ts
-  - src/services/moduleAssemblyService.ts (New)
-  - src/services/cellTraceabilityService.ts (Update)
-  - src/pages/ModuleAssemblyDetail.tsx (Update)
-  - src/pages/LineageView.tsx (Update)
+  - src/services/moduleAssemblyService.ts
+  - src/services/packAssemblyService.ts
+  - src/pages/ModuleAssemblyDetail.tsx
+  - src/pages/PackAssemblyDetail.tsx
+  - src/pages/LineageView.tsx
   - src/app/patchInfo.ts
 
-## UI_PATCH_D_CELL_SERIALIZATION_V1
+## UI_PATCH_G_HF2_HASHROUTER_FALLBACK
 - **Date**: 2024-05-24
 ... (existing logs) ...

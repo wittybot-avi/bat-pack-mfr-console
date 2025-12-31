@@ -1,3 +1,4 @@
+
 import { safeStorage } from '../utils/safeStorage';
 
 export interface SkuRules {
@@ -27,6 +28,7 @@ export interface Sku {
   createdAt: string;
   updatedAt: string;
   parentSkuId?: string;
+  requiredModules: number; // Patch F addition
 }
 
 class SkuService {
@@ -62,6 +64,7 @@ class SkuService {
         firmwareFamily: 'VAN-G3-FW',
         moduleStructure: '1x16',
         packStructure: '1P16S',
+        requiredModules: 1,
         rules: {
           minCells: 16,
           maxCells: 16,
@@ -87,6 +90,7 @@ class SkuService {
         firmwareFamily: 'ELITE-FW',
         moduleStructure: '4x5',
         packStructure: '4P20S',
+        requiredModules: 2,
         rules: {
           minCells: 80,
           maxCells: 80,
@@ -112,6 +116,7 @@ class SkuService {
         firmwareFamily: 'NA-IO-FW',
         moduleStructure: '2x6',
         packStructure: '2P12S',
+        requiredModules: 1,
         rules: {
           minCells: 24,
           maxCells: 24,
@@ -160,6 +165,7 @@ class SkuService {
       firmwareFamily: sku.firmwareFamily || 'Default',
       moduleStructure: sku.moduleStructure || '1x1',
       packStructure: sku.packStructure || '1x1',
+      requiredModules: sku.requiredModules || 1,
       rules: sku.rules || { minCells: 0, maxCells: 0, allowedChemistry: [], requiredScans: [] },
       status: sku.status || 'DRAFT',
       createdAt: new Date().toISOString(),

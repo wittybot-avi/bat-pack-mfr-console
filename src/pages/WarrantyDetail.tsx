@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
@@ -196,7 +197,8 @@ export default function WarrantyDetail() {
                                     <p className="text-sm text-muted-foreground italic">No files attached.</p>
                                 ) : (
                                     <ul className="space-y-2">
-                                        {claim.evidenceAttachments.map(att => (
+                                        {/* Fix: Explicitly type attachment to avoid Key error */}
+                                        {claim.evidenceAttachments.map((att: { id: string, fileName: string, type: string }) => (
                                             <li key={att.id} className="text-sm flex items-center gap-2">
                                                 <Paperclip className="h-4 w-4" /> {att.fileName} <span className="text-xs text-muted-foreground">({att.type})</span>
                                             </li>

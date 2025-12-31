@@ -9,7 +9,13 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // TOOLTIP
-export const Tooltip = ({ content, children }: { content: string, children: React.ReactNode }) => {
+interface TooltipProps {
+  content: string;
+  children: React.ReactNode;
+}
+
+/* Updated Tooltip to use React.FC for better prop type recognition including key and children */
+export const Tooltip: React.FC<TooltipProps> = ({ content, children }) => {
   return (
     <div className="group relative inline-block w-full">
       {children}
@@ -99,8 +105,14 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
 Input.displayName = "Input";
 
 // BADGE
-// Fix: children should be optional for Badge component
-export const Badge = ({ children, variant = "default", className }: { children?: React.ReactNode, variant?: 'default' | 'outline' | 'secondary' | 'success' | 'warning' | 'destructive', className?: string }) => {
+interface BadgeProps {
+  children?: React.ReactNode;
+  variant?: 'default' | 'outline' | 'secondary' | 'success' | 'warning' | 'destructive';
+  className?: string;
+}
+
+/* Updated Badge to use React.FC and named interface for consistency and correctness */
+export const Badge: React.FC<BadgeProps> = ({ children, variant = "default", className }) => {
   const variants = {
     default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
     secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",

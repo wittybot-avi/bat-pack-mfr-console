@@ -1,3 +1,4 @@
+
 import { Batch, BatchStatus, Battery, BatteryStatus, InventoryStatus, KPIData, MovementOrder, RiskLevel, TelemetryPoint, SupplierLot, BatchNote, AssemblyEvent, ProvisioningLogEntry, EolMeasurements, QaDisposition, EolLogEntry, InventoryMovementEntry, DispatchOrder, DispatchStatus, CustodyStatus, CustodyEvent } from '../domain/types';
 
 /**
@@ -205,6 +206,8 @@ const generateBatteries = (count: number): Battery[] => {
             soh: 95 + Math.random() * 5,
             soc: 30 + Math.random() * 60,
             voltage: 48 + Math.random(),
+            /* capacityAh is required in the Battery domain type; added here to fix TS error in mock generation. */
+            capacityAh: isInventory ? 102.5 : 100,
             eolResult: isInventory ? 'PASS' : undefined,
             certificateRef: isInventory ? `CERT-${i}` : undefined,
             
@@ -477,7 +480,7 @@ class MockBatteryService implements IBatteryService {
     
     for (let i = 0; i < quantity; i++) {
         const idx = startIndex + i;
-        newBatteries.push({
+        const newBatt: Battery = {
             id: `batt-${idx}`,
             serialNumber: `SN-${(100000 + idx).toString(16).toUpperCase()}`,
             batchId,
@@ -493,8 +496,12 @@ class MockBatteryService implements IBatteryService {
             cryptoProvisioned: false,
             soh: 100,
             soc: 0,
+            voltage: 0,
+            /* capacityAh is required in the Battery domain type; added here to fix TS error in mock generation. */
+            capacityAh: 100,
             notes: [{ id: Math.random().toString(), author: user, role: 'Creator', text: 'Registered', timestamp: new Date().toISOString() }]
-        });
+        };
+        newBatteries.push(newBatt);
     }
     
     MOCK_BATTERIES = [...newBatteries, ...MOCK_BATTERIES];
@@ -706,7 +713,7 @@ class MockProvisioningService implements IProvisioningService {
 }
 
 class MockEolService implements IEolService {
-  private logStep(batt: Battery, action: 'Test Run' | 'Disposition' | 'Certificate' | 'Override', outcome: string, operator: string) {
+  private logStep(batt: Battery, action: string, outcome: string, operator: string) {
     if (!batt.eolLog) batt.eolLog = [];
     batt.eolLog.push({
       id: Math.random().toString(36).substring(7),

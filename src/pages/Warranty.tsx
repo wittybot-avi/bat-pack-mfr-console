@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
@@ -180,7 +181,8 @@ export default function Warranty() {
                                         <CardHeader><CardTitle className="text-base">Claims by Category</CardTitle></CardHeader>
                                         <CardContent>
                                             <div className="space-y-4">
-                                                {metrics.byCategory.map((cat, i) => (
+                                                {/* Fix: Explicitly type category map items to avoid 'unknown' Key error */}
+                                                {metrics.byCategory.map((cat: { name: string, value: number }, i: number) => (
                                                     <div key={i} className="flex items-center justify-between">
                                                         <span className="text-sm">{cat.name}</span>
                                                         <div className="flex items-center gap-2">

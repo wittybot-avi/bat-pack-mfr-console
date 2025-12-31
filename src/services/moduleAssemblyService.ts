@@ -8,6 +8,7 @@ class ModuleAssemblyService {
   private MOD_STORAGE_KEY = 'aayatana_modules_v1';
   private BIND_STORAGE_KEY = 'aayatana_cell_bindings_v1';
   private EXC_STORAGE_KEY = 'aayatana_assembly_exceptions_v1';
+  private EVENT_STORAGE_KEY = 'aayatana_lineage_events_v1';
 
   private loadModules(): ModuleInstance[] {
     const data = safeStorage.getItem(this.MOD_STORAGE_KEY);
@@ -27,13 +28,26 @@ class ModuleAssemblyService {
     safeStorage.setItem(this.BIND_STORAGE_KEY, JSON.stringify(bindings));
   }
 
-  private loadExceptions(): ExceptionRecord[] {
-    const data = safeStorage.getItem(this.EXC_STORAGE_KEY);
+  private loadEvents(): any[] {
+    const data = safeStorage.getItem(this.EVENT_STORAGE_KEY);
     return data ? JSON.parse(data) : [];
   }
 
-  private saveExceptions(exceptions: ExceptionRecord[]) {
-    safeStorage.setItem(this.EXC_STORAGE_KEY, JSON.stringify(exceptions));
+  private saveEvents(events: any[]) {
+    safeStorage.setItem(this.EVENT_STORAGE_KEY, JSON.stringify(events));
+  }
+
+  private logEvent(assetId: string, type: string, message: string, actor: string) {
+    const events = this.loadEvents();
+    events.push({
+      id: `EVT-${Date.now()}`,
+      assetId,
+      type,
+      message,
+      actor,
+      timestamp: new Date().toISOString()
+    });
+    this.saveEvents(events);
   }
 
   async getModule(id: string): Promise<ModuleInstance | undefined> {
@@ -67,6 +81,8 @@ class ModuleAssemblyService {
 
     // 2. Validate status
     if (record.status === 'BOUND') throw new Error(`Serial ${serial} is already bound to another module/pack.`);
+    
+    // In demo mode, we allow binding if it's SCANNED or GENERATED
     if (record.status !== 'SCANNED' && record.status !== 'GENERATED' && !isSuper) {
         throw new Error(`Serial ${serial} is in ${record.status} status. It must be confirmed/scanned before binding.`);
     }
@@ -102,6 +118,10 @@ class ModuleAssemblyService {
     // 6. Update Serial Status
     await cellTraceabilityService.updateSerialStatus(lot.id, serial, 'BOUND', actor);
 
+    // 7. Log Event
+    this.logEvent(moduleId, 'CELL_BOUND', `Cell ${serial} bound to module ${moduleId}`, actor);
+    this.logEvent(serial, 'BOUND_TO_MODULE', `Cell bound to module ${moduleId}`, actor);
+
     return newBinding;
   }
 
@@ -123,6 +143,9 @@ class ModuleAssemblyService {
       boundCellSerials: module.boundCellSerials.filter(s => s !== serial),
       actor
     });
+
+    this.logEvent(moduleId, 'CELL_UNBOUND', `Cell ${serial} removed from module ${moduleId}`, actor);
+    this.logEvent(serial, 'UNBOUND', `Cell removed from module ${moduleId}`, actor);
   }
 
   async sealModule(moduleId: string, actor: string): Promise<ModuleInstance> {
@@ -132,19 +155,27 @@ class ModuleAssemblyService {
         throw new Error(`Cannot seal: Bound count (${module.boundCellSerials.length}) does not match target (${module.targetCells}).`);
     }
 
-    return await this.updateModule(moduleId, { status: ModuleStatus.SEALED, actor });
+    const updated = await this.updateModule(moduleId, { status: ModuleStatus.SEALED, actor });
+    this.logEvent(moduleId, 'MODULE_SEALED', `Module assembly completed and sealed.`, actor);
+    return updated;
   }
 
   async listBindingsByModule(moduleId: string): Promise<CellBindingRecord[]> {
     return this.loadBindings().filter(b => b.moduleId === moduleId);
   }
 
+  // Added missing method to fix lineage lookup error
   async listBindingsBySerial(serial: string): Promise<CellBindingRecord[]> {
     return this.loadBindings().filter(b => b.serial === serial);
   }
 
+  async getLineageEvents(assetId: string): Promise<any[]> {
+    return this.loadEvents().filter(e => e.assetId === assetId);
+  }
+
   async raiseException(entityId: string, entityType: 'module' | 'pack', message: string, severity: any, actor: string): Promise<ExceptionRecord> {
-    const exceptions = this.loadExceptions();
+    const data = safeStorage.getItem(this.EXC_STORAGE_KEY);
+    const exceptions = data ? JSON.parse(data) : [];
     const newEx: ExceptionRecord = {
       id: `EXC-${Date.now()}`,
       entityType,
@@ -155,7 +186,8 @@ class ModuleAssemblyService {
       actor
     };
     exceptions.push(newEx);
-    this.saveExceptions(exceptions);
+    safeStorage.setItem(this.EXC_STORAGE_KEY, JSON.stringify(exceptions));
+    this.logEvent(entityId, 'EXCEPTION_RAISED', message, actor);
     return newEx;
   }
 }

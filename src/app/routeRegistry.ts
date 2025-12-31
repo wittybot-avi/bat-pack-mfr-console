@@ -1,85 +1,84 @@
 
 import { 
-  LayoutDashboard, 
-  Package, 
-  Battery, 
-  Cpu, 
-  Activity, 
-  ClipboardCheck, 
-  Truck, 
-  Settings, 
-  ShieldCheck,
-  Box,
-  FileText,
-  Lock,
-  Container,
-  AlertOctagon,
-  Wand2,
-  Fingerprint,
-  Link2,
+  LayoutDashboard,
+  Activity,
+  BarChart3,
   Layers,
-  Archive
+  Archive,
+  ClipboardList,
+  ClipboardCheck,
+  Search,
+  Box,
+  Truck,
+  ShieldCheck,
+  History,
+  Settings,
+  Shield,
+  Zap,
+  Cpu,
+  FileText,
+  Warehouse,
+  FileSpreadsheet
 } from 'lucide-react';
 import { ScreenId } from '../rbac/screenIds';
 
+// Fix: Add RouteConfig interface for registry mapping
 export interface RouteConfig {
-  screenId: ScreenId;
-  path: string;
-  label: string;
   icon: any;
-  componentName: string; 
+  label: string;
+  path: string;
+  screenId: ScreenId;
+  componentName: string;
 }
 
 export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.DASHBOARD]: { icon: LayoutDashboard, label: 'Dashboard', path: '/', screenId: ScreenId.DASHBOARD, componentName: 'Dashboard.tsx' },
   [ScreenId.TELEMETRY]: { icon: Activity, label: 'Telemetry', path: '/telemetry', screenId: ScreenId.TELEMETRY, componentName: 'Telemetry.tsx' },
-  [ScreenId.ANALYTICS]: { icon: FileText, label: 'Analytics', path: '/analytics', screenId: ScreenId.ANALYTICS, componentName: 'Analytics.tsx' },
+  [ScreenId.ANALYTICS]: { icon: BarChart3, label: 'Analytics', path: '/analytics', screenId: ScreenId.ANALYTICS, componentName: 'Analytics.tsx' },
   
-  // Design Group
-  [ScreenId.SKU_LIST]: { icon: Wand2, label: 'SKU Design', path: '/sku', screenId: ScreenId.SKU_LIST, componentName: 'SkuList.tsx' },
-  [ScreenId.SKU_DETAIL]: { icon: Wand2, label: 'SKU Detail', path: '/sku/:id', screenId: ScreenId.SKU_DETAIL, componentName: 'SkuDetail.tsx' },
+  [ScreenId.SKU_LIST]: { icon: Layers, label: 'SKU Design', path: '/sku', screenId: ScreenId.SKU_LIST, componentName: 'SkuList.tsx' },
   
-  // Trace Group
-  [ScreenId.CELL_LOTS_LIST]: { icon: Fingerprint, label: 'Cells', path: '/trace/cells', screenId: ScreenId.CELL_LOTS_LIST, componentName: 'CellLotsList.tsx' },
-  [ScreenId.CELL_LOT_DETAIL]: { icon: Fingerprint, label: 'Cell Lot Detail', path: '/trace/cells/:lotId', screenId: ScreenId.CELL_LOT_DETAIL, componentName: 'CellLotDetail.tsx' },
-  [ScreenId.LINEAGE_VIEW]: { icon: Link2, label: 'Lineage', path: '/trace/lineage/:id', screenId: ScreenId.LINEAGE_VIEW, componentName: 'LineageView.tsx' },
+  [ScreenId.CELL_LOTS_LIST]: { icon: Archive, label: 'Cell Serialization', path: '/trace/cells', screenId: ScreenId.CELL_LOTS_LIST, componentName: 'CellLotsList.tsx' },
+  [ScreenId.LINEAGE_VIEW]: { icon: History, label: 'Lineage Audit', path: '/trace/lineage/:id', screenId: ScreenId.LINEAGE_VIEW, componentName: 'LineageView.tsx' },
+  
+  [ScreenId.BATCHES_LIST]: { icon: Box, label: 'Manufacturing Batches', path: '/batches', screenId: ScreenId.BATCHES_LIST, componentName: 'Batches.tsx' },
+  [ScreenId.BATCHES_DETAIL]: { icon: Box, label: 'Batch Details', path: '/batches/:id', screenId: ScreenId.BATCHES_DETAIL, componentName: 'BatchDetail.tsx' },
+  
+  [ScreenId.MODULE_ASSEMBLY_LIST]: { icon: Layers, label: 'Module Assembly', path: '/operate/modules', screenId: ScreenId.MODULE_ASSEMBLY_LIST, componentName: 'ModuleAssemblyList.tsx' },
+  [ScreenId.MODULE_ASSEMBLY_DETAIL]: { icon: Layers, label: 'Module Detail', path: '/operate/modules/:id', screenId: ScreenId.MODULE_ASSEMBLY_DETAIL, componentName: 'ModuleAssemblyDetail.tsx' },
+  
+  [ScreenId.PACK_ASSEMBLY_LIST]: { icon: Box, label: 'Pack Assembly', path: '/operate/packs', screenId: ScreenId.PACK_ASSEMBLY_LIST, componentName: 'PackAssemblyList.tsx' },
+  [ScreenId.PACK_ASSEMBLY_DETAIL]: { icon: Box, label: 'Pack Detail', path: '/operate/packs/:id', screenId: ScreenId.PACK_ASSEMBLY_DETAIL, componentName: 'PackAssemblyDetail.tsx' },
+  
+  [ScreenId.BATTERIES_LIST]: { icon: Zap, label: 'Battery Trace', path: '/batteries', screenId: ScreenId.BATTERIES_LIST, componentName: 'Batteries.tsx' },
+  [ScreenId.BATTERIES_DETAIL]: { icon: Zap, label: 'Battery Detail', path: '/batteries/:id', screenId: ScreenId.BATTERIES_DETAIL, componentName: 'BatteryDetail.tsx' },
+  
+  [ScreenId.PROVISIONING]: { icon: Cpu, label: 'BMS Provisioning', path: '/provisioning', screenId: ScreenId.PROVISIONING, componentName: 'ProvisioningConsole.tsx' },
+  [ScreenId.PROVISIONING_STATION_SETUP]: { icon: Settings, label: 'Provisioning Setup', path: '/provisioning/setup', screenId: ScreenId.PROVISIONING_STATION_SETUP, componentName: 'ProvisioningStationSetup.tsx' },
+  
+  [ScreenId.INVENTORY]: { icon: Warehouse, label: 'Inventory', path: '/inventory', screenId: ScreenId.INVENTORY, componentName: 'InventoryList.tsx' },
+  [ScreenId.DISPATCH_LIST]: { icon: Truck, label: 'Dispatch Orders', path: '/dispatch', screenId: ScreenId.DISPATCH_LIST, componentName: 'DispatchList.tsx' },
+  [ScreenId.DISPATCH_DETAIL]: { icon: Truck, label: 'Dispatch Details', path: '/dispatch/:orderId', screenId: ScreenId.DISPATCH_DETAIL, componentName: 'DispatchDetail.tsx' },
 
-  [ScreenId.BATCHES_LIST]: { icon: Package, label: 'Batches', path: '/batches', screenId: ScreenId.BATCHES_LIST, componentName: 'Batches.tsx' },
-  
-  // Assembly Group (Patch C)
-  [ScreenId.MODULE_ASSEMBLY_LIST]: { icon: Archive, label: 'Module Assembly', path: '/operate/modules', screenId: ScreenId.MODULE_ASSEMBLY_LIST, componentName: 'ModuleAssemblyList.tsx' },
-  [ScreenId.MODULE_ASSEMBLY_DETAIL]: { icon: Archive, label: 'Module Detail', path: '/operate/modules/:id', screenId: ScreenId.MODULE_ASSEMBLY_DETAIL, componentName: 'ModuleAssemblyDetail.tsx' },
-  [ScreenId.PACK_ASSEMBLY_LIST]: { icon: Layers, label: 'Pack Assembly', path: '/operate/packs', screenId: ScreenId.PACK_ASSEMBLY_LIST, componentName: 'PackAssemblyList.tsx' },
-  [ScreenId.PACK_ASSEMBLY_DETAIL]: { icon: Layers, label: 'Pack Detail', path: '/operate/packs/:id', screenId: ScreenId.PACK_ASSEMBLY_DETAIL, componentName: 'PackAssemblyDetail.tsx' },
+  [ScreenId.EOL_QA_STATION]: { icon: ClipboardCheck, label: 'EOL / QA Queue', path: '/eol', screenId: ScreenId.EOL_QA_STATION, componentName: 'EolQaList.tsx' },
+  [ScreenId.EOL_QA_DETAIL]: { icon: ClipboardList, label: 'EOL Details', path: '/assure/eol/:id', screenId: ScreenId.EOL_QA_DETAIL, componentName: 'EolQaDetail.tsx' },
+  [ScreenId.EOL_QA_STATION_SETUP]: { icon: Settings, label: 'EOL Station Setup', path: '/assure/eol-setup', screenId: ScreenId.EOL_QA_STATION_SETUP, componentName: 'EolStationSetup.tsx' },
 
-  [ScreenId.BATTERIES_LIST]: { icon: Battery, label: 'Batteries', path: '/batteries', screenId: ScreenId.BATTERIES_LIST, componentName: 'Batteries.tsx' },
-  [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning', path: '/provisioning', screenId: ScreenId.PROVISIONING, componentName: 'ProvisioningConsole.tsx' },
-  [ScreenId.PROVISIONING_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/provisioning/setup', screenId: ScreenId.PROVISIONING_STATION_SETUP, componentName: 'ProvisioningStationSetup.tsx' },
-  [ScreenId.INVENTORY]: { icon: Box, label: 'Inventory', path: '/inventory', screenId: ScreenId.INVENTORY, componentName: 'InventoryList.tsx' },
-  [ScreenId.DISPATCH_LIST]: { icon: Truck, label: 'Dispatch', path: '/dispatch', screenId: ScreenId.DISPATCH_LIST, componentName: 'DispatchList.tsx' },
-  [ScreenId.EOL_QA_STATION]: { icon: ClipboardCheck, label: 'EOL / QA', path: '/eol', screenId: ScreenId.EOL_QA_STATION, componentName: 'EolStation.tsx' },
-  [ScreenId.EOL_QA_STATION_SETUP]: { icon: Settings, label: 'Station Setup', path: '/eol/setup', screenId: ScreenId.EOL_QA_STATION_SETUP, componentName: 'EolStationSetup.tsx' },
-  [ScreenId.WARRANTY]: { icon: AlertOctagon, label: 'Warranty', path: '/warranty', screenId: ScreenId.WARRANTY, componentName: 'Warranty.tsx' },
   [ScreenId.COMPLIANCE]: { icon: ShieldCheck, label: 'Compliance', path: '/compliance', screenId: ScreenId.COMPLIANCE, componentName: 'Compliance.tsx' },
-  [ScreenId.CUSTODY]: { icon: Container, label: 'Custody', path: '/custody', screenId: ScreenId.CUSTODY, componentName: 'Custody.tsx' }, 
-  [ScreenId.SETTINGS]: { icon: Settings, label: 'Settings', path: '/settings', screenId: ScreenId.SETTINGS, componentName: 'Settings.tsx' },
-  [ScreenId.RBAC_VIEW]: { icon: Lock, label: 'Access Control', path: '/admin/rbac', screenId: ScreenId.RBAC_VIEW, componentName: 'RbacAdmin.tsx' },
+  [ScreenId.CUSTODY]: { icon: History, label: 'Chain of Custody', path: '/custody', screenId: ScreenId.CUSTODY, componentName: 'Custody.tsx' },
   
-  // Detail pages
-  [ScreenId.BATCHES_DETAIL]: { icon: Package, label: 'Batch Detail', path: '/batches/:id', screenId: ScreenId.BATCHES_DETAIL, componentName: 'BatchDetail.tsx' },
-  [ScreenId.BATTERIES_DETAIL]: { icon: Battery, label: 'Battery Detail', path: '/batteries/:id', screenId: ScreenId.BATTERIES_DETAIL, componentName: 'BatteryDetail.tsx' },
-  [ScreenId.DISPATCH_DETAIL]: { icon: Truck, label: 'Dispatch Detail', path: '/dispatch/:id', screenId: ScreenId.DISPATCH_DETAIL, componentName: 'DispatchDetail.tsx' },
-  [ScreenId.CUSTODY_DETAIL]: { icon: Container, label: 'Custody Detail', path: '/custody/:dispatchId', screenId: ScreenId.CUSTODY_DETAIL, componentName: 'CustodyDetail.tsx' },
-  [ScreenId.WARRANTY_CLAIM_DETAIL]: { icon: AlertOctagon, label: 'Claim Detail', path: '/warranty/claims/:claimId', screenId: ScreenId.WARRANTY_CLAIM_DETAIL, componentName: 'WarrantyDetail.tsx' },
-  [ScreenId.WARRANTY_EXTERNAL_INTAKE]: { icon: AlertOctagon, label: 'Warranty Intake', path: '/warranty/intake', screenId: ScreenId.WARRANTY_EXTERNAL_INTAKE, componentName: 'WarrantyIntake.tsx' },
+  [ScreenId.WARRANTY]: { icon: FileText, label: 'Warranty & Returns', path: '/warranty', screenId: ScreenId.WARRANTY, componentName: 'Warranty.tsx' },
+  [ScreenId.WARRANTY_EXTERNAL_INTAKE]: { icon: FileSpreadsheet, label: 'Submit Claim', path: '/warranty/intake', screenId: ScreenId.WARRANTY_EXTERNAL_INTAKE, componentName: 'WarrantyIntake.tsx' },
+
+  [ScreenId.SETTINGS]: { icon: Settings, label: 'Settings', path: '/settings', screenId: ScreenId.SETTINGS, componentName: 'Settings.tsx' },
+  [ScreenId.RBAC_VIEW]: { icon: Shield, label: 'Access Audit', path: '/admin/rbac', screenId: ScreenId.RBAC_VIEW, componentName: 'RbacAdmin.tsx' },
 };
 
-export const checkConsistency = () => {
+// Fix: Added checkConsistency utility for diagnostic validation
+export function checkConsistency() {
   const warnings: string[] = [];
-  Object.entries(APP_ROUTES).forEach(([key, config]) => {
-    if (key !== config.screenId) {
-      warnings.push(`Mismatch: Key ${key} does not match screenId ${config.screenId}`);
-    }
+  Object.values(ScreenId).forEach(id => {
+      if (!APP_ROUTES[id]) warnings.push(`Missing route config for screen: ${id}`);
   });
   return warnings;
-};
+}

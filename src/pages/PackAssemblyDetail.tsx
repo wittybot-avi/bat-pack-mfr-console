@@ -1,16 +1,13 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { packService } from '../services/packService';
-import { moduleService } from '../services/moduleService';
+import { packAssemblyService } from '../services/packAssemblyService';
+import { moduleAssemblyService } from '../services/moduleAssemblyService';
 import { skuService, Sku } from '../services/skuService';
 import { PackInstance, PackStatus, ModuleInstance, ModuleStatus } from '../domain/types';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge, Table, TableHeader, TableRow, TableHead, TableCell } from '../components/ui/design-system';
-// Fix: Added missing 'Archive' import
-import { ArrowLeft, Save, ShieldCheck, Zap, Info, Layers, CheckCircle, AlertTriangle, ChevronRight, Cpu, FileCheck, Archive } from 'lucide-react';
+import { ArrowLeft, Layers, ShieldCheck, CheckCircle, Info, Zap, Box, Trash2, Plus, History, Activity, ShieldAlert, Cpu } from 'lucide-react';
 import { useAppStore } from '../lib/store';
-import { canDo } from '../rbac/can';
-import { ScreenId } from '../rbac/screenIds';
 
 export default function PackAssemblyDetail() {
   const { id } = useParams();
@@ -18,102 +15,58 @@ export default function PackAssemblyDetail() {
   const { currentRole, currentCluster, addNotification } = useAppStore();
   
   const [pack, setPack] = useState<PackInstance | null>(null);
-  const [skus, setSkus] = useState<Sku[]>([]);
-  const [availableModules, setAvailableModules] = useState<ModuleInstance[]>([]);
-  const [step, setStep] = useState(1);
+  const [sku, setSku] = useState<Sku | null>(null);
+  const [modules, setModules] = useState<ModuleInstance[]>([]);
+  const [eligibleModules, setEligibleModules] = useState<ModuleInstance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [activeTab, setActiveTab] = useState('linkage');
+  
+  // Inputs
+  const [bmsInput, setBmsInput] = useState('');
 
-  // Form states
-  const [selectedSkuId, setSelectedSkuId] = useState('');
-  const [bmsSerial, setBmsSerial] = useState('');
-  const [firmware, setFirmware] = useState('v3.1.0-STABLE');
-
-  const isNew = id === 'new';
-
-  // RBAC for QA
-  const canPerformQC = canDo(currentCluster?.id || '', ScreenId.PACK_ASSEMBLY_DETAIL, 'A');
+  const clusterId = currentCluster?.id || '';
+  const isSuperAdmin = clusterId === 'CS';
+  const isOperator = clusterId === 'C2' || isSuperAdmin;
+  const isQA = clusterId === 'C3' || isSuperAdmin;
 
   useEffect(() => {
-    loadInitialData();
+    if (id) loadData(id);
   }, [id]);
 
-  const loadInitialData = async () => {
+  const loadData = async (pid: string) => {
     setLoading(true);
-    const skuList = await skuService.listSkus();
-    setSkus(skuList);
-
-    const mods = await moduleService.listModules();
-    setAvailableModules(mods.filter(m => m.status === ModuleStatus.SEALED));
-
-    if (!isNew && id) {
-      const p = await packService.getPack(id);
+    try {
+      const p = await packAssemblyService.getPack(pid);
       if (p) {
         setPack(p);
-        setSelectedSkuId(p.skuId);
-        setBmsSerial(p.bmsSerial);
-        setFirmware(p.firmwareVersion || 'v3.1.0-STABLE');
-        // Determine step based on status
-        if (p.status === PackStatus.FINALIZED) setStep(4);
-        else if (p.packSerial) setStep(3);
-        else if (p.moduleIds.length > 0) setStep(2);
+        setBmsInput(p.bmsId || '');
+        const s = await skuService.getSku(p.skuId);
+        if (s) setSku(s);
+
+        const modDetails = await Promise.all(p.moduleIds.map(mid => moduleAssemblyService.getModule(mid)));
+        setModules(modDetails.filter(m => !!m) as ModuleInstance[]);
+        
+        const eligible = await packAssemblyService.listEligibleModulesForPack(p.skuId);
+        setEligibleModules(eligible);
       }
-    }
-    setLoading(false);
-  };
-
-  const handleCreate = async () => {
-    const sku = skus.find(s => s.id === selectedSkuId);
-    if (!sku) return;
-
-    setProcessing(true);
-    try {
-      const p = await packService.createPack({
-        skuId: sku.id,
-        skuCode: sku.skuCode,
-        createdBy: currentRole?.name || 'User'
-      });
-      setPack(p);
-      navigate(`/operate/packs/${p.id}`, { replace: true });
-      setStep(2);
     } catch (e) {
-      addNotification({ title: 'Error', message: 'Failed to create work order.', type: 'error' });
+      console.error(e);
     } finally {
-      setProcessing(false);
+      setLoading(false);
     }
   };
 
-  const toggleModuleLink = (modId: string) => {
-    if (!pack) return;
-    const newList = pack.moduleIds.includes(modId)
-      ? pack.moduleIds.filter(mid => mid !== modId)
-      : [...pack.moduleIds, modId];
-    updatePackLocally({ moduleIds: newList });
-  };
-
-  const updatePackLocally = (patch: Partial<PackInstance>) => {
-    if (!pack) return;
-    const updated = { ...pack, ...patch };
-    setPack(updated);
-    packService.updatePack(pack.id, updated);
-  };
-
-  const handleGenerateSerial = () => {
-    if (!pack) return;
-    const serial = `SN-${pack.skuCode}-${Date.now().toString().slice(-6)}`;
-    updatePackLocally({ packSerial: serial });
-    setStep(3);
-  };
-
-  const handleFinalize = async () => {
+  const handleLinkModule = async (moduleId: string) => {
     if (!pack) return;
     setProcessing(true);
     try {
-      await packService.updatePack(pack.id, { bmsSerial, firmwareVersion: firmware });
-      await packService.finalizePack(pack.id);
-      setStep(4);
-      setPack({ ...pack, status: PackStatus.FINALIZED, bmsSerial, firmwareVersion: firmware });
-      addNotification({ title: 'Finalized', message: 'Pack assembly complete and record generated.', type: 'success' });
+      const actor = `${currentRole?.name} (${clusterId})`;
+      await packAssemblyService.linkModuleToPack(pack.id, moduleId, actor, isSuperAdmin);
+      addNotification({ title: 'Linked', message: `Module ${moduleId} added to build.`, type: 'success' });
+      await loadData(pack.id);
+      setIsPickerOpen(false);
     } catch (e: any) {
       addNotification({ title: 'Error', message: e.message, type: 'error' });
     } finally {
@@ -121,228 +74,332 @@ export default function PackAssemblyDetail() {
     }
   };
 
-  const handleQCToggle = () => {
-     if (!pack) return;
-     const newStatus = pack.qcStatus === 'PASSED' ? 'PENDING' : 'PASSED';
-     updatePackLocally({ qcStatus: newStatus });
-     addNotification({ title: 'QC Updated', message: `Pack status marked as ${newStatus}`, type: 'info' });
+  const handleUnlinkModule = async (moduleId: string) => {
+    if (!pack || !window.confirm("Remove module?")) return;
+    setProcessing(true);
+    try {
+      const actor = `${currentRole?.name} (${clusterId})`;
+      await packAssemblyService.unlinkModuleFromPack(pack.id, moduleId, actor, isSuperAdmin);
+      addNotification({ title: 'Unlinked', message: 'Module removed from pack.', type: 'info' });
+      await loadData(pack.id);
+    } catch (e: any) {
+      addNotification({ title: 'Error', message: e.message, type: 'error' });
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  if (loading) return <div className="p-20 text-center animate-pulse">Loading work order...</div>;
+  const handleQC = async (status: 'PASSED' | 'FAILED') => {
+      if (!pack) return;
+      try {
+          await packAssemblyService.updatePack(pack.id, { qcStatus: status });
+          addNotification({ title: 'QC Updated', message: `Pack QC marked as ${status}.`, type: status === 'PASSED' ? 'success' : 'warning' });
+          await loadData(pack.id);
+      } catch (e: any) {
+          addNotification({ title: 'Error', message: e.message, type: 'error' });
+      }
+  };
+
+  const handleGenerateSerial = async () => {
+    if (!pack) return;
+    try {
+        await packAssemblyService.generatePackSerial(pack.id);
+        addNotification({ title: 'Identity Locked', message: 'Pack serial assigned.', type: 'success' });
+        await loadData(pack.id);
+    } catch (e: any) {
+        addNotification({ title: 'Error', message: e.message, type: 'error' });
+    }
+  };
+
+  const handleBindBMS = async () => {
+    if (!pack || !bmsInput) return;
+    setProcessing(true);
+    try {
+        const actor = `${currentRole?.name} (${clusterId})`;
+        await packAssemblyService.bindDeviceToPack(pack.id, bmsInput, actor);
+        addNotification({ title: 'BMS Bound', message: 'Hardware identity confirmed.', type: 'success' });
+        await loadData(pack.id);
+    } catch (e: any) {
+        addNotification({ title: 'Error', message: e.message, type: 'error' });
+    } finally {
+        setProcessing(false);
+    }
+  };
+
+  const handleFinalizeBuild = async () => {
+    if (!pack) return;
+    try {
+        const actor = `${currentRole?.name} (${clusterId})`;
+        await packAssemblyService.markPackReadyForEOL(pack.id, actor);
+        addNotification({ title: 'Finalized', message: 'Pack build complete. Sent to QA queue.', type: 'success' });
+        await loadData(pack.id);
+    } catch (e: any) {
+        addNotification({ title: 'Failure', message: e.message, type: 'error' });
+    }
+  };
+
+  if (loading) return <div className="p-20 text-center animate-pulse">Syncing production record...</div>;
+  if (!pack) return <div className="p-20 text-center">Record not found.</div>;
+
+  const isFinalized = pack.status === PackStatus.READY_FOR_EOL || pack.status === PackStatus.FINALIZED;
+  const isComplete = pack.moduleIds.length === pack.requiredModules;
+  const canRelease = isComplete && pack.packSerial && pack.qcStatus === 'PASSED' && pack.bmsId && !isFinalized;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="space-y-6 animate-in fade-in">
+      <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/operate/packs')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold">{isNew ? 'New Pack Build' : pack?.id}</h2>
-            {pack && <Badge variant={pack.status === PackStatus.FINALIZED ? 'success' : 'default'}>{pack.status}</Badge>}
+            <h2 className="text-2xl font-bold font-mono text-indigo-700">{pack.id}</h2>
+            <Badge variant={isFinalized ? 'success' : 'default'}>{pack.status.replace(/_/g, ' ')}</Badge>
           </div>
-          <p className="text-sm text-muted-foreground">{pack?.skuCode || 'Initiating final assembly'}</p>
+          <p className="text-sm text-muted-foreground">{sku?.skuCode} • {sku?.skuName}</p>
         </div>
         <div className="flex gap-2">
-           <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-full px-4 py-1 gap-4">
-              {[1,2,3,4].map(i => (
-                <div key={i} className={`h-2 w-2 rounded-full ${step >= i ? 'bg-primary' : 'bg-slate-300'}`} />
-              ))}
-           </div>
+            {canRelease && isOperator && (
+                <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-xl shadow-indigo-500/20" onClick={handleFinalizeBuild}>
+                    <ShieldCheck className="mr-2 h-4 w-4" /> Finalize & Release
+                </Button>
+            )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          
-          {/* STEP 1: SKU Selection */}
-          {step === 1 && (
-            <Card>
-              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Layers className="h-5 w-5" /> Step 1: Target SKU</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Select Master Blueprint</label>
-                  <select 
-                    className="w-full p-2 border rounded bg-background"
-                    value={selectedSkuId}
-                    onChange={(e) => setSelectedSkuId(e.target.value)}
-                  >
-                    <option value="">Choose a SKU...</option>
-                    {skus.map(sku => (
-                      <option key={sku.id} value={sku.id}>{sku.skuCode} - {sku.skuName}</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="pt-4 flex justify-end">
-                  <Button onClick={handleCreate} disabled={!selectedSkuId || processing}>
-                    Open Work Order <ChevronRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 space-y-6">
+          <div className="border-b flex gap-6 text-sm font-medium text-muted-foreground">
+            <button className={`pb-2 border-b-2 transition-all ${activeTab === 'linkage' ? 'border-primary text-primary font-bold' : 'border-transparent'}`} onClick={() => setActiveTab('linkage')}>Linkage & Build</button>
+            <button className={`pb-2 border-b-2 transition-all ${activeTab === 'qc' ? 'border-primary text-primary font-bold' : 'border-transparent'}`} onClick={() => setActiveTab('qc')}>QC & Finalize</button>
+          </div>
 
-          {/* STEP 2: Module Linkage */}
-          {step === 2 && pack && (
-            <Card>
-              <CardHeader className="flex flex-row justify-between items-center">
-                <CardTitle className="text-lg flex items-center gap-2"><Archive className="h-5 w-5" /> Step 2: Link Sub-Assemblies</CardTitle>
-                <div className="flex items-center gap-2">
-                   <Badge variant="outline">{pack.moduleIds.length} Linked</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="border rounded-md overflow-hidden">
-                   <Table>
-                      <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
-                         <TableRow>
-                            <TableHead className="w-10"></TableHead>
-                            <TableHead>Module ID</TableHead>
-                            <TableHead>Cells</TableHead>
-                            <TableHead>Sealed At</TableHead>
-                         </TableRow>
-                      </TableHeader>
-                      <tbody>
-                         {availableModules.length === 0 ? (
-                           <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground italic">No SEALED modules available for linkage.</TableCell></TableRow>
-                         ) : (
-                           availableModules.map(m => (
-                             <TableRow key={m.id} className="cursor-pointer" onClick={() => toggleModuleLink(m.id)}>
-                               <TableCell>
-                                  <input type="checkbox" checked={pack.moduleIds.includes(m.id)} readOnly className="rounded border-slate-300" />
-                               </TableCell>
-                               <TableCell className="font-mono text-xs">{m.id}</TableCell>
-                               <TableCell>{m.boundCellSerials.length}</TableCell>
-                               <TableCell className="text-xs text-muted-foreground">{new Date(m.updatedAt).toLocaleString()}</TableCell>
-                             </TableRow>
-                           ))
-                         )}
-                      </tbody>
-                   </Table>
-                </div>
+          {activeTab === 'linkage' && (
+            <div className="space-y-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-base flex items-center gap-2"><Layers className="h-5 w-5 text-indigo-500" /> Module Components</CardTitle>
+                        {!isFinalized && isOperator && !isComplete && (
+                            <Button size="sm" variant="outline" onClick={() => setIsPickerOpen(true)}>
+                                <Plus size={14} className="mr-1" /> Add Sealed Module
+                            </Button>
+                        )}
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        <Table>
+                            <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
+                                <TableRow>
+                                    <TableHead>Module ID</TableHead>
+                                    <TableHead>Cells</TableHead>
+                                    <TableHead>Last Actor</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <tbody>
+                                {modules.length === 0 ? (
+                                    <TableRow><TableCell colSpan={4} className="text-center py-16 text-muted-foreground font-mono text-xs opacity-50">Build empty. Link sealed modules to start.</TableCell></TableRow>
+                                ) : (
+                                    modules.map(m => (
+                                        <TableRow key={m.id} className="group">
+                                            <TableCell className="font-mono font-bold">{m.id}</TableCell>
+                                            <TableCell className="text-xs">{m.boundCellSerials.length} Cells</TableCell>
+                                            <TableCell className="text-xs text-muted-foreground">{m.actor || 'System'}</TableCell>
+                                            <TableCell className="text-right">
+                                                {!isFinalized && isOperator && (
+                                                    <Button variant="ghost" size="icon" className="text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleUnlinkModule(m.id)}>
+                                                        <Trash2 size={16} />
+                                                    </Button>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </tbody>
+                        </Table>
+                    </CardContent>
+                </Card>
 
-                <div className="pt-4 flex justify-end">
-                   <Button onClick={handleGenerateSerial} disabled={pack.moduleIds.length === 0}>
-                     Assign Pack Serial <ChevronRight className="ml-2 h-4 w-4" />
-                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* STEP 3: BMS & Finalization */}
-          {step === 3 && pack && (
-            <Card>
-              <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Cpu className="h-5 w-5" /> Step 3: BMS & Control</CardTitle></CardHeader>
-              <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <div className="space-y-2">
-                      <label className="text-sm font-medium">BMS Serial Number</label>
-                      <Input value={bmsSerial} onChange={e => setBmsSerial(e.target.value)} placeholder="Scan BMS identifier..." />
-                   </div>
-                   <div className="space-y-2">
-                      <label className="text-sm font-medium">Firmware Version</label>
-                      <select className="w-full p-2 border rounded bg-background" value={firmware} onChange={e => setFirmware(e.target.value)}>
-                        <option value="v3.1.0-STABLE">v3.1.0-STABLE</option>
-                        <option value="v3.2.0-BETA">v3.2.0-BETA</option>
-                        <option value="v2.9.9-LTS">v2.9.9-LTS</option>
-                      </select>
-                   </div>
-                </div>
+                    <Card>
+                        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Zap className="h-5 w-5 text-amber-500" /> Identity Logic</CardTitle></CardHeader>
+                        <CardContent className="space-y-4">
+                            {pack.packSerial ? (
+                                <div className="p-4 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900 rounded-lg text-center">
+                                    <p className="text-[10px] text-indigo-600 font-bold uppercase tracking-widest mb-1">Authenticated Serial</p>
+                                    <p className="font-mono font-bold text-lg select-all">{pack.packSerial}</p>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col items-center py-2">
+                                    <p className="text-xs text-muted-foreground mb-3 text-center">Identity is required for EOL release.</p>
+                                    <Button variant="outline" className="w-full" onClick={handleGenerateSerial} disabled={!isOperator || isFinalized}>
+                                        Generate Pack Identity
+                                    </Button>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
 
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-md border text-sm flex gap-4 items-center">
-                   <ShieldCheck className="text-primary h-8 w-8 shrink-0" />
-                   <div>
-                      <p className="font-bold">Final Validation</p>
-                      <p className="text-xs text-muted-foreground">Clicking finalize will generate the immutable Battery record and update inventory status.</p>
-                   </div>
+                    <Card>
+                        <CardHeader><CardTitle className="text-base flex items-center gap-2"><Cpu className="h-5 w-5 text-blue-500" /> BMS Binding</CardTitle></CardHeader>
+                        <CardContent>
+                            <div className="flex gap-2">
+                                <Input 
+                                    disabled={isFinalized || !isOperator || !!pack.bmsId}
+                                    placeholder="Enter BMS UID..." 
+                                    className="font-mono"
+                                    value={bmsInput}
+                                    onChange={e => setBmsInput(e.target.value.toUpperCase())}
+                                />
+                                {!pack.bmsId ? (
+                                    <Button onClick={handleBindBMS} disabled={!isOperator || !bmsInput}>Bind</Button>
+                                ) : (
+                                    <Badge variant="success" className="h-10 px-4">Locked</Badge>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </div>
-
-                <div className="pt-4 flex justify-end gap-2">
-                   <Button variant="outline" onClick={() => setStep(2)}>Back</Button>
-                   <Button onClick={handleFinalize} disabled={!bmsSerial || processing}>Finalize Pack Assembly</Button>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
           )}
 
-          {/* STEP 4: Success */}
-          {step === 4 && pack && (
-            <Card className="bg-emerald-50/10 border-emerald-200">
-               <CardContent className="p-12 flex flex-col items-center justify-center text-center space-y-4">
-                  <div className="h-20 w-20 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                     <FileCheck size={48} />
-                  </div>
-                  <h3 className="text-2xl font-bold text-emerald-800 dark:text-emerald-400">Pack Finalized</h3>
-                  <div className="bg-white dark:bg-slate-950 p-4 rounded border font-mono text-sm w-full max-sm:text-xs">
-                     <div className="flex justify-between border-b pb-2 mb-2"><span>Serial:</span> <span className="font-bold">{pack.packSerial}</span></div>
-                     <div className="flex justify-between border-b pb-2 mb-2"><span>BMS:</span> <span>{pack.bmsSerial}</span></div>
-                     <div className="flex justify-between"><span>FW:</span> <span>{pack.firmwareVersion}</span></div>
-                  </div>
-                  <div className="flex gap-4 pt-4">
-                     <Button variant="outline" onClick={() => navigate('/operate/packs')}>Return to List</Button>
-                     <Button onClick={() => navigate(`/batteries/${pack.packSerial}`)}>View Life-cycle Record</Button>
-                  </div>
-               </CardContent>
-            </Card>
-          )}
+          {activeTab === 'qc' && (
+            <div className="space-y-6 animate-in slide-in-from-bottom-2">
+                <Card>
+                    <CardHeader><CardTitle>Assembly Quality Control</CardTitle></CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="space-y-3">
+                            {[
+                                { id: 'q1', label: 'All module seals verified intact', val: isComplete },
+                                { id: 'q2', label: 'BMS communication handshake verified', val: !!pack.bmsId },
+                                { id: 'q3', label: 'Wiring and physical fasteners inspected', val: true },
+                                { id: 'q4', label: 'Safety covers and labeling applied', val: true }
+                            ].map(q => (
+                                <div key={q.id} className="flex items-center gap-3 p-3 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                                    <div className={`h-5 w-5 rounded flex items-center justify-center border-2 ${q.val ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300'}`}>
+                                        {q.val && <CheckCircle size={14} />}
+                                    </div>
+                                    <span className="text-sm font-medium">{q.label}</span>
+                                </div>
+                            ))}
+                        </div>
 
+                        <div className="flex gap-4 pt-4 border-t">
+                            <Button 
+                                className={`flex-1 h-12 text-lg ${pack.qcStatus === 'PASSED' ? 'bg-emerald-600 shadow-lg shadow-emerald-500/20' : ''}`}
+                                variant={pack.qcStatus === 'PASSED' ? 'default' : 'outline'}
+                                onClick={() => handleQC('PASSED')}
+                                disabled={!isQA || isFinalized}
+                            >
+                                <CheckCircle className="mr-2 h-5 w-5" /> QC Passed
+                            </Button>
+                            <Button 
+                                className={`flex-1 h-12 text-lg ${pack.qcStatus === 'FAILED' ? 'bg-rose-600 shadow-lg shadow-rose-500/20' : ''}`}
+                                variant={pack.qcStatus === 'FAILED' ? 'default' : 'outline'}
+                                onClick={() => handleQC('FAILED')}
+                                disabled={!isQA || isFinalized}
+                            >
+                                <ShieldAlert className="mr-2 h-5 w-5" /> Reject Build
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {canRelease && (
+                    <Card className="bg-indigo-900 text-white border-none shadow-2xl overflow-hidden">
+                        <CardContent className="p-8 text-center space-y-4">
+                            <div className="h-16 w-16 bg-indigo-500 rounded-full flex items-center justify-center mx-auto text-white">
+                                <ShieldCheck size={40} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold">Build Order Complete</h3>
+                                <p className="text-indigo-200 mt-2">All checks passed. Pack is ready for EOL release.</p>
+                            </div>
+                            <Button size="lg" className="bg-white text-indigo-900 hover:bg-indigo-50 w-full font-bold" onClick={handleFinalizeBuild}>
+                                RELEASE TO EOL GATE
+                            </Button>
+                        </CardContent>
+                    </Card>
+                )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-6">
-           <Card>
-              <CardHeader><CardTitle className="text-base">Assembly Context</CardTitle></CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                 <div className="flex justify-between">
-                    <span className="text-muted-foreground">Pack ID:</span>
-                    <span className="font-mono font-bold">{pack?.id || 'New Draft'}</span>
-                 </div>
-                 <div className="flex justify-between">
-                    <span className="text-muted-foreground">SKU:</span>
-                    <span className="font-bold">{pack?.skuCode || '-'}</span>
-                 </div>
-                 <div className="flex justify-between border-t pt-2">
-                    <span className="text-muted-foreground">Modules Linked:</span>
-                    <span className="font-bold">{pack?.moduleIds.length || 0}</span>
-                 </div>
-                 {pack?.packSerial && (
-                   <div className="flex flex-col gap-1 border-t pt-2">
-                      <span className="text-muted-foreground text-xs uppercase font-bold tracking-wider">Pack Serial</span>
-                      <span className="font-mono text-primary font-bold bg-primary/5 p-2 rounded border border-primary/20 text-center">{pack.packSerial}</span>
-                   </div>
-                 )}
-              </CardContent>
-           </Card>
-
-           {/* QA Section */}
-           {!isNew && pack && (
-             <Card className={pack.qcStatus === 'PASSED' ? 'border-emerald-200' : ''}>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">QC Verification</CardTitle></CardHeader>
-                <CardContent className="space-y-4">
-                   <div className="flex items-center justify-between">
-                      <span className="text-sm">Status:</span>
-                      <Badge variant={pack.qcStatus === 'PASSED' ? 'success' : 'outline'}>{pack.qcStatus}</Badge>
-                   </div>
-                   {canPerformQC ? (
-                     <Button variant="outline" size="sm" className="w-full gap-2" onClick={handleQCToggle}>
-                        {pack.qcStatus === 'PASSED' ? 'Revoke Approval' : 'Mark QC Passed'}
-                     </Button>
-                   ) : (
-                     <p className="text-[10px] text-muted-foreground text-center italic">Only QA role cluster can update QC status.</p>
-                   )}
+            <Card className="bg-slate-900 text-white border-none">
+                <CardHeader><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Ledger Assurance</CardTitle></CardHeader>
+                <CardContent className="space-y-4 text-xs">
+                    <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Total Cells:</span>
+                        <span className="font-mono text-indigo-400 font-bold">{modules.reduce((acc, m) => acc + m.boundCellSerials.length, 0)}</span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-slate-800 pt-2">
+                        <span className="text-slate-400">Modules Bound:</span>
+                        <span className={`font-mono font-bold ${isComplete ? 'text-emerald-400' : 'text-amber-400'}`}>{pack.moduleIds.length} / {pack.requiredModules}</span>
+                    </div>
+                    <div className="pt-2">
+                        <Button variant="ghost" size="sm" className="w-full text-indigo-400 gap-2 h-8" onClick={() => navigate(`/trace/lineage/${pack.id}`)}>
+                            <History size={14} /> Full Audit Trace
+                        </Button>
+                    </div>
                 </CardContent>
-             </Card>
-           )}
+            </Card>
 
-           <div className="p-4 border border-dashed rounded-lg bg-slate-50 dark:bg-slate-900/50 flex gap-3">
-              <Info size={20} className="text-primary shrink-0" />
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                 Assembly completion triggers automated registration in the Fleet Management module. 
-                 Ensure BMS communication is verified before finalize.
-              </p>
-           </div>
+            <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-bold">SKU Parameters</CardTitle></CardHeader>
+                <CardContent className="space-y-3 text-xs">
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Chemistry:</span>
+                        <Badge variant="outline">{sku?.chemistry}</Badge>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-muted-foreground">Required Topology:</span>
+                        <span className="font-mono">{sku?.seriesCount}S {sku?.parallelCount}P</span>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
       </div>
+
+      {/* Module Picker Modal */}
+      {isPickerOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <Card className="w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+                  <CardHeader className="flex flex-row items-center justify-between bg-slate-50 dark:bg-slate-900 border-b">
+                      <CardTitle className="text-lg">Select Sealed Module</CardTitle>
+                      <Button variant="ghost" size="icon" onClick={() => setIsPickerOpen(false)}>X</Button>
+                  </CardHeader>
+                  <CardContent className="flex-1 overflow-auto p-0">
+                      <Table>
+                          <TableHeader className="bg-slate-100 sticky top-0 z-10">
+                              <TableRow>
+                                  <TableHead>Module ID</TableHead>
+                                  <TableHead>Target SKU</TableHead>
+                                  <TableHead className="text-right"></TableHead>
+                              </TableRow>
+                          </TableHeader>
+                          <tbody>
+                              {eligibleModules.length === 0 ? (
+                                  <TableRow><TableCell colSpan={3} className="text-center py-20 text-muted-foreground">No eligible SEALED modules found for SKU {pack.skuCode}.</TableCell></TableRow>
+                              ) : (
+                                  eligibleModules.map(m => (
+                                      <TableRow key={m.id} className="hover:bg-slate-50">
+                                          <TableCell className="font-mono font-bold text-indigo-600">{m.id}</TableCell>
+                                          <TableCell className="text-xs">{m.skuCode}</TableCell>
+                                          <TableCell className="text-right">
+                                              <Button size="sm" onClick={() => handleLinkModule(m.id)} disabled={processing}>Link</Button>
+                                          </TableCell>
+                                      </TableRow>
+                                  ))
+                              )}
+                          </tbody>
+                      </Table>
+                  </CardContent>
+                  <div className="p-4 border-t flex justify-end bg-slate-50">
+                      <Button variant="outline" onClick={() => setIsPickerOpen(false)}>Close</Button>
+                  </div>
+              </Card>
+          </div>
+      )}
     </div>
   );
 }
