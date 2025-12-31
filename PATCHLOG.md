@@ -1,30 +1,22 @@
 
 # Patch Log
 
-## UI_PATCH_C_MODULE_PACK_ASSEMBLY_V1
+## UI_PATCH_E_MODULE_BIND_V1
 - **Date**: 2024-05-24
-- **Summary**: Implemented the Module and Pack Assembly workflow modules.
-  - Added new screens: `MODULE_ASSEMBLY_LIST`, `MODULE_ASSEMBLY_DETAIL`, `PACK_ASSEMBLY_LIST`, `PACK_ASSEMBLY_DETAIL`.
-  - Implemented `moduleService` for managing sub-assembly work orders and cell binding.
-  - Implemented `packService` for final assembly management and BMS/Firmware linkage.
-  - Module Assembly: Features stepper-based UI for SKU selection, cell scanning (bulk/single), and sealing.
-  - Pack Assembly: Features linkage of SEALED modules, BMS serial assignment, and finalized record generation.
-  - Updated RBAC policy to grant production roles creation/edit rights and QA roles approval rights.
+- **Summary**: Implemented the Cell-to-Module assembly binding workflow.
+  - Enhanced `ModuleAssemblyDetail` with operational Scan-to-Bind interface.
+  - Implemented `moduleAssemblyService` to manage binding lifecycle, SKU target enforcement, and chemistry validation.
+  - Integrated `cellTraceabilityService` for global serial lookup and status synchronization (`BOUND` state).
+  - Enforced RBAC: Operators can bind/seal, QA can raise exceptions, Super Admin can override constraints.
+  - Updated `LineageView` to dynamically display component graph based on ledger bindings.
 - **Files changed**:
   - src/domain/types.ts
-  - src/rbac/screenIds.ts
-  - src/rbac/policy.ts
-  - src/app/routeRegistry.ts
-  - App.tsx
-  - src/services/moduleService.ts (New)
-  - src/services/packService.ts (New)
-  - src/pages/ModuleAssemblyList.tsx (New)
-  - src/pages/ModuleAssemblyDetail.tsx (New)
-  - src/pages/PackAssemblyList.tsx (New)
-  - src/pages/PackAssemblyDetail.tsx (New)
+  - src/services/moduleAssemblyService.ts (New)
+  - src/services/cellTraceabilityService.ts (Update)
+  - src/pages/ModuleAssemblyDetail.tsx (Update)
+  - src/pages/LineageView.tsx (Update)
   - src/app/patchInfo.ts
 
-## UI_PATCH_B0_TRACE_ROUTE_MISMATCH_FIX
+## UI_PATCH_D_CELL_SERIALIZATION_V1
 - **Date**: 2024-05-24
-- **Summary**: Aligned TRACE module routes (Cells and Lineage) to a canonical namespace to resolve Diagnostic Mode mismatches.
 ... (existing logs) ...

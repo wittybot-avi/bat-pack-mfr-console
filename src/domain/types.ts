@@ -443,7 +443,7 @@ export interface Alert {
 }
 
 /**
- * MODULE & PACK ASSEMBLY TYPES (Patch C)
+ * MODULE & PACK ASSEMBLY TYPES (Patch C + E)
  * ---------------------------------------------------------------------
  */
 
@@ -472,6 +472,7 @@ export interface ModuleInstance {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  actor?: string;
 }
 
 export interface PackInstance {
@@ -488,4 +489,63 @@ export interface PackInstance {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CellBindingRecord {
+  moduleId: string;
+  serial: string;
+  lotId: string;
+  lotCode: string;
+  boundAt: string;
+  actor: string;
+  chemistry: string;
+}
+
+export interface ExceptionRecord {
+  id: string;
+  entityType: 'module' | 'pack' | 'lot';
+  entityId: string;
+  severity: 'LOW' | 'MED' | 'HIGH' | 'CRITICAL';
+  message: string;
+  createdAt: string;
+  actor: string;
+}
+
+/**
+ * CELL TRACEABILITY & SERIALIZATION TYPES (Patch D)
+ * ---------------------------------------------------------------------
+ */
+
+export type CellLotStatus = 'DRAFT' | 'SERIALIZED' | 'EXPORTED' | 'SCANNED' | 'READY_TO_BIND' | 'PUBLISHED' | 'CLOSED';
+export type CellSerialStatus = 'GENERATED' | 'SCANNED' | 'BOUND' | 'QUARANTINED' | 'SCRAPPED';
+
+export interface CellSerialRecord {
+  serial: string;
+  lotId: string;
+  status: CellSerialStatus;
+  generatedAt: string;
+  scannedAt?: string;
+  exportedAt?: string;
+  actor?: string;
+  metadata?: Record<string, any>;
+}
+
+export interface CellLot {
+  id: string;
+  lotCode: string;
+  supplierName: string;
+  supplierLotNo: string;
+  chemistry: 'LFP' | 'NMC' | 'LTO' | 'Na-Ion';
+  formFactor: 'Prismatic' | 'Cylindrical' | 'Pouch';
+  capacityAh: number;
+  receivedDate: string;
+  quantityReceived: number;
+  status: CellLotStatus;
+  notes?: string;
+  updatedAt: string;
+  createdAt: string;
+  // Stats
+  generatedCount: number;
+  scannedCount: number;
+  boundCount: number;
 }
