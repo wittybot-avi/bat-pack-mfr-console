@@ -16,10 +16,10 @@ interface State {
 
 /**
  * Standard React Error Boundary component to catch rendering errors.
- * Explicitly using Component from react to resolve TS inheritance issues.
+ * Using named Component import to resolve inheritance visibility issues in TypeScript.
  */
 class ErrorBoundary extends Component<Props, State> {
-  // Explicitly declaring state as a property on the class to ensure visibility
+  // Use property initializer for state
   public state: State = {
     hasError: false,
     error: null,
@@ -37,7 +37,7 @@ class ErrorBoundary extends Component<Props, State> {
 
   // Correctly typed componentDidCatch to handle error tracking
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Correctly using setState inherited from Component base class
+    // Accessing setState through Component inheritance
     this.setState({ error, errorInfo });
     logger.error("Global Error Boundary caught exception", error);
   }
@@ -54,19 +54,19 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   private copyDiagnostics = () => {
-    // Correctly accessing state inherited from Component base class
+    // Accessing state inherited from Component base class
     const data = logger.getDiagnostics(this.state.error || undefined);
     navigator.clipboard.writeText(data);
     alert("Diagnostic info copied to clipboard.");
   };
 
   private toggleDetails = () => {
-    // Correctly using setState inherited from Component base class
+    // Accessing setState through Component inheritance
     this.setState((prev: State) => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
-    // Correctly accessing state inherited from Component base class
+    // Accessing state inherited from Component base class
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
@@ -131,7 +131,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Accessing children through inherited props property from Component base class
+    // Accessing children from props inherited from Component base class
     return this.props.children;
   }
 }

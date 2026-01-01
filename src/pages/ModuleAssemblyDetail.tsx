@@ -4,7 +4,7 @@ import { moduleAssemblyService } from '../services/moduleAssemblyService';
 import { skuService, Sku } from '../services/skuService';
 import { ModuleInstance, ModuleStatus, CellBindingRecord } from '../domain/types';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge, Table, TableHeader, TableRow, TableHead, TableCell } from '../components/ui/design-system';
-import { ArrowLeft, ShieldCheck, Trash2, Info, Scan, History, Database, Layers } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Trash2, Info, Scan, History, Database, Layers, Box } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { workflowGuardrails } from '../services/workflowGuardrails';
 import { StageHeader, NextStepsPanel, ActionGuard } from '../components/SopGuidedUX';
@@ -85,8 +85,8 @@ export default function ModuleAssemblyDetail() {
   return (
     <div className="pb-12">
       <StageHeader 
-        stageCode="S5"
-        title="Sub-Assembly Integration"
+        stageCode="S4"
+        title="Module Assembly"
         objective="Bind validated cell units into a module lattice and verify electrical continuity."
         entityLabel={module.id}
         status={module.status}
@@ -98,6 +98,11 @@ export default function ModuleAssemblyDetail() {
             <Button variant="ghost" size="sm" onClick={() => navigate('/operate/modules')} className="gap-2">
                 <ArrowLeft className="h-4 w-4" /> Back to Queue
             </Button>
+            <div className="h-4 w-px bg-slate-200 mx-2" />
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] font-black uppercase text-slate-400">Batch Context:</span>
+               <Badge variant="outline" className="font-mono text-xs">{module.batchId || 'UNLINKED'}</Badge>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -203,7 +208,7 @@ export default function ModuleAssemblyDetail() {
               </Card>
 
               <div className="p-4 border-2 border-dashed rounded-xl bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center space-y-2 opacity-60">
-                 <Layers size={24} className="text-slate-400" />
+                 <Box size={24} className="text-slate-400" />
                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Unit Genealogy</p>
                  <p className="text-[9px] text-slate-400">Genealogy mapping is immutable once lattice is sealed.</p>
               </div>

@@ -121,7 +121,7 @@ class WorkflowGuardrailsService {
   }
 
   /**
-   * Module Guardrails
+   * S4: Module Guardrails
    */
   getModuleGuardrail(module: ModuleInstance, clusterId: string): Record<string, GuardrailResult> {
     const isOperator = clusterId === 'C2' || clusterId === 'CS';
@@ -139,7 +139,7 @@ class WorkflowGuardrailsService {
   }
 
   /**
-   * Pack Guardrails
+   * S5: Pack Guardrails
    */
   getPackGuardrail(pack: PackInstance, clusterId: string): Record<string, GuardrailResult> {
     const isOperator = clusterId === 'C2' || clusterId === 'CS';

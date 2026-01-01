@@ -71,8 +71,8 @@ export default function CellLotDetail() {
       addNotification({ title: 'Generated', message: `${genParams.count} serials generated for this lot.`, type: 'success' });
       await loadData(lot.id);
       setActiveTab('labels');
-    } catch (e: any) {
-      addNotification({ title: 'Error', message: e.message, type: 'error' });
+    } catch (any: any) {
+      addNotification({ title: 'Error', message: any.message, type: 'error' });
     } finally {
       setProcessing(false);
     }
@@ -324,7 +324,7 @@ export default function CellLotDetail() {
                         <Button 
                             variant="outline"
                             className="w-full text-white border-slate-700 hover:bg-slate-800 h-12"
-                            onClick={() => navigate('/batches')}
+                            onClick={() => navigate(`/batches?prefillLotId=${lot.id}`)}
                             disabled={lot.status !== 'PUBLISHED'}
                         >
                             <Box className="mr-2 h-4 w-4" /> Issue to Batch

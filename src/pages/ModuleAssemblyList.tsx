@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { moduleService } from '../services/moduleService';
 import { ModuleInstance, ModuleStatus } from '../domain/types';
-import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button, Tooltip } from '../components/ui/design-system';
-import { Plus, Eye, User, Calendar, Loader2, History } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button, Tooltip, Input } from '../components/ui/design-system';
+import { Plus, Eye, User, Calendar, Loader2, History, Search, Filter } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { canDo } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
@@ -12,10 +12,12 @@ import { STATUS_LABELS } from '../services/workflowGuardrails';
 
 export default function ModuleAssemblyList() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentCluster } = useAppStore();
   const [modules, setModules] = useState<ModuleInstance[]>([]);
   const [loading, setLoading] = useState(true);
   const [traceId, setTraceId] = useState<string | null>(null);
+  const [search, setSearch] = useState(searchParams.get('batchId') || '');
 
   const canCreate = canDo(currentCluster?.id || '', ScreenId.MODULE_ASSEMBLY_LIST, 'C');
 
@@ -37,42 +39,63 @@ export default function ModuleAssemblyList() {
     }
   };
 
+  const filtered = modules.filter(m => 
+    m.id.toLowerCase().includes(search.toLowerCase()) || 
+    m.skuCode.toLowerCase().includes(search.toLowerCase()) ||
+    m.batchId?.toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Module Assembly</h2>
-          <p className="text-muted-foreground">Monitor sub-assembly work orders and cell binding progress.</p>
+          <h2 className="text-3xl font-bold tracking-tight">Module Assembly Queue</h2>
+          <p className="text-muted-foreground">Monitor sub-assembly work orders and cell binding progress across active batches.</p>
         </div>
         {canCreate && (
           <Button onClick={() => navigate('/operate/modules/new')} className="gap-2 shadow-lg">
-            <Plus className="h-4 w-4" /> Start Assembly
+            <Plus className="h-4 w-4" /> New Module Build
           </Button>
         )}
       </div>
 
       <Card>
+        <CardHeader className="pb-4">
+            <div className="flex items-center gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                        placeholder="Search by ID, SKU or Batch..." 
+                        className="pl-9" 
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                    />
+                </div>
+                <Button variant="outline" size="icon"><Filter className="h-4 w-4" /></Button>
+            </div>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
               <TableRow>
                 <TableHead>Work Order ID</TableHead>
+                <TableHead>Batch Link</TableHead>
                 <TableHead>SKU Blueprint</TableHead>
-                <TableHead>Bound Cells</TableHead>
+                <TableHead>Progress</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Last Updated</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <tbody>
               {loading ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-20"><Loader2 className="animate-spin h-8 w-8 mx-auto opacity-20" /></TableCell></TableRow>
-              ) : modules.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-20 text-muted-foreground">No active module work orders found.</TableCell></TableRow>
+              ) : filtered.length === 0 ? (
+                <TableRow><TableCell colSpan={6} className="text-center py-20 text-muted-foreground">No active module work orders found matching filters.</TableCell></TableRow>
               ) : (
-                modules.map(m => (
+                filtered.map(m => (
                   <TableRow key={m.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group" onClick={() => navigate(`/operate/modules/${m.id}`)}>
                     <TableCell className="font-mono font-bold text-primary">{m.id}</TableCell>
+                    <TableCell><Badge variant="outline" className="text-[10px] font-mono">{m.batchId || '-'}</Badge></TableCell>
                     <TableCell>{m.skuCode}</TableCell>
                     <TableCell>
                        <div className="flex items-center gap-2">
@@ -83,7 +106,6 @@ export default function ModuleAssemblyList() {
                        </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(m.status)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{new Date(m.updatedAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                            <Tooltip content="Quick Trace">

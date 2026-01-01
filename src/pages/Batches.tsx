@@ -1,8 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { batchService } from '../services/api';
-import { Batch, BatchStatus } from '../domain/types';
+import { cellTraceabilityService } from '../services/cellTraceabilityService';
+import { Batch, BatchStatus, CellLot } from '../domain/types';
 import { Button, Input, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Card, CardContent } from '../components/ui/design-system';
 import { Plus, Search, Filter, Eye, MoreHorizontal, FileDown, Lock, Unlock, AlertTriangle, CheckCircle, Loader2, PackageOpen } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -33,12 +33,29 @@ const createBatchSchema = z.object({
   sku: z.string().min(1, "SKU required"),
   quantity: z.number().min(1, "Quantity must be > 0"),
   plantId: z.string().min(1, "Plant ID required"),
+  prefillLotId: z.string().optional()
 });
 
-const CreateBatchModal = ({ isOpen, onClose, onCreated }: any) => {
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
-    resolver: zodResolver(createBatchSchema)
+const CreateBatchModal = ({ isOpen, onClose, onCreated, prefillData }: any) => {
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm({
+    resolver: zodResolver(createBatchSchema),
+    defaultValues: {
+      batchNumber: `B-${new Date().getFullYear()}-${Math.floor(Math.random()*1000)}`,
+      plantId: 'PLANT-01',
+      sku: prefillData?.sku || '',
+      quantity: prefillData?.quantity || 100,
+      prefillLotId: prefillData?.lotId || ''
+    }
   });
+
+  useEffect(() => {
+    if (prefillData) {
+      setValue('sku', prefillData.sku);
+      setValue('quantity', prefillData.quantity);
+      setValue('prefillLotId', prefillData.lotId);
+    }
+  }, [prefillData, setValue]);
+
   const [loading, setLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -50,7 +67,8 @@ const CreateBatchModal = ({ isOpen, onClose, onCreated }: any) => {
         batchNumber: data.batchNumber,
         sku: data.sku,
         targetQuantity: data.quantity,
-        plantId: data.plantId
+        plantId: data.plantId,
+        supplierLots: data.prefillLotId ? [{ id: data.prefillLotId, lotType: 'Cell', supplierName: 'Linked', supplierLotId: data.prefillLotId, receivedDate: new Date().toISOString(), qtyConsumed: data.quantity }] : []
       });
       reset();
       onCreated();
@@ -67,6 +85,15 @@ const CreateBatchModal = ({ isOpen, onClose, onCreated }: any) => {
       <div className="bg-white dark:bg-slate-900 rounded-lg p-6 w-[500px] shadow-xl border dark:border-slate-800">
         <h3 className="text-lg font-bold mb-4">Create Manufacturing Batch</h3>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {prefillData && (
+             <div className="bg-primary/5 p-3 rounded border border-primary/20 flex items-center gap-3 mb-2">
+                <CheckCircle className="h-5 w-5 text-primary" />
+                <div className="text-xs">
+                    <p className="font-bold">Bridged from Inbound Lot</p>
+                    <p className="text-muted-foreground opacity-70">Lot: {prefillData.lotCode}</p>
+                </div>
+             </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Batch Number</label>
@@ -101,10 +128,12 @@ const CreateBatchModal = ({ isOpen, onClose, onCreated }: any) => {
 
 export default function Batches() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { currentCluster, currentRole, addNotification } = useAppStore();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [prefillData, setPrefillData] = useState<any>(null);
   
   // Filters
   const [search, setSearch] = useState('');
@@ -116,7 +145,28 @@ export default function Batches() {
 
   useEffect(() => {
     loadBatches();
+    checkPrefill();
   }, []);
+
+  const checkPrefill = async () => {
+    const lotId = searchParams.get('prefillLotId');
+    if (lotId && canCreate) {
+        try {
+            const lot = await cellTraceabilityService.getLot(lotId);
+            if (lot) {
+                setPrefillData({
+                    lotId: lot.id,
+                    lotCode: lot.lotCode,
+                    sku: '', // In real app, map chemistry to SKU
+                    quantity: lot.quantityReceived
+                });
+                setIsCreateOpen(true);
+                // Clean up URL
+                setSearchParams({});
+            }
+        } catch (e) {}
+    }
+  };
 
   const loadBatches = async () => {
     setLoading(true);
@@ -133,6 +183,7 @@ export default function Batches() {
   const handleCreateSuccess = () => {
     addNotification({ title: "Success", message: "Batch created successfully", type: "success" });
     loadBatches();
+    setPrefillData(null);
   };
 
   const handleExport = (batch: Batch) => {
@@ -272,7 +323,7 @@ export default function Batches() {
         </CardContent>
       </Card>
 
-      <CreateBatchModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreated={handleCreateSuccess} />
+      <CreateBatchModal isOpen={isCreateOpen} onClose={() => setIsCreateOpen(false)} onCreated={handleCreateSuccess} prefillData={prefillData} />
     </div>
   );
 }

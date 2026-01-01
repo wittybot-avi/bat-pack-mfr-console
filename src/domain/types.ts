@@ -94,6 +94,7 @@ export interface ModuleInstance {
   id: string;
   skuId: string;
   skuCode: string;
+  batchId?: string;
   targetCells: number;
   boundCellSerials: string[];
   status: ModuleStatus;
@@ -107,6 +108,7 @@ export interface PackInstance {
   id: string;
   skuId: string;
   skuCode: string;
+  batchId?: string;
   moduleIds: string[];
   status: PackStatus;
   packSerial: string;

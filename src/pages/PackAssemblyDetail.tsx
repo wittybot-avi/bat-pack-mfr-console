@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { packAssemblyService } from '../services/packAssemblyService';
@@ -6,7 +5,7 @@ import { moduleAssemblyService } from '../services/moduleAssemblyService';
 import { skuService, Sku } from '../services/skuService';
 import { PackInstance, PackStatus, ModuleInstance, ModuleStatus } from '../domain/types';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge, Table, TableHeader, TableRow, TableHead, TableCell } from '../components/ui/design-system';
-import { ArrowLeft, Layers, ShieldCheck, Cpu, Box, Trash2, Database, ClipboardCheck, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Layers, ShieldCheck, Cpu, Box, Trash2, Database, ClipboardCheck, CheckCircle, Search, AlertCircle } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { workflowGuardrails } from '../services/workflowGuardrails';
 import { StageHeader, NextStepsPanel, ActionGuard } from '../components/SopGuidedUX';
@@ -54,6 +53,9 @@ export default function PackAssemblyDetail() {
   if (loading || !pack) return <div className="p-20 text-center animate-pulse">Syncing build order...</div>;
 
   const guards = workflowGuardrails.getPackGuardrail(pack, clusterId);
+  const isComplete = pack.status === PackStatus.READY_FOR_EOL || pack.status === PackStatus.FINALIZED;
+  const boundCount = pack.moduleIds.length;
+  const targetCount = pack.requiredModules || 1;
 
   const handleLinkModule = async (moduleId: string) => {
     setProcessing(true);
@@ -98,16 +100,15 @@ export default function PackAssemblyDetail() {
     }
   };
 
-  const isComplete = pack.status === PackStatus.READY_FOR_EOL || pack.status === PackStatus.FINALIZED;
-  const boundCount = pack.moduleIds.length;
-  const targetCount = pack.requiredModules || 1;
+  const stage = activeTab === 'qc' ? 'S6' : 'S5';
+  const stageTitle = activeTab === 'qc' ? 'Pack Review & Pre-EOL' : 'Pack Assembly';
 
   return (
     <div className="pb-12">
       <StageHeader 
-        stageCode="S6"
-        title="Main Enclosure Assembly"
-        objective="Integrate sealed sub-assemblies into the final pack chassis and bind the BMS controller."
+        stageCode={stage}
+        title={stageTitle}
+        objective={activeTab === 'qc' ? "Validate main enclosure integrity and authorize EOL testing handover." : "Integrate sealed sub-assemblies into the final pack chassis and bind the BMS controller."}
         entityLabel={pack.id}
         status={pack.status}
         diagnostics={{ route: '/operate/packs', entityId: pack.id }}
@@ -116,8 +117,13 @@ export default function PackAssemblyDetail() {
       <div className="max-w-7xl mx-auto px-6 space-y-6">
         <div className="flex items-center gap-4 mb-2">
             <Button variant="ghost" size="sm" onClick={() => navigate('/operate/packs')} className="gap-2 text-slate-500">
-                <ArrowLeft className="h-4 w-4" /> Back to Enclosure Queue
+                <ArrowLeft className="h-4 w-4" /> Back to Queue
             </Button>
+            <div className="h-4 w-px bg-slate-200 mx-2" />
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] font-black uppercase text-slate-400">Batch Context:</span>
+               <Badge variant="outline" className="font-mono text-xs">{pack.batchId || 'UNLINKED'}</Badge>
+            </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -125,8 +131,8 @@ export default function PackAssemblyDetail() {
             <NextStepsPanel entity={pack} type="PACK" />
 
             <div className="border-b flex gap-8 text-sm font-bold text-slate-400 overflow-x-auto pb-px">
-              <button className={`pb-3 border-b-2 transition-all uppercase tracking-widest ${activeTab === 'linkage' ? 'border-primary text-primary' : 'border-transparent hover:text-slate-600'}`} onClick={() => setActiveTab('linkage')}>Build Manifest</button>
-              <button className={`pb-3 border-b-2 transition-all uppercase tracking-widest ${activeTab === 'qc' ? 'border-primary text-primary' : 'border-transparent hover:text-slate-600'}`} onClick={() => setActiveTab('qc')}>Identity & QC Gate</button>
+              <button className={`pb-3 border-b-2 transition-all uppercase tracking-widest ${activeTab === 'linkage' ? 'border-primary text-primary' : 'border-transparent hover:text-slate-600'}`} onClick={() => setActiveTab('linkage')}>S5: Build Manifest</button>
+              <button className={`pb-3 border-b-2 transition-all uppercase tracking-widest ${activeTab === 'qc' ? 'border-primary text-primary' : 'border-transparent hover:text-slate-600'}`} onClick={() => setActiveTab('qc')}>S6: Pack Review & Release</button>
             </div>
 
             {activeTab === 'linkage' && (
@@ -169,18 +175,18 @@ export default function PackAssemblyDetail() {
             {activeTab === 'qc' && (
               <div className="space-y-6 animate-in slide-in-from-right-2 duration-300">
                   <Card className="shadow-sm">
-                      <CardHeader className="border-b"><CardTitle className="text-base flex items-center gap-2"><ClipboardCheck size={18} className="text-primary"/> Final Assembly Verification</CardTitle></CardHeader>
+                      <CardHeader className="border-b"><CardTitle className="text-base flex items-center gap-2"><ClipboardCheck size={18} className="text-primary"/> Final Review Gate</CardTitle></CardHeader>
                       <CardContent className="space-y-8 pt-6">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                               <div className="space-y-3">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BMS Hardware Provisioning</label>
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BMS Hardware Binding</label>
                                   <div className="flex gap-2">
                                       <Input disabled={isComplete || !!pack.bmsId} placeholder="Scan BMS UID..." value={bmsInput} onChange={e => setBmsInput(e.target.value.toUpperCase())} className="font-mono bg-slate-50 dark:bg-slate-950 border-2" />
                                       {!pack.bmsId && <Button onClick={handleBindBMS} className="px-6">Bind</Button>}
                                   </div>
                               </div>
                               <div className="space-y-3">
-                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digital Twin Serial</label>
+                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assign Final SN</label>
                                   {pack.packSerial ? (
                                       <div className="p-3 border-2 border-slate-200 dark:border-slate-800 rounded-lg font-mono font-black text-center bg-slate-50 dark:bg-slate-900 text-indigo-600 dark:text-indigo-400">{pack.packSerial}</div>
                                   ) : (
@@ -190,10 +196,10 @@ export default function PackAssemblyDetail() {
                           </div>
                           <div className="pt-6 border-t flex flex-col sm:flex-row gap-4">
                               <Button className={`flex-1 h-14 text-lg font-black transition-all ${pack.qcStatus === 'PASSED' ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 shadow-lg' : 'bg-white dark:bg-slate-900 text-slate-400 border-2'}`} variant={pack.qcStatus === 'PASSED' ? 'default' : 'outline'} onClick={() => handleQC('PASSED')} disabled={isComplete}>
-                                  <CheckCircle className="mr-2 h-5 w-5" /> QC PASS
+                                  <CheckCircle className="mr-2 h-5 w-5" /> PASSED REVIEW
                               </Button>
                               <Button className={`flex-1 h-14 text-lg font-black transition-all ${pack.qcStatus === 'FAILED' ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20 shadow-lg' : 'bg-white dark:bg-slate-900 text-slate-400 border-2'}`} variant={pack.qcStatus === 'FAILED' ? 'default' : 'outline'} onClick={() => handleQC('FAILED')} disabled={isComplete}>
-                                  <Trash2 className="mr-2 h-5 w-5" /> REJECT ASSEMBLY
+                                  <Trash2 className="mr-2 h-5 w-5" /> REJECT ASSEMBY
                               </Button>
                           </div>
                       </CardContent>
@@ -204,18 +210,18 @@ export default function PackAssemblyDetail() {
 
           <div className="space-y-6">
               <Card className="bg-slate-900 text-white border-none shadow-2xl relative overflow-hidden">
-                  <CardHeader className="pb-3 border-b border-slate-800"><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Ledger Finalization</CardTitle></CardHeader>
+                  <CardHeader className="pb-3 border-b border-slate-800"><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Registry Finalization</CardTitle></CardHeader>
                   <CardContent className="space-y-6 pt-6">
                       <div className="flex items-start gap-3">
                           <Database className="h-5 w-5 text-indigo-400 mt-0.5" />
                           <p className="text-[10px] text-slate-400 uppercase font-bold tracking-tight leading-relaxed">
-                            Immutable build record ensures all components are validated against master blueprint before S7 handover.
+                            Submitting this build record creates a permanent ledger entry. Ensure all sub-modules are verified.
                           </p>
                       </div>
                       <ActionGuard 
                           guard={guards.finalize} 
                           onClick={handleFinalize} 
-                          label="Authorize EOL Release" 
+                          label="Release to EOL Queue" 
                           icon={ShieldCheck} 
                           className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white border-none shadow-xl shadow-indigo-500/30 font-black text-sm"
                           actionName="Finalize_Pack_Build"
@@ -226,11 +232,12 @@ export default function PackAssemblyDetail() {
               </Card>
 
               <div className="p-5 border-2 border-slate-200 dark:border-slate-800 rounded-2xl bg-white dark:bg-slate-900 shadow-sm space-y-3">
-                <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Stage S6 Constraints</h5>
+                <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">S6 Review Checklist</h5>
                 <ul className="space-y-2 text-[10px] font-bold text-slate-500 uppercase">
-                    <li className={`flex items-center gap-2 ${boundCount === targetCount ? 'text-emerald-500' : ''}`}><CheckCircle size={12}/> Lattice Parity</li>
-                    <li className={`flex items-center gap-2 ${pack.bmsId ? 'text-emerald-500' : ''}`}><CheckCircle size={12}/> BMS Serial Link</li>
-                    <li className={`flex items-center gap-2 ${pack.packSerial ? 'text-emerald-500' : ''}`}><CheckCircle size={12}/> Pack SN Identity</li>
+                    <li className={`flex items-center gap-2 ${boundCount === targetCount ? 'text-emerald-500' : ''}`}><CheckCircle size={12}/> Modules Linked</li>
+                    <li className={`flex items-center gap-2 ${pack.bmsId ? 'text-emerald-500' : ''}`}><CheckCircle size={12}/> BMS Serial Bound</li>
+                    <li className={`flex items-center gap-2 ${pack.packSerial ? 'text-emerald-500' : ''}`}><CheckCircle size={12}/> Unique Pack SN</li>
+                    <li className={`flex items-center gap-2 ${pack.qcStatus === 'PASSED' ? 'text-emerald-500' : ''}`}><CheckCircle size={12}/> Visual QC</li>
                 </ul>
               </div>
           </div>
