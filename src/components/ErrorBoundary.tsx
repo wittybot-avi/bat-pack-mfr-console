@@ -1,6 +1,5 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-// Added Badge to imports
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from './ui/design-system';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home, Database, ClipboardCopy, Trash2 } from 'lucide-react';
 import { logger } from '../utils/logger';
@@ -16,25 +15,27 @@ interface State {
   showDetails: boolean;
 }
 
-// Fixed class component inheritance by using the Component named import
+/**
+ * Standard React Error Boundary component to catch rendering errors.
+ * Extends Component directly to ensure state, setState, and props are correctly typed.
+ */
 class ErrorBoundary extends Component<Props, State> {
-  // state property initialization without override
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null,
-    showDetails: false
-  };
-
   constructor(props: Props) {
     super(props);
+    // Initializing state - fixed property access
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      showDetails: false
+    };
   }
 
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error, errorInfo: null, showDetails: false };
   }
 
-  // Lifecycle methods without override to resolve environment-specific compilation errors
+  // Fixed setState access by ensuring correct class inheritance
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ error, errorInfo });
     logger.error("Global Error Boundary caught exception", error);
@@ -52,16 +53,19 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   private copyDiagnostics = () => {
+    // state is now correctly identified
     const data = logger.getDiagnostics(this.state.error || undefined);
     navigator.clipboard.writeText(data);
     alert("Diagnostic info copied to clipboard.");
   };
 
+  // Fixed setState access
   private toggleDetails = () => {
     this.setState((prev: State) => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
+    // state is now correctly identified
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
@@ -126,6 +130,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
+    // props is now correctly identified
     return this.props.children;
   }
 }

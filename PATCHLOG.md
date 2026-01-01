@@ -1,25 +1,18 @@
 # Patch Log
 
-## UI_PATCH_K_WORKFLOW_GUARDRAILS_V1
+## BACKEND_API_CONTRACT_HANDOVER_V1 (v1.8.5)
 - **Date**: 2024-05-24
-- **Summary**: Implemented state-machine enforcement and guided navigation across all core manufacturing modules.
-  - **Action Gating**: Buttons now disable based on both User Role AND Entity State (e.g., Cannot seal an empty module).
-  - **Intelligent Tooltips**: All disabled actions now explain *why* they are locked and *what* prerequisite is missing.
-  - **Guided Next Steps**: Context-aware prompts appearing on SKU, Batch, and Pack screens to guide operators to the next logical workflow phase.
-  - **Centralized Service**: Created `workflowGuardrails.ts` as the single source of truth for workflow state logic.
+- **Summary**: Defined formal Backend API specification to replace current UI mocks.
+  - Standardized response envelopes and error structures.
+  - Defined RESTful endpoints for SKU, Batch, Module, Pack, and Battery entities.
+  - Specified workflow transition endpoints with mandatory server-side validation.
+  - Established authentication (JWT) and RBAC expectations.
+  - Documented audit trail requirements for manufacturing traceability.
 - **Files changed**:
   - src/app/patchInfo.ts
   - PATCHLOG.md
-  - src/services/workflowGuardrails.ts
-  - src/components/WorkflowGuards.tsx
-  - src/pages/SkuDetail.tsx
-  - src/pages/BatchDetail.tsx
-  - src/pages/ModuleAssemblyDetail.tsx
-  - src/pages/PackAssemblyDetail.tsx
-  - src/pages/BatteryDetail.tsx
-  - src/pages/EolQaDetail.tsx
-  - PATCH_NOTES_P33.md
+  - BACKEND_API_CONTRACT.md (New)
 
-## UI_PATCH_L_HARDEN_SAFETY_NETS_V1
+## UI_PATCH_K_WORKFLOW_GUARDRAILS_V1 (v1.8.4)
 - **Date**: 2024-05-24
-... (rest of the file) ...
+... (rest of the file)

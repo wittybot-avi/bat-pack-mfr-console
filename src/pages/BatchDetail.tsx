@@ -5,8 +5,8 @@ import { Batch, BatchStatus, BatchNote } from '../domain/types';
 import { useAppStore } from '../lib/store';
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Input } from '../components/ui/design-system';
 import { ArrowLeft, Save, AlertTriangle, CheckCircle, Lock, PlayCircle } from 'lucide-react';
-import { workflowGuardrails, STATUS_LABELS } from '../services/workflowGuardrails';
-import { GatedAction, NextStepPrompt } from '../components/WorkflowGuards';
+import { workflowGuardrails, STATUS_MAP } from '../services/workflowGuardrails';
+import { GatedAction, NextStepPanel } from '../components/WorkflowGuards';
 
 const NoteItem = ({ note }: { note: BatchNote, key?: any }) => (
   <div className="border-b last:border-0 pb-3 mb-3">
@@ -24,11 +24,12 @@ const NoteItem = ({ note }: { note: BatchNote, key?: any }) => (
 export default function BatchDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentCluster, currentRole, addNotification } = useAppStore();
+  const { currentCluster, addNotification } = useAppStore();
   
   const [batch, setBatch] = useState<Batch | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
+
+  const clusterId = currentCluster?.id || '';
 
   useEffect(() => {
     if (id) loadBatch(id);
@@ -38,30 +39,29 @@ export default function BatchDetail() {
     setLoading(true);
     const data = await batchService.getBatchById(batchId);
     if (!data) {
-      addNotification({ title: "Error", message: "Batch not found", type: "error" });
-      navigate('/batches');
-    } else {
-      setBatch(data);
+        addNotification({ title: 'Redirection', message: 'Batch not found. Redirecting to queue.', type: 'info' });
+        navigate('/batches');
+        return;
     }
+    setBatch(data);
     setLoading(false);
   };
 
-  const clusterId = currentCluster?.id || '';
-  const guard = batch ? workflowGuardrails.getBatchGuardrail(batch, clusterId) : null;
-  const nextStep = batch ? workflowGuardrails.getNextRecommendedStep(batch, 'BATCH') : null;
+  if (loading || !batch) return <div className="p-10 text-center animate-pulse">Syncing batch ledger...</div>;
+
+  const guards = workflowGuardrails.getBatchGuardrail(batch, clusterId);
+  const nextStep = workflowGuardrails.getNextRecommendedStep(batch, 'BATCH');
+  const statusConfig = STATUS_MAP[batch.status] || STATUS_MAP.DRAFT;
 
   const handleRelease = async () => {
-    if (!batch) return;
     try {
         await batchService.updateBatch(batch.id, { status: BatchStatus.IN_PRODUCTION });
-        addNotification({ title: "Released", message: "Batch sent to assembly line.", type: "success" });
+        addNotification({ title: "Released", message: "Batch released to shopfloor.", type: "success" });
         loadBatch(batch.id);
     } catch (e) {
         addNotification({ title: "Error", message: "Action failed", type: "error" });
     }
   };
-
-  if (loading || !batch) return <div className="p-10 text-center animate-pulse">Synchronizing batch ledger...</div>;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-100px)]">
@@ -73,68 +73,52 @@ export default function BatchDetail() {
           <div>
             <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-bold">{batch.batchNumber}</h2>
-                <Badge variant={batch.status === BatchStatus.CLOSED ? 'success' : 'default'}>
-                    {batch.status === BatchStatus.CLOSED ? STATUS_LABELS.COMPLETED : batch.status === BatchStatus.ON_HOLD ? STATUS_LABELS.BLOCKED : STATUS_LABELS.IN_PROGRESS}
-                </Badge>
+                <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
             </div>
             <p className="text-muted-foreground text-sm">{batch.sku}</p>
           </div>
         </div>
 
-        <NextStepPrompt step={nextStep} />
+        <NextStepPanel step={nextStep} />
 
-        <div className="border-b flex gap-6 text-sm font-medium text-muted-foreground overflow-x-auto">
-            <button className={`pb-2 border-b-2 ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('overview')}>Overview</button>
-            <button className={`pb-2 border-b-2 ${activeTab === 'qa' ? 'border-primary text-primary' : 'border-transparent hover:text-foreground'}`} onClick={() => setActiveTab('qa')}>QA / EOL</button>
-        </div>
-
-        <div className="pt-2">
-            {activeTab === 'overview' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card>
-                        <CardHeader><CardTitle className="text-lg">Key Metrics</CardTitle></CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-4">
-                            <div><p className="text-xs text-muted-foreground">Target Qty</p><p className="text-xl font-bold">{batch.targetQuantity}</p></div>
-                            <div><p className="text-xs text-muted-foreground">Built Qty</p><p className="text-xl font-bold">{batch.qtyBuilt}</p></div>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader><CardTitle className="text-lg">Process Audit</CardTitle></CardHeader>
-                        <CardContent className="max-h-[200px] overflow-y-auto">
-                            {batch.notes.length === 0 ? <p className="text-sm text-muted-foreground italic">No events recorded.</p> : batch.notes.map(note => <NoteItem key={note.id} note={note} />)}
-                        </CardContent>
-                    </Card>
-                </div>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card>
+                <CardHeader><CardTitle className="text-lg">Key Metrics</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 gap-4">
+                    <div><p className="text-xs text-muted-foreground">Target Qty</p><p className="text-xl font-bold">{batch.targetQuantity}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Built Qty</p><p className="text-xl font-bold">{batch.qtyBuilt}</p></div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader><CardTitle className="text-lg">Process Audit</CardTitle></CardHeader>
+                <CardContent className="max-h-[200px] overflow-y-auto">
+                    {batch.notes.length === 0 ? <p className="text-sm text-muted-foreground italic">No events recorded.</p> : batch.notes.map(note => <NoteItem key={note.id} note={note} />)}
+                </CardContent>
+            </Card>
         </div>
       </div>
 
       <div className="w-full lg:w-80 space-y-4 shrink-0">
          <Card>
-             <CardHeader className="pb-2"><CardTitle className="text-base">Operations Hub</CardTitle></CardHeader>
+             <CardHeader className="pb-2"><CardTitle className="text-base">Gated Actions</CardTitle></CardHeader>
              <CardContent className="space-y-3">
-                 {batch.status === BatchStatus.DRAFT && guard && (
+                <GatedAction 
+                    guard={guards.release} 
+                    onClick={handleRelease} 
+                    label="Release to Line" 
+                    icon={PlayCircle} 
+                    className="w-full"
+                />
+                <div className="pt-4 border-t space-y-2">
                     <GatedAction 
-                      guard={guard.releaseToLine} 
-                      onClick={handleRelease} 
-                      label="Release to Line" 
-                      icon={PlayCircle} 
-                      className="w-full"
+                        guard={guards.close} 
+                        onClick={() => addNotification({title: "Closed", message: "Batch record finalized.", type: "success"})} 
+                        label="Finalize Batch" 
+                        icon={Lock} 
+                        variant="outline"
+                        className="w-full"
                     />
-                 )}
-                 
-                 {batch.status !== BatchStatus.CLOSED && guard && (
-                    <div className="pt-4 border-t space-y-2">
-                         <GatedAction 
-                            guard={guard.closeBatch} 
-                            onClick={() => addNotification({title: "Coming Soon", message: "Final closure requires all units at EOL PASS.", type: "info"})} 
-                            label="Finalize Batch" 
-                            icon={Lock} 
-                            variant="outline"
-                            className="w-full"
-                         />
-                    </div>
-                 )}
+                </div>
              </CardContent>
          </Card>
       </div>

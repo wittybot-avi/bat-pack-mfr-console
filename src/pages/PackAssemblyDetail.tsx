@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { packAssemblyService } from '../services/packAssemblyService';
@@ -6,10 +5,10 @@ import { moduleAssemblyService } from '../services/moduleAssemblyService';
 import { skuService, Sku } from '../services/skuService';
 import { PackInstance, PackStatus, ModuleInstance, ModuleStatus } from '../domain/types';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge, Table, TableHeader, TableRow, TableHead, TableCell } from '../components/ui/design-system';
-import { ArrowLeft, Layers, ShieldCheck, Cpu, Box, Trash2, History, Database } from 'lucide-react';
+import { ArrowLeft, Layers, ShieldCheck, Cpu, Box, Trash2, Database } from 'lucide-react';
 import { useAppStore } from '../lib/store';
-import { workflowGuardrails, STATUS_LABELS } from '../services/workflowGuardrails';
-import { GatedAction, NextStepPrompt } from '../components/WorkflowGuards';
+import { workflowGuardrails, STATUS_MAP } from '../services/workflowGuardrails';
+import { GatedAction, NextStepPanel } from '../components/WorkflowGuards';
 
 export default function PackAssemblyDetail() {
   const { id } = useParams();
@@ -26,40 +25,43 @@ export default function PackAssemblyDetail() {
   const [activeTab, setActiveTab] = useState('linkage');
   const [bmsInput, setBmsInput] = useState('');
 
+  const clusterId = currentCluster?.id || '';
+
   useEffect(() => {
     if (id) loadData(id);
   }, [id]);
 
   const loadData = async (pid: string) => {
     setLoading(true);
-    try {
-      const p = await packAssemblyService.getPack(pid);
-      if (p) {
-        setPack(p);
-        setBmsInput(p.bmsId || '');
-        const s = await skuService.getSku(p.skuId);
-        if (s) setSku(s);
-        const modDetails = await Promise.all(p.moduleIds.map(mid => moduleAssemblyService.getModule(mid)));
-        setModules(modDetails.filter(m => !!m) as ModuleInstance[]);
-        const eligible = await packAssemblyService.listEligibleModulesForPack(p.skuId);
-        setEligibleModules(eligible);
-      }
-    } finally {
-      setLoading(false);
+    const p = await packAssemblyService.getPack(pid);
+    if (!p) {
+        addNotification({ title: 'Redirection', message: 'Build order not found.', type: 'info' });
+        navigate('/operate/packs');
+        return;
     }
+    setPack(p);
+    setBmsInput(p.bmsId || '');
+    const s = await skuService.getSku(p.skuId);
+    if (s) setSku(s);
+    const modDetails = await Promise.all(p.moduleIds.map(mid => moduleAssemblyService.getModule(mid)));
+    setModules(modDetails.filter(m => !!m) as ModuleInstance[]);
+    const eligible = await packAssemblyService.listEligibleModulesForPack(p.skuId);
+    setEligibleModules(eligible);
+    setLoading(false);
   };
 
-  const clusterId = currentCluster?.id || '';
-  const guard = pack ? workflowGuardrails.getPackGuardrail(pack, clusterId) : null;
-  const nextStep = pack ? workflowGuardrails.getNextRecommendedStep(pack, 'PACK') : null;
+  if (loading || !pack) return <div className="p-20 text-center animate-pulse">Syncing build order...</div>;
+
+  const guards = workflowGuardrails.getPackGuardrail(pack, clusterId);
+  const nextStep = workflowGuardrails.getNextRecommendedStep(pack, 'PACK');
+  const statusConfig = STATUS_MAP[pack.status] || STATUS_MAP.DRAFT;
 
   const handleLinkModule = async (moduleId: string) => {
-    if (!pack) return;
     setProcessing(true);
     try {
       const actor = `${currentRole?.name} (${clusterId})`;
       await packAssemblyService.linkModuleToPack(pack.id, moduleId, actor, clusterId === 'CS');
-      addNotification({ title: 'Linked', message: `Module ${moduleId} added to build.`, type: 'success' });
+      addNotification({ title: 'Linked', message: `Module added to build.`, type: 'success' });
       await loadData(pack.id);
       setIsPickerOpen(false);
     } catch (e: any) {
@@ -70,18 +72,16 @@ export default function PackAssemblyDetail() {
   };
 
   const handleQC = async (status: 'PASSED' | 'FAILED') => {
-      if (!pack) return;
       await packAssemblyService.updatePack(pack.id, { qcStatus: status });
       addNotification({ title: 'QC Updated', message: `Assembly QC marked ${status}`, type: status === 'PASSED' ? 'success' : 'warning' });
       loadData(pack.id);
   };
 
   const handleBindBMS = async () => {
-    if (!pack || !bmsInput) return;
     try {
         const actor = `${currentRole?.name} (${clusterId})`;
         await packAssemblyService.bindDeviceToPack(pack.id, bmsInput, actor);
-        addNotification({ title: 'BMS Bound', message: 'Identity signature locked.', type: 'success' });
+        addNotification({ title: 'BMS Bound', message: 'Hardware identity confirmed.', type: 'success' });
         loadData(pack.id);
     } catch (e: any) {
         addNotification({ title: 'Error', message: e.message, type: 'error' });
@@ -89,60 +89,51 @@ export default function PackAssemblyDetail() {
   };
 
   const handleFinalize = async () => {
-    if (!pack) return;
     try {
         const actor = `${currentRole?.name} (${clusterId})`;
         await packAssemblyService.markPackReadyForEOL(pack.id, actor);
-        addNotification({ title: 'Finalized', message: 'Build order sent to EOL station.', type: 'success' });
+        addNotification({ title: 'Finalized', message: 'Build order released to QA.', type: 'success' });
         loadData(pack.id);
     } catch (e: any) {
         addNotification({ title: 'Failure', message: e.message, type: 'error' });
     }
   };
 
-  if (loading || !pack) return <div className="p-20 text-center animate-pulse">Loading work order...</div>;
-
-  const isFinalized = pack.status === PackStatus.READY_FOR_EOL || pack.status === PackStatus.FINALIZED;
-  const isComplete = pack.moduleIds.length === (pack.requiredModules || 1);
-  // Defined variables for sub-assembly counts to fix compilation errors
+  const isComplete = pack.status === PackStatus.READY_FOR_EOL || pack.status === PackStatus.FINALIZED;
   const boundCount = pack.moduleIds.length;
   const targetCount = pack.requiredModules || 1;
 
   return (
     <div className="space-y-6 animate-in fade-in">
-      <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+      <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={() => navigate('/operate/packs')}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold font-mono text-indigo-700">{pack.id}</h2>
-            <Badge variant={isFinalized ? 'success' : 'default'}>
-                {isFinalized ? STATUS_LABELS.COMPLETED : STATUS_LABELS.IN_PROGRESS}
-            </Badge>
+            <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
           </div>
-          <p className="text-sm text-muted-foreground">{sku?.skuCode} Pack Build</p>
+          <p className="text-sm text-muted-foreground">{sku?.skuCode} Main Assembly</p>
         </div>
         <div className="flex gap-2">
-            {guard && (
-                <GatedAction 
-                  guard={guard.finalize} 
-                  onClick={handleFinalize} 
-                  label="Finalize & Release" 
-                  icon={ShieldCheck} 
-                  className="bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
-                />
-            )}
+            <GatedAction 
+                guard={guards.finalize} 
+                onClick={handleFinalize} 
+                label="Finalize Build" 
+                icon={ShieldCheck} 
+                className="bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/20"
+            />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className="lg:col-span-3 space-y-6">
-          <NextStepPrompt step={nextStep} />
+          <NextStepPanel step={nextStep} />
 
           <div className="border-b flex gap-6 text-sm font-medium text-muted-foreground overflow-x-auto pb-px">
-            <button className={`pb-2 border-b-2 transition-all ${activeTab === 'linkage' ? 'border-primary text-primary font-bold' : 'border-transparent'}`} onClick={() => setActiveTab('linkage')}>Linkage & Build</button>
-            <button className={`pb-2 border-b-2 transition-all ${activeTab === 'qc' ? 'border-primary text-primary font-bold' : 'border-transparent'}`} onClick={() => setActiveTab('qc')}>QC & Identity</button>
+            <button className={`pb-2 border-b-2 transition-all ${activeTab === 'linkage' ? 'border-primary text-primary font-bold' : 'border-transparent'}`} onClick={() => setActiveTab('linkage')}>Build Order</button>
+            <button className={`pb-2 border-b-2 transition-all ${activeTab === 'qc' ? 'border-primary text-primary font-bold' : 'border-transparent'}`} onClick={() => setActiveTab('qc')}>Identity & QC</button>
           </div>
 
           {activeTab === 'linkage' && (
@@ -150,21 +141,21 @@ export default function PackAssemblyDetail() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-base">Sub-Assemblies ({boundCount}/{targetCount})</CardTitle>
-                        {guard?.linkModule.allowed && <Button size="sm" variant="outline" onClick={() => setIsPickerOpen(true)}>Add Sealed Module</Button>}
+                        {!isComplete && <Button size="sm" variant="outline" onClick={() => setIsPickerOpen(true)}>Link Module</Button>}
                     </CardHeader>
                     <CardContent className="p-0">
                         <Table>
-                            <TableHeader><TableRow><TableHead>Module ID</TableHead><TableHead>Cells</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
+                            <TableHeader><TableRow><TableHead>Module ID</TableHead><TableHead>Target Cells</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                             <tbody>
                                 {modules.length === 0 ? (
-                                    <TableRow><TableCell colSpan={3} className="text-center py-16 text-muted-foreground italic">No modules linked to this build.</TableCell></TableRow>
+                                    <TableRow><TableCell colSpan={3} className="text-center py-16 text-muted-foreground italic">No modules linked.</TableCell></TableRow>
                                 ) : (
                                     modules.map(m => (
                                         <TableRow key={m.id}>
                                             <TableCell className="font-mono font-bold">{m.id}</TableCell>
-                                            <TableCell className="text-xs">{m.boundCellSerials.length} Cells</TableCell>
+                                            <TableCell className="text-xs">{m.targetCells} Cells</TableCell>
                                             <TableCell className="text-right">
-                                                {!isFinalized && clusterId === 'C2' && (
+                                                {!isComplete && (
                                                     <Button variant="ghost" size="icon" className="text-rose-500" onClick={() => packAssemblyService.unlinkModuleFromPack(pack.id, m.id, 'Operator').then(() => loadData(pack.id))}>
                                                         <Trash2 size={16} />
                                                     </Button>
@@ -183,28 +174,28 @@ export default function PackAssemblyDetail() {
           {activeTab === 'qc' && (
             <div className="space-y-6">
                 <Card>
-                    <CardHeader><CardTitle className="text-base">Identity & Assembly QC</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">Identity & Assembly Verification</CardTitle></CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">BMS UID Binding</label>
                                 <div className="flex gap-2">
-                                    <Input disabled={isFinalized || !!pack.bmsId} placeholder="Scan BMS Identity..." value={bmsInput} onChange={e => setBmsInput(e.target.value.toUpperCase())} />
-                                    {!pack.bmsId && <GatedAction guard={guard?.bindBms!} onClick={handleBindBMS} label="Bind" />}
+                                    <Input disabled={isComplete || !!pack.bmsId} placeholder="Scan BMS..." value={bmsInput} onChange={e => setBmsInput(e.target.value.toUpperCase())} />
+                                    {!pack.bmsId && <Button onClick={handleBindBMS}>Bind</Button>}
                                 </div>
                             </div>
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Pack Serial Assignment</label>
+                                <label className="text-sm font-medium">Pack Serial</label>
                                 {pack.packSerial ? (
                                     <div className="p-2 border rounded font-mono font-bold text-center bg-slate-50">{pack.packSerial}</div>
                                 ) : (
-                                    <Button variant="outline" className="w-full" onClick={() => packAssemblyService.generatePackSerial(pack.id).then(() => loadData(pack.id))} disabled={isFinalized}>Generate Identity</Button>
+                                    <Button variant="outline" className="w-full" onClick={() => packAssemblyService.generatePackSerial(pack.id).then(() => loadData(pack.id))}>Assign Serial</Button>
                                 )}
                             </div>
                         </div>
                         <div className="pt-6 border-t flex gap-4">
-                            <Button className={`flex-1 h-12 ${pack.qcStatus === 'PASSED' ? 'bg-emerald-600' : ''}`} variant={pack.qcStatus === 'PASSED' ? 'default' : 'outline'} onClick={() => handleQC('PASSED')} disabled={isFinalized}>Assembly QC PASS</Button>
-                            <Button className={`flex-1 h-12 ${pack.qcStatus === 'FAILED' ? 'bg-rose-600' : ''}`} variant={pack.qcStatus === 'FAILED' ? 'default' : 'outline'} onClick={() => handleQC('FAILED')} disabled={isFinalized}>Reject Build</Button>
+                            <Button className={`flex-1 h-12 ${pack.qcStatus === 'PASSED' ? 'bg-emerald-600' : ''}`} variant={pack.qcStatus === 'PASSED' ? 'default' : 'outline'} onClick={() => handleQC('PASSED')} disabled={isComplete}>QC PASS</Button>
+                            <Button className={`flex-1 h-12 ${pack.qcStatus === 'FAILED' ? 'bg-rose-600' : ''}`} variant={pack.qcStatus === 'FAILED' ? 'default' : 'outline'} onClick={() => handleQC('FAILED')} disabled={isComplete}>QC FAIL</Button>
                         </div>
                     </CardContent>
                 </Card>
@@ -214,11 +205,11 @@ export default function PackAssemblyDetail() {
 
         <div className="space-y-6">
             <Card className="bg-slate-900 text-white border-none shadow-xl">
-                <CardHeader className="pb-2"><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Assurance Ledger</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Assurance Ledger</CardTitle></CardHeader>
                 <CardContent className="space-y-4 pt-2">
                     <div className="flex items-start gap-3">
                         <Database className="h-5 w-5 text-indigo-400 mt-0.5" />
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Non-volatile build record initialized. Genealogy mapping active.</p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">Main assembly registry ensures all sub-components are validated against the master blueprint.</p>
                     </div>
                 </CardContent>
             </Card>
@@ -228,13 +219,13 @@ export default function PackAssemblyDetail() {
       {isPickerOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
               <Card className="w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
-                  <CardHeader className="flex flex-row items-center justify-between border-b"><CardTitle className="text-lg">Select Sealed Module</CardTitle><Button variant="ghost" size="icon" onClick={() => setIsPickerOpen(false)}>X</Button></CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between border-b"><CardTitle className="text-lg">Link Sealed Module</CardTitle><Button variant="ghost" size="icon" onClick={() => setIsPickerOpen(false)}>X</Button></CardHeader>
                   <CardContent className="flex-1 overflow-auto p-0">
                       <Table>
                           <TableHeader className="bg-slate-100 sticky top-0 z-10"><TableRow><TableHead>Module ID</TableHead><TableHead className="text-right">Action</TableHead></TableRow></TableHeader>
                           <tbody>
                               {eligibleModules.map(m => (
-                                  <TableRow key={m.id} className="hover:bg-slate-50"><TableCell className="font-mono font-bold text-indigo-600">{m.id}</TableCell><TableCell className="text-right"><Button size="sm" onClick={() => handleLinkModule(m.id)} disabled={processing}>Link to Build</Button></TableCell></TableRow>
+                                  <TableRow key={m.id} className="hover:bg-slate-50"><TableCell className="font-mono font-bold text-indigo-600">{m.id}</TableCell><TableCell className="text-right"><Button size="sm" onClick={() => handleLinkModule(m.id)}>Link</Button></TableCell></TableRow>
                               ))}
                           </tbody>
                       </Table>

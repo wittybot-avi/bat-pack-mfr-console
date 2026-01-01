@@ -3,10 +3,9 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { batteryService } from '../services/api';
 import { Battery, BatteryStatus } from '../domain/types';
 import { useAppStore } from '../lib/store';
-import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Input, Table, TableHeader, TableRow, TableHead, TableCell, Tooltip } from '../components/ui/design-system';
-import { ArrowLeft, CheckCircle, Truck, Cpu, ClipboardCheck, Lock } from 'lucide-react';
-import { workflowGuardrails, STATUS_LABELS } from '../services/workflowGuardrails';
-import { GatedAction } from '../components/WorkflowGuards';
+import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from '../components/ui/design-system';
+import { ArrowLeft, CheckCircle, Truck, Cpu, ClipboardCheck } from 'lucide-react';
+import { STATUS_MAP } from '../services/workflowGuardrails';
 
 const InfoRow = ({ label, value, isLink = false, linkTo = '' }: { label: string, value: any, isLink?: boolean, linkTo?: string }) => (
   <div className="flex flex-col gap-1">
@@ -24,12 +23,10 @@ const InfoRow = ({ label, value, isLink = false, linkTo = '' }: { label: string,
 export default function BatteryDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentCluster, currentRole, addNotification } = useAppStore();
+  const { addNotification } = useAppStore();
   
   const [battery, setBattery] = useState<Battery | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     if (id) loadBattery(id);
@@ -39,50 +36,17 @@ export default function BatteryDetail() {
     setLoading(true);
     const data = await batteryService.getBatteryById(battId);
     if (!data) {
-      addNotification({ title: "Error", message: "Battery not found", type: "error" });
-      navigate('/batteries');
-    } else {
-      setBattery(data);
+        addNotification({ title: 'Redirection', message: 'Asset identity not found.', type: 'info' });
+        navigate('/batteries');
+        return;
     }
+    setBattery(data);
     setLoading(false);
   };
 
-  const clusterId = currentCluster?.id || '';
-  const guard = battery ? workflowGuardrails.getBatteryGuardrail(battery, clusterId) : null;
+  if (loading || !battery) return <div className="p-10 text-center animate-pulse">Syncing traceable record...</div>;
 
-  const handleAction = async (action: string) => {
-      if (!battery) return;
-      const user = `${currentRole?.name} (${clusterId})`;
-      setActionLoading(true);
-
-      try {
-          if (action === 'provision') {
-              await batteryService.provisionBattery(battery.id, { bmsUid: `BMS-${Date.now()}`, firmware: 'v2.2.0', profile: 'STD' });
-              addNotification({ title: "Success", message: "BMS Provisioned", type: "success" });
-          } 
-          else if (action === 'approve') {
-              await batteryService.approveBattery(battery.id, user);
-              addNotification({ title: "Certified", message: "Asset moved to inventory.", type: "success" });
-          } 
-          else if (action === 'dispatch') {
-               await batteryService.dispatchBattery(battery.id, "Customer Site");
-               addNotification({ title: "Dispatched", message: "Logistics record updated.", type: "success" });
-          }
-          await loadBattery(battery.id);
-      } catch (e: any) {
-          addNotification({ title: "Error", message: e.message || "Action failed", type: "error" });
-      } finally {
-          setActionLoading(false);
-      }
-  };
-
-  const getStatusLabel = (status: BatteryStatus) => {
-    if (status === BatteryStatus.DEPLOYED) return STATUS_LABELS.COMPLETED;
-    if (status === BatteryStatus.SCRAPPED || status === BatteryStatus.RMA) return STATUS_LABELS.FAILED;
-    return STATUS_LABELS.IN_PROGRESS;
-  };
-
-  if (loading || !battery) return <div className="p-10 text-center animate-pulse">Syncing traceable records...</div>;
+  const statusConfig = STATUS_MAP[battery.status] || STATUS_MAP.DRAFT;
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-100px)]">
@@ -94,30 +58,22 @@ export default function BatteryDetail() {
           <div>
             <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-bold font-mono">{battery.serialNumber}</h2>
-                <Badge variant={battery.status === BatteryStatus.DEPLOYED ? 'success' : 'outline'}>
-                    {getStatusLabel(battery.status)}
-                </Badge>
+                <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
             </div>
-            <p className="text-muted-foreground text-sm">Asset ID: {battery.id} • {battery.status}</p>
+            <p className="text-muted-foreground text-sm">Asset Registry: {battery.id}</p>
           </div>
         </div>
 
-        <div className="border-b flex gap-6 text-sm font-medium text-muted-foreground">
-            <button className={`pb-2 border-b-2 ${activeTab === 'overview' ? 'border-primary text-primary' : 'border-transparent'}`} onClick={() => setActiveTab('overview')}>Overview</button>
-            <button className={`pb-2 border-b-2 ${activeTab === 'qa' ? 'border-primary text-primary' : 'border-transparent'}`} onClick={() => setActiveTab('qa')}>QA Data</button>
-        </div>
-
-        <div className="pt-2">
-            {activeTab === 'overview' && (
-                <Card>
-                    <CardHeader><CardTitle className="text-lg">Asset Identity</CardTitle></CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-y-4">
-                        <InfoRow label="Serial Number" value={battery.serialNumber} />
-                        <InfoRow label="Current Status" value={battery.status} />
-                        <InfoRow label="Batch ID" value={battery.batchId} isLink linkTo={`/batches/${battery.batchId}`} />
-                    </CardContent>
-                </Card>
-            )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+            <Card>
+                <CardHeader><CardTitle className="text-lg">Core Identity</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-2 gap-y-4">
+                    <InfoRow label="Serial Number" value={battery.serialNumber} />
+                    <InfoRow label="System Status" value={battery.status} />
+                    <InfoRow label="Last Reported" value={battery.location} />
+                    <InfoRow label="Lot Link" value={battery.batchId} isLink linkTo={`/batches/${battery.batchId}`} />
+                </CardContent>
+            </Card>
         </div>
       </div>
 
@@ -125,14 +81,19 @@ export default function BatteryDetail() {
          <Card>
              <CardHeader className="pb-3"><CardTitle className="text-base">Operations</CardTitle></CardHeader>
              <CardContent className="space-y-2">
-                 {guard && (
-                   <>
-                    <GatedAction guard={guard.provision} onClick={() => handleAction('provision')} label="Provision BMS" icon={Cpu} className="w-full justify-start" variant="outline" />
-                    <GatedAction guard={guard.eolUpload} onClick={() => navigate('/eol')} label="Upload QA Data" icon={ClipboardCheck} className="w-full justify-start" variant="outline" />
-                    <GatedAction guard={guard.approveStock} onClick={() => handleAction('approve')} label="Approve for Stock" icon={CheckCircle} className="w-full justify-start" variant="outline" />
-                    <GatedAction guard={guard.dispatch} onClick={() => handleAction('dispatch')} label="Dispatch Shipment" icon={Truck} className="w-full justify-start" variant="outline" />
-                   </>
-                 )}
+                <Button variant="outline" className="w-full justify-start" disabled>
+                    <Cpu className="mr-2 h-4 w-4" /> Provision BMS
+                </Button>
+                <Button variant="outline" className="w-full justify-start" disabled>
+                    <ClipboardCheck className="mr-2 h-4 w-4" /> Run QA Test
+                </Button>
+                <Button variant="outline" className="w-full justify-start" disabled>
+                    <CheckCircle className="mr-2 h-4 w-4" /> Release to Stock
+                </Button>
+                <Button variant="outline" className="w-full justify-start" disabled>
+                    <Truck className="mr-2 h-4 w-4" /> Dispatch Unit
+                </Button>
+                <p className="text-[10px] text-center text-muted-foreground pt-2 italic">Use workflow-specific consoles for actions.</p>
              </CardContent>
          </Card>
       </div>

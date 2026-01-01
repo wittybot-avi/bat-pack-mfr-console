@@ -1,8 +1,8 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Tooltip, Card, CardContent, Badge } from './ui/design-system';
 import { GuardrailResult, NextStep } from '../services/workflowGuardrails';
-import { ArrowRight, Lightbulb, Lock } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Lightbulb, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface GatedActionProps {
   guard: GuardrailResult;
@@ -10,14 +10,18 @@ interface GatedActionProps {
   label: string;
   icon?: any;
   variant?: any;
+  size?: any;
   className?: string;
   loading?: boolean;
 }
 
-export const GatedAction: React.FC<GatedActionProps> = ({ guard, onClick, label, icon: Icon, variant, className, loading }) => {
+export const GatedAction: React.FC<GatedActionProps> = ({ 
+  guard, onClick, label, icon: Icon, variant, size, className, loading 
+}) => {
   const btn = (
     <Button 
       variant={variant} 
+      size={size}
       className={className} 
       onClick={onClick} 
       disabled={!guard.allowed || loading}
@@ -29,22 +33,18 @@ export const GatedAction: React.FC<GatedActionProps> = ({ guard, onClick, label,
   );
 
   if (!guard.allowed && guard.reason) {
-    return (
-      <Tooltip content={guard.reason}>
-        <div className="w-full">{btn}</div>
-      </Tooltip>
-    );
+    return <Tooltip content={guard.reason}><div className="w-full">{btn}</div></Tooltip>;
   }
 
   return btn;
 };
 
-export const NextStepPrompt: React.FC<{ step: NextStep | null }> = ({ step }) => {
+export const NextStepPanel: React.FC<{ step: NextStep | null }> = ({ step }) => {
   const navigate = useNavigate();
   if (!step) return null;
 
   return (
-    <Card className="bg-indigo-50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900 border-2 border-dashed shadow-none animate-in fade-in duration-500">
+    <Card className="bg-indigo-50 dark:bg-indigo-900/10 border-indigo-100 dark:border-indigo-900 border-2 border-dashed shadow-none animate-in fade-in slide-in-from-top-1">
       <CardContent className="p-4 flex items-start gap-4">
         <div className="p-2 bg-indigo-100 dark:bg-indigo-900/50 rounded-lg text-indigo-600">
           <Lightbulb size={20} />
@@ -55,16 +55,18 @@ export const NextStepPrompt: React.FC<{ step: NextStep | null }> = ({ step }) =>
             <Badge variant="secondary" className="text-[9px] uppercase tracking-tighter">{step.roleRequired}</Badge>
           </div>
           <p className="text-xs text-indigo-700/70 dark:text-indigo-400">{step.description}</p>
-          <div className="pt-2">
-            <Button 
-              size="sm" 
-              variant="link" 
-              className="p-0 h-auto text-indigo-600 font-bold gap-1"
-              onClick={() => step.path && navigate(step.path)}
-            >
-              {step.label} <ArrowRight size={14} />
-            </Button>
-          </div>
+          {step.path && (
+            <div className="pt-2">
+              <Button 
+                size="sm" 
+                variant="link" 
+                className="p-0 h-auto text-indigo-600 font-bold gap-1"
+                onClick={() => navigate(step.path)}
+              >
+                Go to {step.label} <ArrowRight size={14} />
+              </Button>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
