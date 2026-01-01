@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode } from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from './ui/design-system';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home, Database, ClipboardCopy, Trash2 } from 'lucide-react';
 import { logger } from '../utils/logger';
@@ -18,22 +18,26 @@ interface State {
 /**
  * Standard React Error Boundary component to catch rendering errors.
  */
-// Fix: Explicitly use React.Component to ensure inherited members like state and props are correctly resolved by TypeScript.
-class ErrorBoundary extends React.Component<Props, State> {
-  public state: State = {
-    hasError: false,
-    error: null,
-    errorInfo: null,
-    showDetails: false
-  };
+/* Fixed: Updated to extend Component directly and added a constructor to ensure proper type resolution for setState, props, and state by the TypeScript compiler. */
+class ErrorBoundary extends Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null,
+      showDetails: false
+    };
+  }
 
-  // Fixed static method signature to correctly return Partial<State> for the error boundary lifecycle
+  // Fix: Correct static method for error boundary lifecycle
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error, errorInfo: null, showDetails: false };
   }
 
-  // Fix: Ensure setState is recognized as an inherited method by extending React.Component.
+  // lifecycle method to catch errors
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    /* Fix: Accessing setState which is correctly inherited from the Component base class. */
     this.setState({ error, errorInfo });
     logger.error("Global Error Boundary caught exception", error);
   }
@@ -55,7 +59,8 @@ class ErrorBoundary extends React.Component<Props, State> {
     alert("Diagnostic info copied to clipboard.");
   };
 
-  // Fix: Ensure setState is recognized as an inherited method by extending React.Component.
+  // Toggle details view
+  /* Fix: Use setState from Component base class to toggle detail visibility. */
   private toggleDetails = () => {
     this.setState((prev) => ({ showDetails: !prev.showDetails }));
   };
@@ -125,7 +130,7 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Correctly access this.props by inheriting from React.Component.
+    /* Fix: Access children from this.props which is correctly inherited and typed. */
     return this.props.children;
   }
 }

@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
 import { Button, Badge, Card, CardContent, Tooltip } from './ui/design-system';
@@ -69,7 +70,8 @@ export const StageHeader: React.FC<StageHeaderProps> = ({
 // --- NextStepsPanel Component ---
 interface NextStepsPanelProps {
   entity: any;
-  type: 'SKU' | 'BATCH' | 'MODULE' | 'PACK' | 'BATTERY';
+  // Fix: Added 'LOT' and 'DISPATCH' to satisfy type checks in pages using these entity types
+  type: 'SKU' | 'BATCH' | 'MODULE' | 'PACK' | 'BATTERY' | 'LOT' | 'DISPATCH';
   className?: string;
 }
 

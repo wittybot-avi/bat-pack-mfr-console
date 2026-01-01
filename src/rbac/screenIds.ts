@@ -1,3 +1,4 @@
+
 export enum ScreenId {
   // Observe
   DASHBOARD = 'DASHBOARD',
@@ -97,7 +98,10 @@ export enum ScreenId {
 
   // Guided
   RUNBOOK_HUB = 'RUNBOOK_HUB',
-  RUNBOOK_DETAIL = 'RUNBOOK_DETAIL'
+  RUNBOOK_DETAIL = 'RUNBOOK_DETAIL',
+
+  // Diagnostics
+  SYSTEM_HEALTH = 'SYSTEM_HEALTH'
 }
 
 export const SCREEN_GROUPS = {

@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 import { ScreenId } from '../rbac/screenIds';
 import { matchPath } from 'react-router-dom';
-import { ROUTES } from '../../app/routes';
+import { ROUTES } from './routes';
 
 export interface RouteConfig {
   icon: any;
@@ -87,6 +87,7 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.PACK_ASSEMBLY_LIST]: { icon: Box, label: 'Pack Assembly', path: ROUTES.PACK_ASSEMBLY, screenId: ScreenId.PACK_ASSEMBLY_LIST, componentName: 'PackAssemblyList.tsx' },
   [ScreenId.PACK_ASSEMBLY_DETAIL]: { icon: Box, label: 'Pack Detail', path: ROUTES.PACK_ASSEMBLY_DETAIL, screenId: ScreenId.PACK_ASSEMBLY_DETAIL, componentName: 'PackAssemblyDetail.tsx' },
   
+  // Fix: Correct invalid property references to ROUTES (using keys from app/routes.ts)
   [ScreenId.BATTERIES_LIST]: { icon: Fingerprint, label: 'Battery Identity', path: ROUTES.BATTERY_IDENTITY, screenId: ScreenId.BATTERIES_LIST, componentName: 'Batteries.tsx' },
   [ScreenId.BATTERIES_DETAIL]: { icon: Zap, label: 'Battery Detail', path: ROUTES.BATTERY_IDENTITY_DETAIL, screenId: ScreenId.BATTERIES_DETAIL, componentName: 'BatteryDetail.tsx' },
   
@@ -121,6 +122,7 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.COMPLIANCE_RECYCLING_PREVIEW]: { icon: Recycle, label: 'Recycle Preview', path: ROUTES.COMPLIANCE, screenId: ScreenId.COMPLIANCE_RECYCLING_PREVIEW, componentName: 'Compliance.tsx' },
   [ScreenId.COMPLIANCE_REG_EXPORT_PREVIEW]: { icon: FileText, label: 'Reg. Export Preview', path: ROUTES.COMPLIANCE, screenId: ScreenId.COMPLIANCE_REG_EXPORT_PREVIEW, componentName: 'Compliance.tsx' },
 
+  // Fix: Correct invalid property references to ROUTES (using existing keys from app/routes.ts)
   [ScreenId.CUSTODY]: { icon: History, label: 'Chain of Custody', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY, componentName: 'Custody.tsx' },
   [ScreenId.CUSTODY_OVERVIEW]: { icon: History, label: 'Custody: Overview', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY_OVERVIEW, componentName: 'Custody.tsx' },
   [ScreenId.CUSTODY_LIST]: { icon: History, label: 'Custody: List', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY_LIST, componentName: 'Custody.tsx' },

@@ -56,11 +56,13 @@ export default function EolStation() {
 
     const handlePreCheck = () => {
         if (!battery) return;
-        if (battery.provisioningStatus !== 'PASS' && !isSuperUser) {
+        // Fix: Changed 'PASS' to 'DONE' to correctly align with provisioningStatus enum types
+        if (battery.provisioningStatus !== 'DONE' && !isSuperUser) {
             addNotification({ title: "Eligibility Failed", message: "Battery has not passed provisioning.", type: "error" });
             return;
         }
-        if (battery.provisioningStatus !== 'PASS' && isSuperUser) {
+        // Fix: Changed 'PASS' to 'DONE' here as well for consistency with enum types
+        if (battery.provisioningStatus !== 'DONE' && isSuperUser) {
              addNotification({ title: "Override", message: "Super User Override: Proceeding despite provisioning status.", type: "warning" });
         }
         setCurrentStep(2);
@@ -177,7 +179,8 @@ export default function EolStation() {
                         <div className="p-4 border rounded bg-slate-50 dark:bg-slate-800 text-left space-y-2">
                              <div className="flex justify-between">
                                  <span>Provisioning Status:</span>
-                                 <Badge variant={battery?.provisioningStatus === 'PASS' ? 'success' : 'destructive'}>{battery?.provisioningStatus}</Badge>
+                                 {/* Fix: Changed comparison value from 'PASS' to 'DONE' to match BatteryProvisioningStatus type values */}
+                                 <Badge variant={battery?.provisioningStatus === 'DONE' ? 'success' : 'destructive'}>{battery?.provisioningStatus}</Badge>
                              </div>
                              <div className="flex justify-between">
                                  <span>BMS UID:</span>
@@ -377,7 +380,8 @@ export default function EolStation() {
                                 <div className="border-t pt-2 space-y-2">
                                      <div className="flex justify-between text-sm">
                                          <span>Provisioning:</span>
-                                         <Badge variant={battery.provisioningStatus === 'PASS' ? 'success' : 'outline'} className="text-[10px] h-5">{battery.provisioningStatus}</Badge>
+                                         {/* Fix: Changed comparison value from 'PASS' to 'DONE' to match BatteryProvisioningStatus type values */}
+                                         <Badge variant={battery.provisioningStatus === 'DONE' ? 'success' : 'outline'} className="text-[10px] h-5">{battery.provisioningStatus}</Badge>
                                      </div>
                                      <div className="flex justify-between text-sm">
                                          <span>EOL Status:</span>

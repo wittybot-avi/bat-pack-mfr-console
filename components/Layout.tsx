@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
@@ -20,7 +21,7 @@ import { APP_VERSION, PATCH_LEVEL, LAST_PATCH_ID } from '../app/patchInfo';
 import { ScreenId, SCREEN_GROUPS } from '../rbac/screenIds';
 import { canView } from '../rbac/can';
 import { APP_ROUTES, checkConsistency } from '../app/routeRegistry';
-import { ROUTES } from '../../app/routes';
+import { ROUTES } from '../app/routes';
 import { DIAGNOSTIC_MODE } from '../app/diagnostics';
 import { traceSearchService } from '../services/traceSearchService';
 import { scenarioStore, DemoScenario } from '../demo/scenarioStore';

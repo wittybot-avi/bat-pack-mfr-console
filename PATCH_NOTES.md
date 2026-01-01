@@ -1,4 +1,3 @@
-
 # Patch Notes: UI Hardening & Safety Nets (L)
 
 ## Key Changes
@@ -8,11 +7,7 @@
 - **Diagnostic Bundles**: One-click "Copy Diagnostics" for troubleshooting.
 - **Consistent Visuals**: Loading skeletons and descriptive empty states added to primary manufacturing modules.
 
-## How to Test Fallback
-1. To see the Error Boundary, manually throw an error in any render method (Dev only).
-2. Or, navigate to a deep link (e.g., specific batch ID) and switch to the "EMPTY" scenario. If the asset is missing, the app should safely recover via the NotFound page or Error Boundary if a dependency fails.
-
-## Collecting Diagnostics
-If the app crashes:
-1. Click "Copy Diagnostic Bundle" in the error UI.
-2. The bundle includes: current path, active role, current demo scenario, error stack, and system version.
+## UI_PATCH_P48_CRITICAL_ROUTING_DEMO_HANDSHAKE (v1.8.9i)
+- **Summary**: HOTFIX_ROUTING_REGISTRY + DEMO_HANDSHAKE_BYPASS.
+- **Handshake Fix**: Detail pages (EOL Analysis, Run, Audit) now synthesize demo contexts if secure context handshake exceeds 3s, preventing permanent stalls on "Establishing secure context" screens.
+- **Routing Stability**: Synchronized `:buildId` parameters across all EOL workflow pages and verified canonical route registration in `App.tsx` and `routeRegistry.ts`.

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, matchPath } from 'react-router-dom';
 import { DIAGNOSTIC_MODE } from '../app/diagnostics';
 import { APP_ROUTES } from '../app/routeRegistry';
 import { useAppStore } from '../lib/store';
 import { ScreenId } from '../rbac/screenIds';
 import { canView, canDo, getMyPermissions } from '../rbac/can';
 import { Badge } from './ui/design-system';
-import { ChevronDown, ChevronUp, AlertCircle, Database, Shield, Monitor } from 'lucide-react';
+// Added CheckCircle to the imports from lucide-react
+import { ChevronDown, ChevronUp, AlertCircle, Database, Shield, Monitor, CheckCircle } from 'lucide-react';
 
 interface DiagnosticBannerProps {
   screenId: ScreenId;
@@ -23,8 +24,8 @@ export const DiagnosticBanner: React.FC<DiagnosticBannerProps> = ({ screenId }) 
   const permissions = getMyPermissions(currentCluster?.id || '', screenId);
   const isViewable = canView(currentCluster?.id || '', screenId);
   
-  // Basic validation
-  const routeMatch = routeConfig?.path === location.pathname || (routeConfig?.path.includes(':') && location.pathname.startsWith(routeConfig.path.split(':')[0]));
+  // Pattern-based validation using matchPath to support :params
+  const routeMatch = routeConfig ? !!matchPath({ path: routeConfig.path, end: true }, location.pathname) : false;
 
   return (
     <div className="mb-4 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-900/50 text-xs font-mono text-slate-600 dark:text-slate-400 overflow-hidden">
@@ -54,8 +55,7 @@ export const DiagnosticBanner: React.FC<DiagnosticBannerProps> = ({ screenId }) 
             <div className="space-y-1">
               <div>Page: <span className="font-semibold">{routeConfig?.label}</span></div>
               <div>Location: <span className="text-blue-500 font-bold">{location.pathname}{location.search}{location.hash}</span></div>
-              <div>Route: {location.pathname}</div>
-              <div>Def. Path: {routeConfig?.path}</div>
+              <div>Route Pattern: {routeConfig?.path}</div>
               <div>Screen ID: <span className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{screenId}</span></div>
             </div>
           </div>
@@ -81,9 +81,9 @@ export const DiagnosticBanner: React.FC<DiagnosticBannerProps> = ({ screenId }) 
             <div className="space-y-1">
               <div>Provider: MockServiceAdapter</div>
               <div>State: Local Memory / Zustand</div>
-              <div className="flex items-center gap-1 text-amber-600">
-                <AlertCircle className="h-3 w-3" />
-                <span>No backend connection</span>
+              <div className="flex items-center gap-1 text-emerald-600">
+                <CheckCircle className="h-3 w-3" />
+                <span>Demo mode: bypassing secure context</span>
               </div>
             </div>
           </div>

@@ -286,7 +286,8 @@ export default function Batteries() {
                     )}
                     {!isC9 && (
                         <TableCell>
-                            {batt.provisioningStatus === 'PASS' ? (
+                            {/* Fix: Changed 'PASS' to 'DONE' to align with BatteryProvisioningStatus enum values */}
+                            {batt.provisioningStatus === 'DONE' ? (
                                 <div className="flex items-center text-emerald-600 text-xs"><Cpu className="h-3 w-3 mr-1" /> Bound</div>
                             ) : (
                                 <span className="text-muted-foreground text-xs">Pending</span>

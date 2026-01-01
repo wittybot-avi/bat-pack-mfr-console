@@ -38,19 +38,19 @@ export default function EolReview() {
       <div className="max-w-7xl mx-auto px-6 space-y-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="text-lg">Immutable QA Ledger</CardTitle>
-              <Button variant="outline" size="sm" className="gap-2"><Search size={14}/> Filter Vault</Button>
+              <CardTitle className="text-lg font-bold">Immutable QA Ledger</CardTitle>
+              <Button variant="outline" size="sm" className="gap-2 font-bold text-xs uppercase"><Search size={14}/> Filter Vault</Button>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
                 <TableRow>
-                  <TableHead>Pack ID</TableHead>
-                  <TableHead>Serial</TableHead>
-                  <TableHead>Result</TableHead>
-                  <TableHead>Performed By</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead className="font-black uppercase text-[10px]">Pack ID</TableHead>
+                  <TableHead className="font-black uppercase text-[10px]">Serial</TableHead>
+                  <TableHead className="font-black uppercase text-[10px]">Result</TableHead>
+                  <TableHead className="font-black uppercase text-[10px]">Performed By</TableHead>
+                  <TableHead className="font-black uppercase text-[10px]">Timestamp</TableHead>
+                  <TableHead className="text-right font-black uppercase text-[10px]">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <tbody>
@@ -60,24 +60,24 @@ export default function EolReview() {
                   <TableRow><TableCell colSpan={6} className="text-center py-20 text-muted-foreground italic">No completed test records found in recent ledger.</TableCell></TableRow>
                 ) : (
                   packs.map(p => (
-                    <TableRow key={p.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => navigate(`/assure/eol/details/${p.id}`)}>
+                    <TableRow key={p.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" onClick={() => navigate(`/assure/eol/details/${p.id}`)}>
                       <TableCell className="font-mono font-bold text-primary">{p.id}</TableCell>
-                      <TableCell className="font-mono text-xs">{p.packSerial || 'N/A'}</TableCell>
+                      <TableCell className="font-mono text-xs font-semibold">{p.packSerial || 'N/A'}</TableCell>
                       <TableCell>
                          {p.eolStatus === 'PASS' ? (
-                             <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs">
+                             <div className="flex items-center gap-1.5 text-emerald-600 font-black text-[10px] uppercase">
                                  <CheckCircle size={14} /> PASS
                              </div>
                          ) : (
-                             <div className="flex items-center gap-1.5 text-rose-600 font-bold text-xs">
+                             <div className="flex items-center gap-1.5 text-rose-600 font-black text-[10px] uppercase">
                                  <XCircle size={14} /> {p.eolStatus}
                              </div>
                          )}
                       </TableCell>
-                      <TableCell className="text-xs font-medium">{p.eolPerformedBy || 'System'}</TableCell>
+                      <TableCell className="text-xs font-bold text-slate-700 dark:text-slate-300">{p.eolPerformedBy || 'System'}</TableCell>
                       <TableCell className="text-[10px] text-muted-foreground font-mono">{p.eolTimestamp ? new Date(p.eolTimestamp).toLocaleString() : '-'}</TableCell>
                       <TableCell className="text-right">
-                         <Button variant="ghost" size="sm" className="gap-2 font-bold" onClick={(e) => { e.stopPropagation(); navigate(`/assure/eol/audit/${p.id}`); }}>
+                         <Button variant="ghost" size="sm" className="gap-2 font-black text-[10px] uppercase tracking-wider text-indigo-600" onClick={(e) => { e.stopPropagation(); navigate(`/assure/eol/audit/${p.id}`); }}>
                             Audit Details <ArrowRight size={14} />
                          </Button>
                       </TableCell>
