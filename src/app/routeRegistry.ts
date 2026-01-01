@@ -23,7 +23,8 @@ import {
   Globe,
   Leaf,
   Recycle,
-  Fingerprint
+  Fingerprint,
+  Play
 } from 'lucide-react';
 import { ScreenId } from '../rbac/screenIds';
 
@@ -87,7 +88,8 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.BATTERIES_LIST]: { icon: Fingerprint, label: 'Battery Identity', path: '/batteries', screenId: ScreenId.BATTERIES_LIST, componentName: 'Batteries.tsx' },
   [ScreenId.BATTERIES_DETAIL]: { icon: Zap, label: 'Battery Detail', path: '/batteries/:id', screenId: ScreenId.BATTERIES_DETAIL, componentName: 'BatteryDetail.tsx' },
   
-  [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning', path: '/provisioning', screenId: ScreenId.PROVISIONING, componentName: 'ProvisioningConsole.tsx' },
+  [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning Workstation', path: '/assure/provisioning/:id', screenId: ScreenId.PROVISIONING, componentName: 'ProvisioningConsole.tsx' },
+  [ScreenId.PROVISIONING_QUEUE]: { icon: Cpu, label: 'Provisioning Queue', path: '/manufacturing/provisioning/queue', screenId: ScreenId.PROVISIONING_QUEUE, componentName: 'ProvisioningQueue.tsx' },
   [ScreenId.PROVISIONING_STATION_SETUP]: { icon: Settings, label: 'Provisioning Setup', path: '/provisioning/setup', screenId: ScreenId.PROVISIONING_STATION_SETUP, componentName: 'ProvisioningStationSetup.tsx' },
   
   [ScreenId.INVENTORY]: { icon: Warehouse, label: 'Inventory', path: '/inventory', screenId: ScreenId.INVENTORY, componentName: 'InventoryList.tsx' },
@@ -95,11 +97,13 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.DISPATCH_LIST]: { icon: Truck, label: 'Dispatch Orders', path: '/dispatch', screenId: ScreenId.DISPATCH_LIST, componentName: 'DispatchList.tsx' },
   [ScreenId.DISPATCH_DETAIL]: { icon: Truck, label: 'Dispatch Details', path: '/dispatch/:orderId', screenId: ScreenId.DISPATCH_DETAIL, componentName: 'DispatchDetail.tsx' },
 
-  // Assure (Stabilized Canonical Routes for P44)
+  // Assure (Stabilized Canonical Routes for P45)
   [ScreenId.EOL_QA_QUEUE]: { icon: ClipboardCheck, label: 'EOL / QA Queue', path: '/assure/eol/queue', screenId: ScreenId.EOL_QA_QUEUE, componentName: 'EolQaList.tsx' },
   [ScreenId.EOL_SETUP]: { icon: Settings, label: 'EOL Station Setup', path: '/assure/eol/setup', screenId: ScreenId.EOL_SETUP, componentName: 'EolStationSetup.tsx' },
   [ScreenId.EOL_REVIEW]: { icon: ClipboardList, label: 'EOL Review', path: '/assure/eol/review', screenId: ScreenId.EOL_REVIEW, componentName: 'EolReview.tsx' },
   [ScreenId.EOL_DETAILS]: { icon: Search, label: 'EOL Analysis', path: '/assure/eol/details/:id', screenId: ScreenId.EOL_DETAILS, componentName: 'EolDetails.tsx' },
+  [ScreenId.EOL_RUN_TEST]: { icon: Play, label: 'EOL Test Session', path: '/assure/eol/run/:id', screenId: ScreenId.EOL_RUN_TEST, componentName: 'EolRunTest.tsx' },
+  [ScreenId.EOL_AUDIT_DETAIL]: { icon: History, label: 'EOL Audit Detail', path: '/assure/eol/audit/:id', screenId: ScreenId.EOL_AUDIT_DETAIL, componentName: 'EolAuditDetail.tsx' },
 
   // Govern
   [ScreenId.COMPLIANCE]: { icon: ShieldCheck, label: 'Compliance', path: '/compliance', screenId: ScreenId.COMPLIANCE, componentName: 'Compliance.tsx' },

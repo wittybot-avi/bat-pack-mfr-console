@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { eolQaService } from '../services/eolQaService';
 import { PackInstance, PackStatus } from '../domain/types';
 import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button } from '../components/ui/design-system';
-import { ClipboardCheck, ShieldAlert, ArrowRight, Loader2, CheckCircle, XCircle } from 'lucide-react';
+import { ClipboardCheck, ShieldAlert, ArrowRight, Loader2, CheckCircle, XCircle, Search } from 'lucide-react';
 import { StageHeader } from '../components/SopGuidedUX';
 
 export default function EolReview() {
@@ -37,7 +37,10 @@ export default function EolReview() {
 
       <div className="max-w-7xl mx-auto px-6 space-y-6">
         <Card>
-          <CardHeader><CardTitle className="text-lg">Recently Processed Assets</CardTitle></CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Immutable QA Ledger</CardTitle>
+              <Button variant="outline" size="sm" className="gap-2"><Search size={14}/> Filter Vault</Button>
+          </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
@@ -58,23 +61,25 @@ export default function EolReview() {
                 ) : (
                   packs.map(p => (
                     <TableRow key={p.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => navigate(`/assure/eol/details/${p.id}`)}>
-                      <TableCell className="font-mono font-bold">{p.id}</TableCell>
+                      <TableCell className="font-mono font-bold text-primary">{p.id}</TableCell>
                       <TableCell className="font-mono text-xs">{p.packSerial || 'N/A'}</TableCell>
                       <TableCell>
                          {p.eolStatus === 'PASS' ? (
-                             <div className="flex items-center gap-1.5 text-emerald-600 font-bold">
+                             <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-xs">
                                  <CheckCircle size={14} /> PASS
                              </div>
                          ) : (
-                             <div className="flex items-center gap-1.5 text-rose-600 font-bold">
+                             <div className="flex items-center gap-1.5 text-rose-600 font-bold text-xs">
                                  <XCircle size={14} /> {p.eolStatus}
                              </div>
                          )}
                       </TableCell>
-                      <TableCell className="text-sm">{p.eolPerformedBy || 'System'}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{p.eolTimestamp ? new Date(p.eolTimestamp).toLocaleString() : '-'}</TableCell>
+                      <TableCell className="text-xs font-medium">{p.eolPerformedBy || 'System'}</TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground font-mono">{p.eolTimestamp ? new Date(p.eolTimestamp).toLocaleString() : '-'}</TableCell>
                       <TableCell className="text-right">
-                         <Button variant="ghost" size="sm" className="gap-2">Audit <ArrowRight size={14} /></Button>
+                         <Button variant="ghost" size="sm" className="gap-2 font-bold" onClick={(e) => { e.stopPropagation(); navigate(`/assure/eol/audit/${p.id}`); }}>
+                            Audit Details <ArrowRight size={14} />
+                         </Button>
                       </TableCell>
                     </TableRow>
                   ))

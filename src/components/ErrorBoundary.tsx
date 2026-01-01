@@ -1,5 +1,5 @@
 
-import React, { ErrorInfo, ReactNode, Component } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from './ui/design-system';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home, Database, ClipboardCopy, Trash2 } from 'lucide-react';
 import { logger } from '../utils/logger';
@@ -18,9 +18,8 @@ interface State {
 /**
  * Standard React Error Boundary component to catch rendering errors.
  */
-// Fix: Use Component explicitly to ensure TypeScript correctly resolves inherited members like state and props
-class ErrorBoundary extends Component<Props, State> {
-  // Fix: Property initializer for state resolves issues with this.state accessibility in constructor vs inheritance
+// Fix: Explicitly use React.Component to ensure inherited members like state and props are correctly resolved by TypeScript.
+class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null,
@@ -33,7 +32,7 @@ class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error, errorInfo: null, showDetails: false };
   }
 
-  // Fix line 37: Ensure setState is recognized as an inherited method by extending Component
+  // Fix: Ensure setState is recognized as an inherited method by extending React.Component.
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ error, errorInfo });
     logger.error("Global Error Boundary caught exception", error);
@@ -51,20 +50,17 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   private copyDiagnostics = () => {
-    // Correctly accessing state.error which is now recognized by TypeScript
     const data = logger.getDiagnostics(this.state.error || undefined);
     navigator.clipboard.writeText(data);
     alert("Diagnostic info copied to clipboard.");
   };
 
-  // Fix line 61: Ensure setState is recognized as an inherited method by extending Component
+  // Fix: Ensure setState is recognized as an inherited method by extending React.Component.
   private toggleDetails = () => {
-    // Functional state update ensures we toggle the showDetails flag safely
     this.setState((prev) => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
-    // TypeScript now correctly identifies state members within the render lifecycle
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
@@ -129,7 +125,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Fix line 131: Correctly accessing this.props by inheriting from Component
+    // Fix: Correctly access this.props by inheriting from React.Component.
     return this.props.children;
   }
 }

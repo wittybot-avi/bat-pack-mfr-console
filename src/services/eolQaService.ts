@@ -219,6 +219,15 @@ class EolQaService {
     return newBattery;
   }
 
+  /**
+   * P45: Provisioning Queue Operations
+   */
+  async listProvisioningQueue(): Promise<Battery[]> {
+    const batteries = await batteryService.getBatteries();
+    // Assets in Provisioning stage that aren't yet DONE
+    return batteries.filter(b => b.status === BatteryStatus.PROVISIONING && b.provisioningStatus !== 'DONE');
+  }
+
   async getDispatchEligiblePacks(): Promise<PackInstance[]> {
     const all = await packAssemblyService.listPacks();
     return all.filter(p => p.status === PackStatus.PASSED && p.qcStatus === 'PASSED');

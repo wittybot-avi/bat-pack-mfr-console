@@ -23,11 +23,14 @@ import Batteries from './src/pages/Batteries';
 import BatteryDetail from './src/pages/BatteryDetail';
 import ProvisioningConsole from './src/pages/ProvisioningConsole';
 import ProvisioningStationSetup from './src/pages/ProvisioningStationSetup';
+import ProvisioningQueue from './src/pages/ProvisioningQueue';
 import InventoryList from './src/pages/InventoryList';
 import DispatchList from './src/pages/DispatchList';
 import DispatchDetail from './src/pages/DispatchDetail';
 import EolQaList from './src/pages/EolQaList';
 import EolDetails from './src/pages/EolDetails';
+import EolRunTest from './src/pages/EolRunTest';
+import EolAuditDetail from './src/pages/EolAuditDetail';
 import Compliance from './src/pages/Compliance';
 import Custody from './src/pages/Custody';
 import CustodyDetail from './src/pages/CustodyDetail';
@@ -83,7 +86,8 @@ export default function App() {
             <Route path="batteries/:id" element={<RouteGuard screen={ScreenId.BATTERIES_DETAIL}><BatteryDetail /></RouteGuard>} />
             <Route path="battery/:id" element={<Navigate to="/batteries/:id" replace />} />
             
-            <Route path="provisioning" element={<RouteGuard screen={ScreenId.PROVISIONING}><ProvisioningConsole /></RouteGuard>} />
+            <Route path="manufacturing/provisioning/queue" element={<RouteGuard screen={ScreenId.PROVISIONING_QUEUE}><ProvisioningQueue /></RouteGuard>} />
+            <Route path="provisioning" element={<Navigate to="/manufacturing/provisioning/queue" replace />} />
             <Route path="provisioning/setup" element={<RouteGuard screen={ScreenId.PROVISIONING_STATION_SETUP}><ProvisioningStationSetup /></RouteGuard>} />
             
             <Route path="inventory" element={<RouteGuard screen={ScreenId.INVENTORY}><InventoryList /></RouteGuard>} />
@@ -91,7 +95,7 @@ export default function App() {
             <Route path="dispatch" element={<RouteGuard screen={ScreenId.DISPATCH_LIST}><DispatchList /></RouteGuard>} />
             <Route path="dispatch/:orderId" element={<RouteGuard screen={ScreenId.DISPATCH_DETAIL}><DispatchDetail /></RouteGuard>} />
             
-            {/* ASSURE MODULE STABILIZED ROUTES (P44) */}
+            {/* ASSURE MODULE STABILIZED ROUTES (P45) */}
             <Route path="assure">
               <Route path="eol">
                 <Route index element={<Navigate to="queue" replace />} />
@@ -99,7 +103,8 @@ export default function App() {
                 <Route path="setup" element={<RouteGuard screen={ScreenId.EOL_SETUP}><EolStationSetup /></RouteGuard>} />
                 <Route path="review" element={<RouteGuard screen={ScreenId.EOL_REVIEW}><EolReview /></RouteGuard>} />
                 <Route path="details/:id" element={<RouteGuard screen={ScreenId.EOL_DETAILS}><EolDetails /></RouteGuard>} />
-                {/* Legacy Catch-all within Namespace */}
+                <Route path="run/:id" element={<RouteGuard screen={ScreenId.EOL_RUN_TEST}><EolRunTest /></RouteGuard>} />
+                <Route path="audit/:id" element={<RouteGuard screen={ScreenId.EOL_AUDIT_DETAIL}><EolAuditDetail /></RouteGuard>} />
                 <Route path=":id" element={<Navigate to="details/:id" replace />} />
               </Route>
               <Route path="provisioning/:batteryId" element={<RouteGuard screen={ScreenId.PROVISIONING}><ProvisioningConsole /></RouteGuard>} />
