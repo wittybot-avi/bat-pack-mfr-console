@@ -4,9 +4,9 @@ import { batchService } from '../services/api';
 import { Batch, BatchStatus, BatchNote } from '../domain/types';
 import { useAppStore } from '../lib/store';
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge, Input } from '../components/ui/design-system';
-import { ArrowLeft, Save, AlertTriangle, CheckCircle, Lock, PlayCircle } from 'lucide-react';
-import { workflowGuardrails, STATUS_MAP } from '../services/workflowGuardrails';
-import { GatedAction, NextStepPanel } from '../components/WorkflowGuards';
+import { ArrowLeft, Save, AlertTriangle, CheckCircle, Lock, PlayCircle, ClipboardList, Box } from 'lucide-react';
+import { workflowGuardrails } from '../services/workflowGuardrails';
+import { StageHeader, NextStepsPanel, ActionGuard } from '../components/SopGuidedUX';
 
 const NoteItem = ({ note }: { note: BatchNote, key?: any }) => (
   <div className="border-b last:border-0 pb-3 mb-3">
@@ -15,7 +15,7 @@ const NoteItem = ({ note }: { note: BatchNote, key?: any }) => (
       <span className="text-xs text-muted-foreground">{new Date(note.timestamp).toLocaleString()}</span>
     </div>
     <div className="text-sm">
-      {note.type !== 'General' && <Badge variant="outline" className="mr-2 text-[10px]">{note.type}</Badge>}
+      {note.type !== 'General' && <Badge variant="outline" className="mr-2 text-[10px] font-bold">{note.type}</Badge>}
       {note.text}
     </div>
   </div>
@@ -50,8 +50,6 @@ export default function BatchDetail() {
   if (loading || !batch) return <div className="p-10 text-center animate-pulse">Syncing batch ledger...</div>;
 
   const guards = workflowGuardrails.getBatchGuardrail(batch, clusterId);
-  const nextStep = workflowGuardrails.getNextRecommendedStep(batch, 'BATCH');
-  const statusConfig = STATUS_MAP[batch.status] || STATUS_MAP.DRAFT;
 
   const handleRelease = async () => {
     try {
@@ -64,63 +62,79 @@ export default function BatchDetail() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row gap-6 h-[calc(100vh-100px)]">
-      <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/batches')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <div className="flex items-center gap-2">
-                <h2 className="text-2xl font-bold">{batch.batchNumber}</h2>
-                <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+    <div className="pb-12">
+      <StageHeader 
+        stageCode="S3"
+        title="Manufacturing Authorization"
+        objective="Activate production planning for a specific SKU lot and authorize resource allocation."
+        entityLabel={batch.batchNumber}
+        status={batch.status}
+        diagnostics={{ route: '/batches', entityId: batch.id }}
+      />
+
+      <div className="max-w-7xl mx-auto px-6 space-y-6">
+        <div className="flex items-center gap-4 mb-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/batches')} className="gap-2 text-slate-500">
+                <ArrowLeft className="h-4 w-4" /> Back to Production Log
+            </Button>
+        </div>
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 space-y-6">
+            <NextStepsPanel entity={batch} type="BATCH" />
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card className="shadow-sm">
+                    <CardHeader className="pb-2 border-b"><CardTitle className="text-lg flex items-center gap-2"><ClipboardList size={18} className="text-primary"/> Production Plan</CardTitle></CardHeader>
+                    <CardContent className="grid grid-cols-2 gap-y-6 pt-6">
+                        <div><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Target Quantity</p><p className="text-2xl font-black text-slate-800 dark:text-slate-100">{batch.targetQuantity}</p></div>
+                        <div><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Current Yield</p><p className="text-2xl font-black text-emerald-600">{batch.qtyPassedEOL}</p></div>
+                        <div><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">SKU Blueprint</p><p className="text-sm font-bold font-mono text-indigo-600">{batch.sku}</p></div>
+                        <div><p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Plant Location</p><p className="text-sm font-bold uppercase">{batch.plantId}</p></div>
+                    </CardContent>
+                </Card>
+                <Card className="shadow-sm">
+                    <CardHeader className="pb-2 border-b"><CardTitle className="text-lg flex items-center gap-2"><Box size={18} className="text-primary"/> Process Audit</CardTitle></CardHeader>
+                    <CardContent className="max-h-[250px] overflow-y-auto pt-4 pr-2">
+                        {batch.notes.length === 0 ? <p className="text-sm text-slate-400 italic text-center py-8">No audit events recorded for this lot.</p> : batch.notes.map(note => <NoteItem key={note.id} note={note} />)}
+                    </CardContent>
+                </Card>
             </div>
-            <p className="text-muted-foreground text-sm">{batch.sku}</p>
+          </div>
+
+          <div className="w-full lg:w-80 space-y-4 shrink-0">
+             <Card className="bg-slate-900 text-white border-none shadow-xl">
+                 <CardHeader className="pb-3 border-b border-slate-800"><CardTitle className="text-sm uppercase tracking-wider text-slate-400">Workstation Control</CardTitle></CardHeader>
+                 <CardContent className="space-y-4 pt-6">
+                    <ActionGuard 
+                        guard={guards.release} 
+                        onClick={handleRelease} 
+                        label="Release to Shopfloor" 
+                        icon={PlayCircle} 
+                        className="w-full h-12 bg-primary hover:bg-primary/90 border-none shadow-lg shadow-primary/20"
+                        actionName="Release_Batch"
+                        entityId={batch.id}
+                    />
+                    <div className="pt-4 border-t border-slate-800 space-y-2">
+                        <ActionGuard 
+                            guard={guards.close} 
+                            onClick={() => addNotification({title: "Closed", message: "Batch record finalized.", type: "success"})} 
+                            label="Finalize Batch Registry" 
+                            icon={Lock} 
+                            variant="outline"
+                            className="w-full text-white border-slate-700 hover:bg-slate-800"
+                            actionName="Finalize_Batch"
+                            entityId={batch.id}
+                        />
+                    </div>
+                    <div className="bg-slate-800/50 p-3 rounded text-[10px] text-slate-400 flex items-start gap-2">
+                        <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+                        <p>Batch finalization requires target quantity parity and 100% EOL certification coverage.</p>
+                    </div>
+                 </CardContent>
+             </Card>
           </div>
         </div>
-
-        <NextStepPanel step={nextStep} />
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-                <CardHeader><CardTitle className="text-lg">Key Metrics</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
-                    <div><p className="text-xs text-muted-foreground">Target Qty</p><p className="text-xl font-bold">{batch.targetQuantity}</p></div>
-                    <div><p className="text-xs text-muted-foreground">Built Qty</p><p className="text-xl font-bold">{batch.qtyBuilt}</p></div>
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader><CardTitle className="text-lg">Process Audit</CardTitle></CardHeader>
-                <CardContent className="max-h-[200px] overflow-y-auto">
-                    {batch.notes.length === 0 ? <p className="text-sm text-muted-foreground italic">No events recorded.</p> : batch.notes.map(note => <NoteItem key={note.id} note={note} />)}
-                </CardContent>
-            </Card>
-        </div>
-      </div>
-
-      <div className="w-full lg:w-80 space-y-4 shrink-0">
-         <Card>
-             <CardHeader className="pb-2"><CardTitle className="text-base">Gated Actions</CardTitle></CardHeader>
-             <CardContent className="space-y-3">
-                <GatedAction 
-                    guard={guards.release} 
-                    onClick={handleRelease} 
-                    label="Release to Line" 
-                    icon={PlayCircle} 
-                    className="w-full"
-                />
-                <div className="pt-4 border-t space-y-2">
-                    <GatedAction 
-                        guard={guards.close} 
-                        onClick={() => addNotification({title: "Closed", message: "Batch record finalized.", type: "success"})} 
-                        label="Finalize Batch" 
-                        icon={Lock} 
-                        variant="outline"
-                        className="w-full"
-                    />
-                </div>
-             </CardContent>
-         </Card>
       </div>
     </div>
   );

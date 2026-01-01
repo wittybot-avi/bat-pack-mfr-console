@@ -1,13 +1,13 @@
-
 import { ScreenId } from './screenIds';
 import { PermissionVerb } from './verbs';
 
-// Fix: Add missing PolicyMap type definition
 export type PolicyMap = Record<string, Partial<Record<ScreenId, PermissionVerb[]>>>;
 
 export const RBAC_POLICY: PolicyMap = {
-  // C1: Executive - View All, minimal edit
+  // C1: Executive - View All
   C1: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.DASHBOARD_EXEC_SUMMARY]: ['V'],
     [ScreenId.DASHBOARD_PRODUCTION]: ['V'],
@@ -32,8 +32,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.SETTINGS_PROFILE]: ['V'],
   },
 
-  // C2: Manufacturing - Shopfloor execution (Production Manager Role)
+  // C2: Manufacturing - Shopfloor execution
   C2: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.DASHBOARD_PRODUCTION]: ['V'],
     [ScreenId.BATCHES_LIST]: ['V', 'C', 'E'],
@@ -52,6 +54,8 @@ export const RBAC_POLICY: PolicyMap = {
 
   // C3: Quality - Testing & Approval
   C3: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.DASHBOARD_QUALITY]: ['V'],
     [ScreenId.DASHBOARD_RISK_COMPLIANCE]: ['V'],
@@ -64,9 +68,34 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.COMPLIANCE_FINDINGS_TAB]: ['V', 'C', 'E'],
     [ScreenId.WARRANTY]: ['V', 'E'],
   },
+
+  // C4: IT & Engineering - Full Config
+  C4: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
+    [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.SETTINGS]: ['V', 'E', 'M'],
+    [ScreenId.SETTINGS_USERS]: ['V', 'E', 'M'],
+    [ScreenId.SETTINGS_API_KEYS]: ['V', 'E', 'M'],
+    [ScreenId.RBAC_VIEW]: ['V', 'M'],
+    [ScreenId.COMPLIANCE]: ['V'],
+  },
+
+  // C5: BMS & Firmware
+  C5: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
+    [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.PROVISIONING]: ['V', 'E', 'X'],
+    [ScreenId.TELEMETRY]: ['V', 'E'],
+    [ScreenId.TELEMETRY_LIVE_VIEW]: ['V', 'E'],
+    [ScreenId.BATTERIES_DETAIL]: ['V', 'E'],
+  },
   
   // C6: Logistics
   C6: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.DASHBOARD_LOGISTICS]: ['V'],
     [ScreenId.INVENTORY]: ['V', 'E', 'X'],
@@ -75,5 +104,36 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.CUSTODY]: ['V', 'X'],
     [ScreenId.CUSTODY_LIST]: ['V'],
     [ScreenId.CUSTODY_RECEIVE_ACTION]: ['X'],
+  },
+
+  // C7: Warranty
+  C7: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
+    [ScreenId.WARRANTY]: ['V', 'E', 'A', 'X'],
+    [ScreenId.WARRANTY_OVERVIEW]: ['V'],
+    [ScreenId.WARRANTY_CLAIMS_LIST]: ['V', 'E'],
+    [ScreenId.BATTERIES_DETAIL]: ['V'],
+  },
+
+  // C8: Compliance
+  C8: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
+    [ScreenId.COMPLIANCE]: ['V', 'C', 'E', 'A', 'M'],
+    [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
+    [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V', 'M'],
+    [ScreenId.RBAC_VIEW]: ['V'],
+  },
+
+  // C9: External Partners
+  C9: {
+    [ScreenId.RUNBOOK_HUB]: ['V'],
+    [ScreenId.RUNBOOK_DETAIL]: ['V'],
+    [ScreenId.DASHBOARD]: ['V'],
+    [ScreenId.CUSTODY]: ['V', 'X'],
+    [ScreenId.CUSTODY_ACCEPT_REJECT_ACTION]: ['X'],
+    [ScreenId.WARRANTY_EXTERNAL_INTAKE]: ['V', 'C'],
+    [ScreenId.BATTERIES_LIST]: ['V'],
   }
 };

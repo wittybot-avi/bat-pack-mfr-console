@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
@@ -15,7 +14,8 @@ import {
   Settings,
   Database,
   Monitor,
-  Loader2
+  Loader2,
+  BookOpen
 } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { Button, Input, Badge } from './ui/design-system';
@@ -51,20 +51,13 @@ export const Layout = () => {
   const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
-    // Initial sync of the scenario store
     scenarioStore.init();
-    
-    // Validate scenario selection on boot
     const saved = scenarioStore.getScenario();
     const VALID_SCENARIOS: DemoScenario[] = ['HAPPY_PATH', 'MISMATCH', 'TAMPER', 'EMPTY'];
     if (!VALID_SCENARIOS.includes(saved)) {
-      logger.warn(`Invalid scenario "${saved}" detected. Resetting to HAPPY_PATH.`);
       scenarioStore.setScenario('HAPPY_PATH');
       setCurrentScenario('HAPPY_PATH');
-      addNotification({ title: 'Safety Reset', message: 'Demo scenario was reset to default.', type: 'info' });
     }
-    
-    // Route Persistence Tracking
     routerSafe.trackRoute(location.pathname, location.search);
 
     if (DIAGNOSTIC_MODE) {
@@ -83,13 +76,11 @@ export const Layout = () => {
   const handleGlobalSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim() || searching) return;
-
     setSearching(true);
     setShowNoMatch(false);
     try {
         const resolution = await traceSearchService.resolveIdentifier(searchQuery);
         if (resolution) {
-            addNotification({ title: 'Jump To', message: `Found ${resolution.type}: ${resolution.label}`, type: 'success' });
             navigate(resolution.route);
             setSearchQuery('');
         } else {
@@ -104,38 +95,18 @@ export const Layout = () => {
 
   const handleScenarioChange = (s: DemoScenario) => {
     if (s === currentScenario || isSwitching) return;
-
-    logger.info(`Initiating scenario switch to ${s}`);
     setIsSwitching(true);
-    
-    // Write new scenario state
     scenarioStore.setScenario(s);
     setCurrentScenario(s);
-    
-    addNotification({ 
-      title: 'Scenario Change', 
-      message: `Re-seeding workspace for ${s.replace('_', ' ')} flow...`, 
-      type: 'info' 
-    });
-
-    // Force navigation to dashboard before reload to avoid 404s on dynamic paths
+    addNotification({ title: 'Scenario Change', message: `Re-seeding workspace for ${s.replace('_', ' ')} flow...`, type: 'info' });
     navigate('/', { replace: true });
-    
-    // Artificial delay for UI feedback and storage sync
-    setTimeout(() => {
-      window.location.reload();
-    }, 450);
+    setTimeout(() => { window.location.reload(); }, 450);
   };
 
   const renderNavGroup = (groupName: string, screenIds: ScreenId[]) => {
     if (!currentCluster) return null;
     const isSuperUser = currentCluster.id === 'CS';
-    const devForceShowSku = safeStorage.getItem('DEV_FORCE_SHOW_SKU') === '1';
-
-    const visibleItems = screenIds.filter(id => {
-      if (id === ScreenId.SKU_LIST && (isSuperUser || devForceShowSku)) return true;
-      return canView(currentCluster.id, id);
-    });
+    const visibleItems = screenIds.filter(id => canView(currentCluster.id, id));
 
     if (visibleItems.length === 0) return null;
 
@@ -143,7 +114,18 @@ export const Layout = () => {
       <div className="mb-6">
         <h3 className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">{groupName}</h3>
         <div className="space-y-1">
+          {/* HARDCODED OVERRIDE FOR RUNBOOKS TO ENSURE DIRECT PATHING */}
+          {groupName === 'SOP Guide' && visibleItems.includes(ScreenId.RUNBOOK_HUB) && (
+            <SidebarItem 
+               icon={BookOpen}
+               label="Runbooks"
+               path="/runbooks"
+               active={location.pathname === '/runbooks' || location.pathname.startsWith('/runbooks/')}
+            />
+          )}
+          {/* RENDER OTHER ITEMS */}
           {visibleItems.map(id => {
+            if (id === ScreenId.RUNBOOK_HUB) return null; // Already handled above
             const config = APP_ROUTES[id];
             if (!config) return null;
             const path = config.path;
@@ -177,6 +159,7 @@ export const Layout = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto py-6 px-3">
+          {renderNavGroup('SOP Guide', SCREEN_GROUPS.GUIDED)}
           {renderNavGroup('Observe', SCREEN_GROUPS.OBSERVE)}
           {renderNavGroup('Design', SCREEN_GROUPS.DESIGN)}
           {renderNavGroup('Trace', SCREEN_GROUPS.TRACE)}
@@ -246,8 +229,6 @@ export const Layout = () => {
             </form>
 
             <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden lg:block"></div>
-
-            {/* Scenario Switcher - Safe Implementation */}
             <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${isSwitching ? 'bg-slate-200 dark:bg-slate-700 animate-pulse' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
                 {isSwitching ? <Loader2 size={14} className="animate-spin text-primary" /> : <Database size={14} className="text-primary" />}
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Demo:</span>

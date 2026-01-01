@@ -1,3 +1,3 @@
-export const APP_VERSION = '1.8.5';
-export const PATCH_LEVEL = 34;
-export const LAST_PATCH_ID = 'BACKEND_API_CONTRACT_HANDOVER_V1';
+export const APP_VERSION = '1.8.5c';
+export const PATCH_LEVEL = '35C' as any;
+export const LAST_PATCH_ID = 'HOTFIX_RUNBOOKS_ROUTER_WIRING_PROOF_V1';

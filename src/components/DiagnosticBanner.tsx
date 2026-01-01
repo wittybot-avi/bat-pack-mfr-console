@@ -53,6 +53,7 @@ export const DiagnosticBanner: React.FC<DiagnosticBannerProps> = ({ screenId }) 
             </h4>
             <div className="space-y-1">
               <div>Page: <span className="font-semibold">{routeConfig?.label}</span></div>
+              <div>Location: <span className="text-blue-500 font-bold">{location.pathname}{location.search}{location.hash}</span></div>
               <div>Route: {location.pathname}</div>
               <div>Def. Path: {routeConfig?.path}</div>
               <div>Screen ID: <span className="bg-slate-200 dark:bg-slate-800 px-1 rounded">{screenId}</span></div>

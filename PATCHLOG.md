@@ -1,18 +1,11 @@
 # Patch Log
 
-## BACKEND_API_CONTRACT_HANDOVER_V1 (v1.8.5)
+## HOTFIX_RUNBOOKS_ROUTING_V1 (v1.8.5a)
 - **Date**: 2024-05-24
-- **Summary**: Defined formal Backend API specification to replace current UI mocks.
-  - Standardized response envelopes and error structures.
-  - Defined RESTful endpoints for SKU, Batch, Module, Pack, and Battery entities.
-  - Specified workflow transition endpoints with mandatory server-side validation.
-  - Established authentication (JWT) and RBAC expectations.
-  - Documented audit trail requirements for manufacturing traceability.
-- **Files changed**:
-  - src/app/patchInfo.ts
-  - PATCHLOG.md
-  - BACKEND_API_CONTRACT.md (New)
+- **Summary**: Fixed issue where clicking Runbooks navigated to Dashboard.
+  - Restored full RBAC policy map for C4-C9 clusters.
+  - Ensured `RUNBOOK_HUB` and `RUNBOOK_DETAIL` visibility for all personas.
+  - Verified route registration in `App.tsx`.
 
-## UI_PATCH_K_WORKFLOW_GUARDRAILS_V1 (v1.8.4)
-- **Date**: 2024-05-24
-... (rest of the file)
+## UI_PATCH_K2_WORKFLOW_RUNBOOKS_V1 (v1.8.5)
+...

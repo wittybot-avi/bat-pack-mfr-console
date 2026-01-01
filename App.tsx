@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthGate } from './src/components/AuthGate';
@@ -39,6 +38,9 @@ import RbacAdmin from './src/pages/RbacAdmin';
 import Settings from './src/pages/Settings';
 import DiagnosticsPage from './src/pages/DiagnosticsPage';
 import ErrorBoundary from './src/components/ErrorBoundary';
+import NotFound from './src/pages/NotFound';
+import RunbookHub from './src/pages/RunbookHub';
+import RunbookDetail from './src/pages/RunbookDetail';
 
 /**
  * App component with routing and security gates.
@@ -56,6 +58,9 @@ export default function App() {
             <Route path="telemetry" element={<RouteGuard screen={ScreenId.TELEMETRY}><Telemetry /></RouteGuard>} />
             <Route path="analytics" element={<RouteGuard screen={ScreenId.ANALYTICS}><Analytics /></RouteGuard>} />
             
+            <Route path="runbooks" element={<RouteGuard screen={ScreenId.RUNBOOK_HUB}><RunbookHub /></RouteGuard>} />
+            <Route path="runbooks/:runbookId" element={<RouteGuard screen={ScreenId.RUNBOOK_DETAIL}><RunbookDetail /></RouteGuard>} />
+
             <Route path="sku" element={<RouteGuard screen={ScreenId.SKU_LIST}><SkuList /></RouteGuard>} />
             <Route path="sku/:id" element={<RouteGuard screen={ScreenId.SKU_LIST}><SkuDetail /></RouteGuard>} />
             
@@ -100,7 +105,7 @@ export default function App() {
             
             <Route path="__diagnostics/pages" element={<DiagnosticsPage />} />
             
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
       </ErrorBoundary>

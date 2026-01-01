@@ -44,10 +44,11 @@ export const STATUS_MAP: Record<string, { label: string, variant: 'default' | 'o
   [PackStatus.FINALIZED]: { label: 'COMPLETED', variant: 'success' },
   [BatteryStatus.DEPLOYED]: { label: 'COMPLETED (FIELD)', variant: 'success' },
   [BatteryStatus.SCRAPPED]: { label: 'FAILED (SCRAP)', variant: 'destructive' },
-  [BatteryStatus.QA_TESTING]: { label: 'IN PROGRESS (QA)', variant: 'default' }
+  [BatteryStatus.QA_TESTING]: { label: 'IN PROGRESS (QA)', variant: 'default' },
+  [BatteryStatus.ASSEMBLY]: { label: 'ASSEMBLY', variant: 'outline' },
+  [BatteryStatus.PROVISIONING]: { label: 'PROVISIONING', variant: 'secondary' }
 };
 
-/* Added STATUS_LABELS to fix import errors in ModuleAssemblyList and PackAssemblyList */
 export const STATUS_LABELS = {
   DRAFT: 'DRAFT',
   ACTIVE: 'ACTIVE',
@@ -129,6 +130,24 @@ class WorkflowGuardrailsService {
   }
 
   /**
+   * Battery Guardrails (New P34)
+   */
+  getBatteryGuardrail(battery: Battery, clusterId: string): Record<string, GuardrailResult> {
+    const isEng = clusterId === 'C5' || clusterId === 'CS';
+    const isQA = clusterId === 'C3' || clusterId === 'CS';
+    return {
+      provision: {
+        allowed: isEng && battery.status === BatteryStatus.PROVISIONING,
+        reason: battery.status !== BatteryStatus.PROVISIONING ? "Asset not in provisioning stage" : "BMS Engineer permissions required (C5)"
+      },
+      test: {
+        allowed: isQA && battery.status === BatteryStatus.QA_TESTING,
+        reason: "QA Analyst permissions required (C3)"
+      }
+    };
+  }
+
+  /**
    * Guidance Logic
    */
   getNextRecommendedStep(entity: any, type: 'SKU' | 'BATCH' | 'MODULE' | 'PACK' | 'BATTERY'): NextStep | null {
@@ -149,6 +168,12 @@ class WorkflowGuardrailsService {
       case 'PACK':
         if (entity.status === PackStatus.DRAFT || entity.status === PackStatus.IN_PROGRESS) return { label: 'QC & Finalize', path: '', description: 'Perform assembly QC and lock the record.', roleRequired: 'Operator' };
         if (entity.status === PackStatus.READY_FOR_EOL) return { label: 'Run EOL Test', path: '/eol', description: 'Hand over to QA for electrical verification.', roleRequired: 'QA' };
+        break;
+      case 'BATTERY':
+        if (entity.status === BatteryStatus.ASSEMBLY) return { label: 'Start Provisioning', path: '/provisioning', description: 'Connect BMS and initialize digital profile.', roleRequired: 'BMS Engineer' };
+        if (entity.status === BatteryStatus.PROVISIONING && entity.provisioningStatus !== 'PASS') return { label: 'Finalize Identity', path: '/provisioning', description: 'Verify security certificates and release to QA.', roleRequired: 'BMS Engineer' };
+        if (entity.status === BatteryStatus.QA_TESTING) return { label: 'Run EOL Verification', path: '/eol', description: 'Complete final electrical and safety checks.', roleRequired: 'QA' };
+        if (entity.status === BatteryStatus.IN_INVENTORY) return { label: 'Reserve for Order', path: '/inventory', description: 'Allocate this pack to a customer dispatch order.', roleRequired: 'Logistics' };
         break;
     }
     return null;
