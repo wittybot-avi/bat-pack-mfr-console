@@ -1,6 +1,6 @@
-
 export const seedHappyPath = () => {
   const now = new Date().toISOString();
+  const past = new Date(Date.now() - 3600000).toISOString();
   
   const skus = [{
     id: 'sku-happy',
@@ -31,74 +31,76 @@ export const seedHappyPath = () => {
     receivedDate: '2024-05-01',
     quantityReceived: 100,
     status: 'READY_TO_BIND',
-    generatedCount: 16,
-    scannedCount: 16,
-    boundCount: 16,
+    generatedCount: 100,
+    scannedCount: 100,
+    boundCount: 80,
     createdAt: now,
     updatedAt: now
   }];
 
-  const serials = Array.from({ length: 16 }).map((_, i) => ({
-    serial: `SN-HAPPY-${String(i + 1).padStart(3, '0')}`,
-    lotId: 'lot-happy',
-    status: 'BOUND',
-    generatedAt: now,
-    scannedAt: now,
-    actor: 'System Seeder'
-  }));
-
-  const bindings = serials.map(s => ({
-    moduleId: 'MOD-HAPPY-01',
-    serial: s.serial,
-    lotId: 'lot-happy',
-    lotCode: 'CATL-HAPPY-PATH',
-    boundAt: now,
-    actor: 'System Seeder',
-    chemistry: 'LFP'
-  }));
-
-  const modules = [{
-    id: 'MOD-HAPPY-01',
-    skuId: 'sku-happy',
-    skuCode: 'VV360-LFP-HAPPY',
-    targetCells: 16,
-    boundCellSerials: serials.map(s => s.serial),
-    status: 'SEALED',
-    createdBy: 'System Seeder',
-    createdAt: now,
-    updatedAt: now
-  }];
-
-  const packs = [{
-    id: 'PACK-HAPPY-01',
-    skuId: 'sku-happy',
-    skuCode: 'VV360-LFP-HAPPY',
-    requiredModules: 1,
-    moduleIds: ['MOD-HAPPY-01'],
-    status: 'FINALIZED',
-    packSerial: 'SN-PACK-HAPPY-999',
-    qcStatus: 'PASSED',
-    createdBy: 'System Seeder',
-    createdAt: now,
-    updatedAt: now
-  }];
-
-  const testRuns = [{
-    id: 'TR-HAPPY',
-    packId: 'PACK-HAPPY-01',
-    startedAt: now,
-    completedAt: now,
-    actor: 'QA Expert',
-    items: [],
-    computedResult: 'PASS',
-    finalDecision: 'PASS'
-  }];
+  // 1. Pack already PASS
+  const packs = [
+    {
+      id: 'PB-CERT-001',
+      skuId: 'sku-happy',
+      skuCode: 'VV360-LFP-HAPPY',
+      requiredModules: 1,
+      moduleIds: ['MOD-HAPPY-01'],
+      status: 'PASSED',
+      packSerial: 'SN-VANG-2024-001',
+      qcStatus: 'PASSED',
+      eolStatus: 'PASS',
+      eolPerformedBy: 'QA Engineer',
+      eolTimestamp: past,
+      batteryRecordCreated: false,
+      createdBy: 'System Seeder',
+      createdAt: past,
+      updatedAt: past
+    },
+    {
+      id: 'PB-FAIL-001',
+      skuId: 'sku-happy',
+      skuCode: 'VV360-LFP-HAPPY',
+      requiredModules: 1,
+      moduleIds: ['MOD-HAPPY-02'],
+      status: 'QUARANTINED',
+      packSerial: 'SN-VANG-2024-ERR',
+      qcStatus: 'FAILED',
+      eolStatus: 'FAIL',
+      eolFailReason: 'Voltage ripple exceeds threshold',
+      createdBy: 'System Seeder',
+      createdAt: past,
+      updatedAt: past
+    },
+    {
+      id: 'PB-PEND-001',
+      skuId: 'sku-happy',
+      skuCode: 'VV360-LFP-HAPPY',
+      requiredModules: 1,
+      moduleIds: ['MOD-HAPPY-03'],
+      status: 'READY_FOR_EOL',
+      packSerial: 'SN-VANG-2024-PEND-1',
+      qcStatus: 'PASSED',
+      createdBy: 'System Seeder',
+      createdAt: now,
+      updatedAt: now
+    },
+    {
+      id: 'PB-PEND-002',
+      skuId: 'sku-happy',
+      skuCode: 'VV360-LFP-HAPPY',
+      requiredModules: 1,
+      moduleIds: ['MOD-HAPPY-04'],
+      status: 'READY_FOR_EOL',
+      packSerial: 'SN-VANG-2024-PEND-2',
+      qcStatus: 'PASSED',
+      createdBy: 'System Seeder',
+      createdAt: now,
+      updatedAt: now
+    }
+  ];
 
   localStorage.setItem('aayatana_skus_v1', JSON.stringify(skus));
   localStorage.setItem('aayatana_cell_lots_v1', JSON.stringify(lots));
-  localStorage.setItem('aayatana_cell_serials_v1_lot-happy', JSON.stringify(serials));
-  localStorage.setItem('aayatana_cell_bindings_v1', JSON.stringify(bindings));
-  localStorage.setItem('aayatana_modules_v1', JSON.stringify(modules));
   localStorage.setItem('aayatana_packs_v1', JSON.stringify(packs));
-  localStorage.setItem('aayatana_eol_test_runs_v1', JSON.stringify(testRuns));
 };

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthGate } from './src/components/AuthGate';
@@ -27,7 +28,7 @@ import InventoryList from './src/pages/InventoryList';
 import DispatchList from './src/pages/DispatchList';
 import DispatchDetail from './src/pages/DispatchDetail';
 import EolQaList from './src/pages/EolQaList';
-import EolQaDetail from './src/pages/EolQaDetail';
+import EolDetails from './src/pages/EolDetails';
 import Compliance from './src/pages/Compliance';
 import Custody from './src/pages/Custody';
 import CustodyDetail from './src/pages/CustodyDetail';
@@ -37,6 +38,8 @@ import WarrantyIntake from './src/pages/WarrantyIntake';
 import RbacAdmin from './src/pages/RbacAdmin';
 import Settings from './src/pages/Settings';
 import DiagnosticsPage from './src/pages/DiagnosticsPage';
+import EolStationSetup from './src/pages/EolStationSetup';
+import EolReview from './src/pages/EolReview';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import NotFound from './src/pages/NotFound';
 import RunbookHub from './src/pages/RunbookHub';
@@ -79,6 +82,7 @@ export default function App() {
             
             <Route path="batteries" element={<RouteGuard screen={ScreenId.BATTERIES_LIST}><Batteries /></RouteGuard>} />
             <Route path="batteries/:id" element={<RouteGuard screen={ScreenId.BATTERIES_DETAIL}><BatteryDetail /></RouteGuard>} />
+            <Route path="battery/:id" element={<Navigate to="/batteries/:id" replace />} />
             
             <Route path="provisioning" element={<RouteGuard screen={ScreenId.PROVISIONING}><ProvisioningConsole /></RouteGuard>} />
             <Route path="provisioning/setup" element={<RouteGuard screen={ScreenId.PROVISIONING_STATION_SETUP}><ProvisioningStationSetup /></RouteGuard>} />
@@ -88,8 +92,27 @@ export default function App() {
             <Route path="dispatch" element={<RouteGuard screen={ScreenId.DISPATCH_LIST}><DispatchList /></RouteGuard>} />
             <Route path="dispatch/:orderId" element={<RouteGuard screen={ScreenId.DISPATCH_DETAIL}><DispatchDetail /></RouteGuard>} />
             
-            <Route path="eol" element={<RouteGuard screen={ScreenId.EOL_QA_STATION}><EolQaList /></RouteGuard>} />
-            <Route path="assure/eol/:id" element={<RouteGuard screen={ScreenId.EOL_QA_DETAIL}><EolQaDetail /></RouteGuard>} />
+            {/* ASSURE MODULE STABILIZED ROUTES (P44) */}
+            <Route path="assure">
+              <Route path="eol">
+                <Route index element={<Navigate to="queue" replace />} />
+                {/* Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE. */}
+                <Route path="queue" element={<RouteGuard screen={ScreenId.EOL_QA_QUEUE}><EolQaList /></RouteGuard>} />
+                <Route path="setup" element={<RouteGuard screen={ScreenId.EOL_SETUP}><EolStationSetup /></RouteGuard>} />
+                <Route path="review" element={<RouteGuard screen={ScreenId.EOL_REVIEW}><EolReview /></RouteGuard>} />
+                {/* Fix: Corrected invalid ScreenId property reference from EOL_QA_DETAIL to EOL_DETAILS. */}
+                <Route path="details/:id" element={<RouteGuard screen={ScreenId.EOL_DETAILS}><EolDetails /></RouteGuard>} />
+                {/* Legacy Catch-all within Namespace */}
+                <Route path=":id" element={<Navigate to="details/:id" replace />} />
+              </Route>
+              <Route path="provisioning/:batteryId" element={<RouteGuard screen={ScreenId.PROVISIONING}><ProvisioningConsole /></RouteGuard>} />
+            </Route>
+
+            {/* Top-Level Legacy Redirects */}
+            <Route path="eol" element={<Navigate to="/assure/eol/queue" replace />} />
+            <Route path="assure/eol-setup" element={<Navigate to="/assure/eol/setup" replace />} />
+            <Route path="assure/eol-review" element={<Navigate to="/assure/eol/review" replace />} />
+            <Route path="eol/details/:id" element={<Navigate to="/assure/eol/details/:id" replace />} />
             
             <Route path="compliance" element={<RouteGuard screen={ScreenId.COMPLIANCE}><Compliance /></RouteGuard>} />
             

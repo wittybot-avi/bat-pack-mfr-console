@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../lib/store';
 import { batteryService, eolService } from '../services/api';
@@ -18,7 +19,8 @@ const STEP_TITLES = [
 
 export default function EolStation() {
     const { currentCluster, currentRole, addNotification } = useAppStore();
-    const canExecute = canDo(currentCluster?.id || '', ScreenId.EOL_QA_STATION, 'X');
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    const canExecute = canDo(currentCluster?.id || '', ScreenId.EOL_QA_QUEUE, 'X');
     const isSuperUser = currentCluster?.id === 'CS';
 
     const [stationId] = useState(() => localStorage.getItem('eol_station_id') || 'EOL-01');
@@ -123,7 +125,8 @@ export default function EolStation() {
         if (!battery) return;
         setLoading(true);
         try {
-            await eolService.finalizeQa(battery.id, userLabel);
+            // Fix: changed finalizeQa to finalizeQA (typo fix)
+            await eolService.finalizeQA(battery.id, userLabel);
             addNotification({ title: "Finalized", message: "Battery released from station", type: "success" });
             setTimeout(() => {
                 if (window.confirm("Process next battery?")) {

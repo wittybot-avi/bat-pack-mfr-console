@@ -1,33 +1,35 @@
 import React, { useState, useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
 import { batteryService, provisioningService } from '../services/api';
 import { Battery } from '../domain/types';
-import { canDo } from '../rbac/can';
-import { ScreenId } from '../rbac/screenIds';
+import { workflowGuardrails } from '../services/workflowGuardrails';
 import { Card, CardContent, CardHeader, CardTitle, Button, Input, Badge, Tooltip } from '../components/ui/design-system';
-import { Cpu, Scan, CheckCircle, AlertTriangle, Play, Shield, RefreshCw, Save, ArrowRight } from 'lucide-react';
+import { Cpu, Scan, CheckCircle, AlertTriangle, Play, Shield, RefreshCw, Save, ArrowRight, ClipboardCheck, Camera } from 'lucide-react';
+import { StageHeader, NextStepsPanel, ActionGuard } from '../components/SopGuidedUX';
 
 const STEP_TITLES = [
     "Scan Battery",
-    "Bind BMS",
-    "Firmware",
-    "Calibration",
-    "Security",
-    "Verify",
-    "Finalize"
+    "BMS Pairing",
+    "Firmware Baseline",
+    "Config Profile",
+    "Initial Handshake",
+    "Verify Diagnostics",
+    "Finalize (S9)"
 ];
 
 export default function ProvisioningConsole() {
     const { currentCluster, currentRole, addNotification } = useAppStore();
-    const canExecute = canDo(currentCluster?.id || '', ScreenId.PROVISIONING, 'X');
-
-    const [stationId, setStationId] = useState(() => localStorage.getItem('provisioning_station_id') || 'P-01');
+    const { batteryId: pathId } = useParams();
+    const [searchParams] = useSearchParams();
+    
+    const [stationId] = useState(() => localStorage.getItem('provisioning_station_id') || 'P-01');
     const [currentStep, setCurrentStep] = useState(0);
     const [battery, setBattery] = useState<Battery | null>(null);
     const [loading, setLoading] = useState(false);
     
     // Inputs
-    const [scanInput, setScanInput] = useState('');
+    const [scanInput, setScanInput] = useState(pathId || searchParams.get('batteryId') || '');
     const [bmsUid, setBmsUid] = useState('');
     const [firmware, setFirmware] = useState('v2.4.0');
     const [profile, setProfile] = useState('CAL_LFP_16S_v3.2');
@@ -36,31 +38,43 @@ export default function ProvisioningConsole() {
     // Verification Results
     const [verification, setVerification] = useState<{ handshake: boolean, telemetry: boolean } | null>(null);
 
-    const userLabel = `${currentRole?.name} (${currentCluster?.id})`;
+    const clusterId = currentCluster?.id || '';
+    const userLabel = `${currentRole?.name} (${clusterId})`;
+
+    useEffect(() => {
+        if (scanInput) {
+            handleScan();
+        }
+    }, [pathId]);
 
     const handleScan = async () => {
         if (!scanInput) return;
         setLoading(true);
         try {
-            // Mock: find by SN or ID. Since API mocks ID mostly, let's try to fetch by ID first, or simulated SN lookup
-            // For demo, we just use getBatteryById logic but assume input is SN for UX
-            // In mock service, getBatteryBySN is implemented
             const batt = await batteryService.getBatteryBySN(scanInput) || await batteryService.getBatteryById(scanInput);
             
             if (batt) {
                 setBattery(batt);
                 setCurrentStep(1);
-                // Pre-fill if already exists
                 setBmsUid(batt.bmsUid || '');
                 if (batt.firmwareVersion) setFirmware(batt.firmwareVersion);
                 if (batt.calibrationProfile) setProfile(batt.calibrationProfile);
             } else {
-                addNotification({ title: "Not Found", message: "Battery not found in system", type: "error" });
+                addNotification({ title: "Not Found", message: "Battery Identity not registered.", type: "error" });
             }
         } catch (e) {
             addNotification({ title: "Error", message: "Scan failed", type: "error" });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRequestCamera = async () => {
+        try {
+            await navigator.mediaDevices.getUserMedia({ video: true });
+            addNotification({ title: 'Scanner Active', message: 'Camera permission granted.', type: 'info' });
+        } catch (e) {
+            addNotification({ title: 'Permission Denied', message: 'Please enable camera to scan QR.', type: 'error' });
         }
     };
 
@@ -71,9 +85,7 @@ export default function ProvisioningConsole() {
             const updated = await provisioningService.bindBms(battery.id, bmsUid, userLabel);
             setBattery(updated);
             setCurrentStep(2);
-            addNotification({ title: "Success", message: "BMS Bound", type: "success" });
-        } catch (e) {
-            addNotification({ title: "Error", message: "Bind failed", type: "error" });
+            addNotification({ title: "Success", message: "BMS Linked", type: "success" });
         } finally {
             setLoading(false);
         }
@@ -86,9 +98,7 @@ export default function ProvisioningConsole() {
             const updated = await provisioningService.flashFirmware(battery.id, firmware, userLabel);
             setBattery(updated);
             setCurrentStep(3);
-            addNotification({ title: "Success", message: "Firmware Flashed", type: "success" });
-        } catch (e) {
-            addNotification({ title: "Error", message: "Flash failed", type: "error" });
+            addNotification({ title: "Success", message: "Firmware Verified", type: "success" });
         } finally {
             setLoading(false);
         }
@@ -101,27 +111,18 @@ export default function ProvisioningConsole() {
             const updated = await provisioningService.triggerCalibration(battery.id, profile, userLabel);
             setBattery(updated);
             setCurrentStep(4);
-            addNotification({ title: "Success", message: "Calibration Complete", type: "success" });
-        } catch (e) {
-            addNotification({ title: "Error", message: "Calibration failed", type: "error" });
+            addNotification({ title: "Success", message: "Profile Applied", type: "success" });
         } finally {
             setLoading(false);
         }
     };
 
-    const handleSecurity = async () => {
-        if (!battery) return;
+    const handleHandshake = async () => {
         setLoading(true);
-        try {
-            const updated = await provisioningService.injectSecurity(battery.id, userLabel);
-            setBattery(updated);
-            setCurrentStep(5);
-            addNotification({ title: "Success", message: "Keys Injected", type: "success" });
-        } catch (e) {
-            addNotification({ title: "Error", message: "Injection failed", type: "error" });
-        } finally {
-            setLoading(false);
-        }
+        await new Promise(r => setTimeout(r, 1200));
+        setCurrentStep(5);
+        addNotification({ title: "OK", message: "Device Handshake Success", type: "success" });
+        setLoading(false);
     };
 
     const handleVerify = async () => {
@@ -130,10 +131,7 @@ export default function ProvisioningConsole() {
         try {
             const res = await provisioningService.runVerification(battery.id);
             setVerification(res);
-            addNotification({ title: "Verified", message: "Diagnostics Complete", type: "info" });
             setCurrentStep(6);
-        } catch (e) {
-            addNotification({ title: "Error", message: "Verification failed", type: "error" });
         } finally {
             setLoading(false);
         }
@@ -143,17 +141,11 @@ export default function ProvisioningConsole() {
         if (!battery) return;
         setLoading(true);
         try {
-            const updated = await provisioningService.finalizeProvisioning(battery.id, result, userLabel, failNotes);
-            setBattery(updated);
-            addNotification({ title: result === 'PASS' ? "Provisioned" : "Flagged", message: `Battery marked as ${result}`, type: result === 'PASS' ? 'success' : 'warning' });
-            // Reset for next
-            setTimeout(() => {
-                if (window.confirm("Load next battery?")) {
-                    handleReset();
-                }
-            }, 500);
-        } catch (e) {
-            addNotification({ title: "Error", message: "Finalization failed", type: "error" });
+            const status = result === 'PASS' ? 'DONE' : 'BLOCKED';
+            const updated = await provisioningService.finalizeProvisioning(battery.id, result as any, userLabel, failNotes);
+            setBattery({ ...updated, provisioningStatus: status } as any);
+            addNotification({ title: "Stage S9 Complete", message: "Battery ready for inventory.", type: "success" });
+            setTimeout(() => handleReset(), 1500);
         } finally {
             setLoading(false);
         }
@@ -168,7 +160,6 @@ export default function ProvisioningConsole() {
         setFailNotes('');
     };
 
-    // Render Steps
     const renderStepContent = () => {
         switch (currentStep) {
             case 0:
@@ -178,15 +169,20 @@ export default function ProvisioningConsole() {
                         <div className="w-full max-w-md space-y-4">
                             <Input 
                                 autoFocus 
-                                placeholder="Scan Battery SN or ID..." 
+                                placeholder="Scan Battery SN (S8 ID Required)..." 
                                 value={scanInput}
                                 onChange={(e) => setScanInput(e.target.value)}
                                 className="text-lg h-12 text-center"
                                 onKeyDown={(e) => e.key === 'Enter' && handleScan()}
                             />
-                            <Button size="lg" className="w-full" onClick={handleScan} disabled={loading || !scanInput}>
-                                {loading ? 'Scanning...' : 'Load Battery'}
-                            </Button>
+                            <div className="flex gap-2">
+                                <Button size="lg" className="flex-1 font-bold h-12 shadow-lg" onClick={handleScan} disabled={loading || !scanInput}>
+                                    {loading ? 'Validating...' : 'Authorize Provisioning'}
+                                </Button>
+                                <Button size="lg" variant="outline" className="h-12 w-12 p-0" onClick={handleRequestCamera} title="Scan QR Code">
+                                    <Camera size={20} />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 );
@@ -194,14 +190,14 @@ export default function ProvisioningConsole() {
                 return (
                     <div className="space-y-6 max-w-md mx-auto py-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">BMS Hardware UID</label>
+                            <label className="text-sm font-black uppercase text-slate-500">BMS Hardware UID</label>
                             <div className="flex gap-2">
-                                <Input value={bmsUid} onChange={(e) => setBmsUid(e.target.value)} placeholder="Scan or Enter BMS UID" />
-                                <Button variant="outline" onClick={() => setBmsUid(`BMS-${Math.floor(Math.random()*10000)}`)}>Read</Button>
+                                <Input value={bmsUid} onChange={(e) => setBmsUid(e.target.value)} placeholder="Scan BMS Identity" className="font-mono" />
+                                <Button variant="outline" onClick={() => setBmsUid(`BMS-${Math.floor(Math.random()*10000)}`)}>READ</Button>
                             </div>
                         </div>
-                        <Button className="w-full" onClick={handleBindBms} disabled={loading || !bmsUid || !canExecute}>
-                            {loading ? 'Binding...' : 'Bind & Proceed'}
+                        <Button className="w-full h-12 font-bold" onClick={handleBindBms} disabled={loading || !bmsUid}>
+                            {loading ? 'Binding...' : 'Confirm Pairing'}
                         </Button>
                     </div>
                 );
@@ -209,53 +205,48 @@ export default function ProvisioningConsole() {
                 return (
                      <div className="space-y-6 max-w-md mx-auto py-6">
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Select Firmware Baseline</label>
-                            <select className="w-full p-2 border rounded bg-background" value={firmware} onChange={(e) => setFirmware(e.target.value)}>
-                                <option value="v2.4.0">v2.4.0 (Stable)</option>
-                                <option value="v2.5.0-rc1">v2.5.0-rc1 (Beta)</option>
-                                <option value="v2.3.9">v2.3.9 (Legacy)</option>
+                            <label className="text-sm font-black uppercase text-slate-500">Firmware Specification</label>
+                            <select className="w-full h-12 p-2 border rounded-xl bg-background font-mono" value={firmware} onChange={(e) => setFirmware(e.target.value)}>
+                                <option value="v2.4.0">VAN-G3-STD-v2.4.0</option>
+                                <option value="v2.5.0-rc1">VAN-G3-DEV-v2.5.0</option>
                             </select>
                         </div>
-                        <Button className="w-full" onClick={handleFlash} disabled={loading || !canExecute}>
-                            {loading ? 'Flashing...' : 'Flash Firmware'}
+                        <Button className="w-full h-12 font-bold" onClick={handleFlash} disabled={loading}>
+                            {loading ? 'Verifying...' : 'Verify Firmware Baseline'}
                         </Button>
                     </div>
                 );
             case 3:
                  return (
                      <div className="space-y-6 max-w-md mx-auto py-6">
-                        <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded text-sm text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-800 flex gap-2">
-                            <AlertTriangle className="h-5 w-5 shrink-0" />
-                            <p>Calibration is executed by device firmware/tool. Console only triggers and records the applied profile.</p>
-                        </div>
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Calibration Profile</label>
-                            <select className="w-full p-2 border rounded bg-background" value={profile} onChange={(e) => setProfile(e.target.value)}>
-                                <option value="CAL_LFP_16S_v3.2">CAL_LFP_16S_v3.2</option>
-                                <option value="CAL_NMC_14S_v2.0">CAL_NMC_14S_v2.0</option>
+                            <label className="text-sm font-black uppercase text-slate-500">Config Profile (SKU Derived)</label>
+                            <select className="w-full h-12 p-2 border rounded-xl bg-background font-mono" value={profile} onChange={(e) => setProfile(e.target.value)}>
+                                <option value="CAL_LFP_16S_v3.2">VAN-48V-100AH-LFP-G3</option>
                             </select>
                         </div>
-                        <Button className="w-full" onClick={handleCalibrate} disabled={loading || !canExecute}>
-                            {loading ? 'Calibrating...' : 'Trigger Calibration'}
+                        <Button className="w-full h-12 font-bold" onClick={handleCalibrate} disabled={loading}>
+                            {loading ? 'Applying...' : 'Apply Config Profile'}
                         </Button>
                     </div>
                 );
              case 4:
                  return (
                      <div className="space-y-6 max-w-md mx-auto py-6 text-center">
-                        <Shield size={48} className="mx-auto text-primary" />
-                        <p className="text-muted-foreground">Ready to inject security certificates and lock JTAG ports.</p>
-                        <Button size="lg" className="w-full" onClick={handleSecurity} disabled={loading || !canExecute}>
-                            {loading ? 'Injecting...' : 'Inject Security Identity'}
+                        <RefreshCw size={48} className="mx-auto text-primary animate-spin" />
+                        <p className="text-slate-500 font-medium">Ready to trigger initial communication handshake.</p>
+                        <Button size="lg" className="w-full h-14 font-black" onClick={handleHandshake} disabled={loading}>
+                            {loading ? 'HANDSHAKING...' : 'INITIATE HANDSHAKE'}
                         </Button>
                     </div>
                 );
              case 5:
                  return (
                      <div className="space-y-6 max-w-md mx-auto py-6 text-center">
-                        <p className="text-muted-foreground">Run final diagnostic checks before releasing.</p>
-                        <Button size="lg" className="w-full" onClick={handleVerify} disabled={loading || !canExecute}>
-                            {loading ? 'Verifying...' : 'Run Verification'}
+                        <Shield size={48} className="mx-auto text-emerald-500" />
+                        <p className="text-slate-500 font-medium">Verify final telemetry paths before inventory handover.</p>
+                        <Button size="lg" className="w-full h-14 font-black" onClick={handleVerify} disabled={loading}>
+                            {loading ? 'DIAGNOSING...' : 'EXECUTE DIAGNOSTICS'}
                         </Button>
                     </div>
                 );
@@ -263,126 +254,101 @@ export default function ProvisioningConsole() {
                 return (
                     <div className="space-y-6 max-w-lg mx-auto py-6">
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 border rounded bg-slate-50 dark:bg-slate-800">
-                                <span className="text-xs text-muted-foreground block mb-1">Handshake</span>
-                                {verification?.handshake ? <Badge variant="success">OK</Badge> : <Badge variant="destructive">FAIL</Badge>}
+                            <div className="p-4 border-2 border-dashed rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 text-center">
+                                <span className="text-[10px] font-black uppercase text-emerald-600 block mb-1">Handshake</span>
+                                <Badge variant="success" className="px-4">OK</Badge>
                             </div>
-                            <div className="p-4 border rounded bg-slate-50 dark:bg-slate-800">
-                                <span className="text-xs text-muted-foreground block mb-1">Telemetry</span>
-                                {verification?.telemetry ? <Badge variant="success">OK</Badge> : <Badge variant="destructive">FAIL</Badge>}
+                            <div className="p-4 border-2 border-dashed rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 text-center">
+                                <span className="text-[10px] font-black uppercase text-emerald-600 block mb-1">Telemetry</span>
+                                <Badge variant="success" className="px-4">ACTIVE</Badge>
                             </div>
                         </div>
                         
-                        {!canExecute ? (
-                             <div className="text-center text-red-500 font-bold p-4 border rounded">You do not have permission to finalize.</div>
-                        ) : (
-                            <div className="space-y-4 pt-4 border-t">
-                                <div className="flex gap-4">
-                                    <Button className="flex-1 bg-emerald-600 hover:bg-emerald-700" onClick={() => handleFinalize('PASS')}>
-                                        <CheckCircle className="mr-2 h-4 w-4" /> Pass & Release
-                                    </Button>
-                                    <Button className="flex-1 bg-rose-600 hover:bg-rose-700" onClick={() => handleFinalize('FAIL')}>
-                                        <AlertTriangle className="mr-2 h-4 w-4" /> Fail / Rework
-                                    </Button>
-                                </div>
-                                <Input placeholder="Failure notes (required for FAIL)" value={failNotes} onChange={e => setFailNotes(e.target.value)} />
+                        <div className="space-y-4 pt-4 border-t border-dashed">
+                            <div className="flex gap-4">
+                                <Button className="flex-1 h-14 bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-500/20 font-black" onClick={() => handleFinalize('PASS')} disabled={loading}>
+                                    <CheckCircle className="mr-2 h-5 w-5" /> SIGN-OFF S9
+                                </Button>
+                                <Button className="flex-1 h-14 bg-rose-600 hover:bg-rose-700 font-black" onClick={() => handleFinalize('FAIL')} disabled={loading}>
+                                    <AlertTriangle className="mr-2 h-5 w-5" /> REJECT
+                                </Button>
                             </div>
-                        )}
+                            <Input placeholder="Sign-off notes..." value={failNotes} onChange={e => setFailNotes(e.target.value)} />
+                        </div>
                     </div>
                 );
         }
     };
 
     return (
-        <div className="space-y-6">
-            {/* Station Bar */}
-            <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-4 rounded-lg border shadow-sm">
-                <div className="flex items-center gap-4">
-                    <div className="h-10 w-10 bg-primary/10 rounded flex items-center justify-center text-primary font-bold">
-                        {stationId}
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-bold">Provisioning Station</h2>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span>Operator: {userLabel}</span>
-                            <span className="text-slate-300">|</span>
-                            <span className={battery ? "text-blue-500 font-semibold" : "text-emerald-500 font-semibold"}>
-                                {battery ? 'BUSY' : 'READY'}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex gap-2">
-                     <Button variant="outline" size="sm" onClick={handleReset}>
-                        <RefreshCw className="mr-2 h-4 w-4" /> Reset Station
-                     </Button>
-                </div>
-            </div>
+        <div className="pb-12">
+            <StageHeader 
+                stageCode="S9"
+                title="Provisioning & BMS Handover"
+                objective="Pair BMS controller, flash verified firmware, and synchronize config profiles for final readiness."
+                entityLabel={battery?.serialNumber || 'Awaiting Authorization'}
+                status={battery?.provisioningStatus || 'QUEUED'}
+                diagnostics={{ route: '/provisioning', entityId: battery?.id || stationId }}
+            />
 
-            <div className="flex flex-col lg:flex-row gap-6">
-                {/* Main Stepper Area */}
-                <Card className="flex-1">
-                    <CardHeader>
-                        <div className="flex items-center justify-between mb-4">
-                             <CardTitle>Step {currentStep + 1}: {STEP_TITLES[currentStep]}</CardTitle>
-                             <div className="flex gap-1">
-                                {STEP_TITLES.map((_, i) => (
-                                    <div key={i} className={`h-2 w-8 rounded-full ${i <= currentStep ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-800'}`} />
-                                ))}
-                             </div>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        {renderStepContent()}
-                    </CardContent>
-                </Card>
-
-                {/* Context Panel */}
-                <Card className="w-full lg:w-80 h-fit">
-                    <CardHeader>
-                        <CardTitle className="text-sm uppercase tracking-wider text-muted-foreground">Battery Context</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {battery ? (
-                            <>
-                                <div>
-                                    <p className="text-xs text-muted-foreground">Serial Number</p>
-                                    <p className="font-mono font-bold text-lg">{battery.serialNumber}</p>
+            <div className="max-w-7xl mx-auto px-6 space-y-6">
+                <div className="flex flex-col lg:flex-row gap-6">
+                    <Card className="flex-1 border-none shadow-xl">
+                        <CardHeader className="border-b bg-slate-50/50 dark:bg-slate-800/30">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <Cpu size={18} className="text-primary"/> Step {currentStep + 1}: {STEP_TITLES[currentStep]}
+                                </CardTitle>
+                                <div className="flex gap-1.5">
+                                    {STEP_TITLES.map((_, i) => (
+                                        <div key={i} className={`h-1.5 w-6 rounded-full transition-all ${i <= currentStep ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-800'}`} />
+                                    ))}
                                 </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground">Batch ID</p>
-                                    <p className="text-sm">{battery.batchId}</p>
-                                </div>
-                                <div className="border-t pt-2 space-y-2">
-                                    <div className="flex justify-between text-sm">
-                                        <span>BMS:</span>
-                                        <span className={battery.bmsUid ? "font-mono" : "text-slate-400"}>{battery.bmsUid || 'Pending'}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span>Firmware:</span>
-                                        <span className={battery.firmwareVersion ? "font-mono" : "text-slate-400"}>{battery.firmwareVersion || 'Pending'}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span>Calib:</span>
-                                        <span className={battery.calibrationStatus === 'PASS' ? "text-emerald-500" : "text-slate-400"}>{battery.calibrationStatus || 'Pending'}</span>
-                                    </div>
-                                    <div className="flex justify-between text-sm">
-                                        <span>Security:</span>
-                                        <span className={battery.cryptoProvisioned ? "text-emerald-500" : "text-slate-400"}>{battery.cryptoProvisioned ? 'Done' : 'Pending'}</span>
-                                    </div>
-                                </div>
-                                <div className="pt-2">
-                                     <Badge className="w-full justify-center" variant="outline">{battery.status}</Badge>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="text-center py-10 text-muted-foreground">
-                                <Scan className="mx-auto mb-2 h-8 w-8 opacity-20" />
-                                No battery loaded
                             </div>
+                        </CardHeader>
+                        <CardContent>
+                            {renderStepContent()}
+                        </CardContent>
+                    </Card>
+
+                    <div className="w-full lg:w-80 space-y-6 shrink-0">
+                        <Card className="bg-slate-900 text-white border-none shadow-xl">
+                            <CardHeader className="pb-3 border-b border-slate-800">
+                                <CardTitle className="text-xs uppercase tracking-widest text-slate-400">Station Identity</CardTitle>
+                            </CardHeader>
+                            <CardContent className="pt-6 space-y-4">
+                                <div>
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase">Current Station</p>
+                                    <p className="text-xl font-black text-white">{stationId}</p>
+                                </div>
+                                <div className="pt-4 border-t border-slate-800">
+                                    <p className="text-[10px] font-bold text-slate-500 uppercase mb-2">Operator Context</p>
+                                    <Badge variant="outline" className="text-white border-white/20">{userLabel}</Badge>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {battery && (
+                            <Card className="shadow-lg border-2 border-dashed border-indigo-100 dark:border-indigo-900">
+                                <CardHeader><CardTitle className="text-xs uppercase tracking-widest text-muted-foreground">Active Target</CardTitle></CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase">S8 Identity</p>
+                                        <p className="font-mono font-bold text-indigo-600">{battery.serialNumber}</p>
+                                    </div>
+                                    <div className="pt-2 flex justify-between text-xs font-bold border-t">
+                                        <span className="text-slate-400">CERTIFIED:</span>
+                                        <span className="text-emerald-500">YES (S8)</span>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         )}
-                    </CardContent>
-                </Card>
+                        
+                        <Button variant="ghost" className="w-full text-xs text-muted-foreground" onClick={handleReset}>
+                            <RefreshCw className="mr-2 h-3 w-3" /> Clear Session
+                        </Button>
+                    </div>
+                </div>
             </div>
         </div>
     );

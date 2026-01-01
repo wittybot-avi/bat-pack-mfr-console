@@ -1,3 +1,4 @@
+
 import { batteryService, batchService, dispatchService, inventoryService } from './api';
 import { Battery, Batch, DispatchOrder, InventoryStatus, BatteryStatus, QaDisposition } from '../domain/types';
 import { findingsStore } from './findingsStore';
@@ -43,7 +44,8 @@ class ComplianceService {
     
     const certified = batteries.filter(b => b.certificateRef).length;
     const tracked = batteries.filter(b => b.location).length;
-    const provisioned = batteries.filter(b => b.provisioningStatus === 'PASS').length;
+    // Fix line 46: use correct enum value 'DONE' instead of 'PASS'
+    const provisioned = batteries.filter(b => b.provisioningStatus === 'DONE').length;
     
     // Weighted Components (Mocked slightly for demo variance)
     const identityScore = Math.min(20, Math.floor((provisioned / totalBatteries) * 20));
@@ -150,7 +152,7 @@ class ComplianceService {
     };
   }
 
-  // TODO: Implement batch/dispatch evidence builders if needed
+  // TODO: Implement battery/batch/dispatch evidence builders if needed
 }
 
 export const complianceService = new ComplianceService();

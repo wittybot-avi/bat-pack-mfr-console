@@ -1,4 +1,5 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+import React, { ErrorInfo, ReactNode, Component } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from './ui/design-system';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home, Database, ClipboardCopy, Trash2 } from 'lucide-react';
 import { logger } from '../utils/logger';
@@ -16,10 +17,10 @@ interface State {
 
 /**
  * Standard React Error Boundary component to catch rendering errors.
- * Using named Component import to resolve inheritance visibility issues in TypeScript.
  */
+// Fix: Use Component explicitly to ensure TypeScript correctly resolves inherited members like state and props
 class ErrorBoundary extends Component<Props, State> {
-  // Use property initializer for state
+  // Fix: Property initializer for state resolves issues with this.state accessibility in constructor vs inheritance
   public state: State = {
     hasError: false,
     error: null,
@@ -27,17 +28,13 @@ class ErrorBoundary extends Component<Props, State> {
     showDetails: false
   };
 
-  constructor(props: Props) {
-    super(props);
-  }
-
+  // Fixed static method signature to correctly return Partial<State> for the error boundary lifecycle
   public static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error, errorInfo: null, showDetails: false };
   }
 
-  // Correctly typed componentDidCatch to handle error tracking
+  // Fix line 37: Ensure setState is recognized as an inherited method by extending Component
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Accessing setState through Component inheritance
     this.setState({ error, errorInfo });
     logger.error("Global Error Boundary caught exception", error);
   }
@@ -54,19 +51,20 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   private copyDiagnostics = () => {
-    // Accessing state inherited from Component base class
+    // Correctly accessing state.error which is now recognized by TypeScript
     const data = logger.getDiagnostics(this.state.error || undefined);
     navigator.clipboard.writeText(data);
     alert("Diagnostic info copied to clipboard.");
   };
 
+  // Fix line 61: Ensure setState is recognized as an inherited method by extending Component
   private toggleDetails = () => {
-    // Accessing setState through Component inheritance
-    this.setState((prev: State) => ({ showDetails: !prev.showDetails }));
+    // Functional state update ensures we toggle the showDetails flag safely
+    this.setState((prev) => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
-    // Accessing state inherited from Component base class
+    // TypeScript now correctly identifies state members within the render lifecycle
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
@@ -95,7 +93,7 @@ class ErrorBoundary extends Component<Props, State> {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Button variant="outline" onClick={() => window.location.href = '#/'} className="gap-2 justify-start h-12">
-                  <Home className="h-4 w-4" /> Reset to Dashboard
+                  <Home className="h-4 w-4" /> Return to Dashboard
                 </Button>
                 <Button onClick={this.handleReload} className="gap-2 bg-slate-900 hover:bg-slate-800 text-white border-none h-12 justify-start">
                   <RefreshCw className="h-4 w-4" /> Hot Reload Component
@@ -131,7 +129,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Accessing children from props inherited from Component base class
+    // Fix line 131: Correctly accessing this.props by inheriting from Component
     return this.props.children;
   }
 }

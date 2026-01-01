@@ -139,10 +139,11 @@ class WorkflowGuardrailsService {
   }
 
   /**
-   * S5: Pack Guardrails
+   * S5-S7: Pack Guardrails
    */
   getPackGuardrail(pack: PackInstance, clusterId: string): Record<string, GuardrailResult> {
     const isOperator = clusterId === 'C2' || clusterId === 'CS';
+    const isQA = clusterId === 'C3' || clusterId === 'CS';
     const hasRequiredModules = pack.moduleIds.length === (pack.requiredModules || 1);
     const hasBms = !!pack.bmsId;
     const hasSerial = !!pack.packSerial;
@@ -151,20 +152,34 @@ class WorkflowGuardrailsService {
       finalize: {
         allowed: isOperator && hasRequiredModules && hasBms && hasSerial && pack.qcStatus === 'PASSED',
         reason: !hasRequiredModules ? "Incomplete module linkage" : !hasBms ? "BMS identity not bound" : !hasSerial ? "Serial identity not generated" : pack.qcStatus !== 'PASSED' ? "Assembly QC check failed" : ""
+      },
+      startEol: {
+        allowed: isQA && (pack.status === PackStatus.READY_FOR_EOL || pack.eolStatus === 'PENDING'),
+        reason: isQA ? "Test already in progress or completed" : "QA Analyst permissions required (C3)"
+      },
+      markEolPass: {
+        allowed: isQA && pack.eolStatus === 'IN_TEST',
+        reason: "Must start EOL test sequence first"
+      },
+      createBatteryIdentity: {
+        allowed: (isQA || clusterId === 'CS') && pack.eolStatus === 'PASS' && !pack.batteryRecordCreated,
+        reason: pack.eolStatus !== 'PASS' ? "Requires successful EOL PASS" : "Record already initialized"
       }
     };
   }
 
   /**
-   * Battery Guardrails
+   * S8-S9: Battery Guardrails
    */
   getBatteryGuardrail(battery: Battery, clusterId: string): Record<string, GuardrailResult> {
     const isEng = clusterId === 'C5' || clusterId === 'CS';
     const isQA = clusterId === 'C3' || clusterId === 'CS';
+    const isOperator = clusterId === 'C2' || clusterId === 'CS';
+
     return {
       provision: {
-        allowed: isEng && battery.status === BatteryStatus.PROVISIONING,
-        reason: battery.status !== BatteryStatus.PROVISIONING ? "Asset not in provisioning stage" : "BMS Engineer permissions required (C5)"
+        allowed: (isEng || isOperator) && battery.provisioningStatus !== 'DONE',
+        reason: battery.provisioningStatus === 'DONE' ? "Provisioning already finalized" : "BMS/Operator permissions required"
       },
       test: {
         allowed: isQA && battery.status === BatteryStatus.QA_TESTING,
@@ -190,17 +205,17 @@ class WorkflowGuardrailsService {
   }
 
   /**
-   * Dispatch Readiness Check
+   * Dispatch Readiness Check (S7-S9 Hard Gates)
    */
   isBatteryDispatchReady(battery: Battery): GuardrailResult {
-    if (battery.status !== BatteryStatus.IN_INVENTORY) {
-      return { allowed: false, reason: "Asset not in final inventory" };
-    }
     if (battery.eolResult !== 'PASS') {
-      return { allowed: false, reason: "Missing EOL Certification" };
+      return { allowed: false, reason: "S7: Missing EOL PASS Certification" };
     }
-    if (battery.provisioningStatus !== 'PASS') {
-      return { allowed: false, reason: "Incomplete BMS provisioning" };
+    if (battery.certificationStatus !== 'CERTIFIED') {
+      return { allowed: false, reason: "S8: Battery Identity not certified" };
+    }
+    if (battery.provisioningStatus !== 'DONE') {
+      return { allowed: false, reason: "S9: BMS Provisioning incomplete" };
     }
     return { allowed: true, reason: "" };
   }
@@ -233,12 +248,11 @@ class WorkflowGuardrailsService {
       case 'PACK':
         if (entity.status === PackStatus.DRAFT || entity.status === PackStatus.IN_PROGRESS) return { label: 'QC & Finalize', path: '', description: 'Perform assembly QC and lock the record.', roleRequired: 'Operator' };
         if (entity.status === PackStatus.READY_FOR_EOL) return { label: 'Run EOL Test', path: '/eol', description: 'Hand over to QA for electrical verification.', roleRequired: 'QA' };
+        if (entity.eolStatus === 'PASS' && !entity.batteryRecordCreated) return { label: 'Create Identity', path: '', description: 'Generate certified battery twin record.', roleRequired: 'QA' };
         break;
       case 'BATTERY':
-        if (entity.status === BatteryStatus.ASSEMBLY) return { label: 'Start Provisioning', path: '/provisioning', description: 'Connect BMS and initialize digital profile.', roleRequired: 'BMS Engineer' };
-        if (entity.status === BatteryStatus.PROVISIONING && entity.provisioningStatus !== 'PASS') return { label: 'Finalize Identity', path: '/provisioning', description: 'Verify security certificates and release to QA.', roleRequired: 'BMS Engineer' };
-        if (entity.status === BatteryStatus.QA_TESTING) return { label: 'Run EOL Verification', path: '/eol', description: 'Complete final electrical and safety checks.', roleRequired: 'QA' };
-        if (entity.status === BatteryStatus.IN_INVENTORY) return { label: 'Reserve for Order', path: '/inventory', description: 'Allocate this pack to a customer dispatch order.', roleRequired: 'Logistics' };
+        if (entity.provisioningStatus !== 'DONE') return { label: 'Finalize Provisioning', path: '/provisioning', description: 'Connect BMS and verify config profile.', roleRequired: 'BMS Engineer' };
+        if (entity.status === BatteryStatus.PROVISIONING && entity.provisioningStatus === 'DONE') return { label: 'Move to Inventory', path: '/inventory', description: 'Confirm placement on warehouse shelf.', roleRequired: 'Logistics' };
         break;
       case 'DISPATCH':
         if (entity.batteryIds.length === 0) return { label: 'Add Units', path: '', description: 'Select certified packs for this shipment.', roleRequired: 'Logistics' };

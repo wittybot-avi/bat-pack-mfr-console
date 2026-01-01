@@ -1,3 +1,4 @@
+
 import { ScreenId } from './screenIds';
 import { canView, canDo } from './can';
 
@@ -15,7 +16,8 @@ const CAPABILITY_CHECKS: CapabilityCheck[] = [
   },
   { 
     label: "Perform EOL testing and certification", 
-    check: (cid) => canDo(cid, ScreenId.EOL_QA_STATION, 'X'), 
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    check: (cid) => canDo(cid, ScreenId.EOL_QA_QUEUE, 'X'), 
     type: 'enable' 
   },
   { 

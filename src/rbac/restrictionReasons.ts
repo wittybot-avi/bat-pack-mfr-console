@@ -1,3 +1,4 @@
+
 import { ScreenId } from './screenIds';
 
 interface RestrictionInfo {
@@ -10,7 +11,8 @@ export const RESTRICTION_REASONS: Partial<Record<ScreenId, RestrictionInfo>> = {
     reason: "Restricted to firmware/production authorized roles due to device calibration risk.",
     allowedRoles: ["Manufacturing (C2)", "BMS Engineer (C5)", "Super User"]
   },
-  [ScreenId.EOL_QA_STATION]: {
+  // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+  [ScreenId.EOL_QA_QUEUE]: {
     reason: "Restricted to QA personnel to ensure certification integrity.",
     allowedRoles: ["QA (C3)", "Super User"]
   },

@@ -1,3 +1,4 @@
+
 import { ScreenId } from './screenIds';
 import { PermissionVerb } from './verbs';
 
@@ -22,8 +23,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATCHES_DETAIL]: ['V'],
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V'],
-    [ScreenId.EOL_QA_STATION]: ['V'],
-    [ScreenId.EOL_QA_DETAIL]: ['V'],
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    [ScreenId.EOL_QA_QUEUE]: ['V'],
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_DETAIL to EOL_DETAILS.
+    [ScreenId.EOL_DETAILS]: ['V'],
     [ScreenId.COMPLIANCE]: ['V'],
     [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
     [ScreenId.WARRANTY]: ['V'],
@@ -47,8 +50,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.PACK_ASSEMBLY_DETAIL]: ['V', 'E', 'X'],
     [ScreenId.BATTERIES_LIST]: ['V', 'C'],
     [ScreenId.BATTERIES_DETAIL]: ['V'],
-    [ScreenId.EOL_QA_STATION]: ['V'],
-    [ScreenId.EOL_QA_DETAIL]: ['V'],
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    [ScreenId.EOL_QA_QUEUE]: ['V'],
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_DETAIL to EOL_DETAILS.
+    [ScreenId.EOL_DETAILS]: ['V'],
     [ScreenId.TELEMETRY]: ['V'],
   },
 
@@ -61,8 +66,14 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DASHBOARD_RISK_COMPLIANCE]: ['V'],
     [ScreenId.PACK_ASSEMBLY_LIST]: ['V'],
     [ScreenId.PACK_ASSEMBLY_DETAIL]: ['V', 'E', 'A'],
-    [ScreenId.EOL_QA_STATION]: ['V', 'C', 'E', 'A', 'X'],
-    [ScreenId.EOL_QA_DETAIL]: ['V', 'E', 'A', 'X'],
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    [ScreenId.EOL_QA_QUEUE]: ['V', 'C', 'E', 'A', 'X'],
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_DETAIL to EOL_DETAILS.
+    [ScreenId.EOL_DETAILS]: ['V', 'E', 'A', 'X'],
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION_SETUP to EOL_SETUP.
+    [ScreenId.EOL_SETUP]: ['V', 'E', 'M'],
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_REVIEW to EOL_REVIEW.
+    [ScreenId.EOL_REVIEW]: ['V'],
     [ScreenId.COMPLIANCE]: ['V', 'C', 'E'],
     [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
     [ScreenId.COMPLIANCE_FINDINGS_TAB]: ['V', 'C', 'E'],

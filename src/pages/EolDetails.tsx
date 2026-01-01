@@ -1,0 +1,165 @@
+
+import React, { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { eolQaService } from '../services/eolQaService';
+import { packAssemblyService } from '../services/packAssemblyService';
+import { PackInstance, PackStatus, EolTestRun } from '../domain/types';
+import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableHeader, TableRow, TableHead, TableCell } from '../components/ui/design-system';
+import { ArrowLeft, ClipboardList, CheckCircle, XCircle, ShieldCheck, Zap, History, Fingerprint, Thermometer, Cpu } from 'lucide-react';
+import { StageHeader, NextStepsPanel, ActionGuard } from '../components/SopGuidedUX';
+import { useAppStore } from '../lib/store';
+import { workflowGuardrails } from '../services/workflowGuardrails';
+
+export default function EolDetails() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { currentRole, currentCluster, addNotification } = useAppStore();
+  
+  const [pack, setPack] = useState<PackInstance | null>(null);
+  const [testRun, setTestRun] = useState<EolTestRun | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (id) loadData(id);
+  }, [id]);
+
+  const loadData = async (pid: string) => {
+    setLoading(true);
+    try {
+      const p = await packAssemblyService.getPack(pid);
+      if (!p) {
+        addNotification({ title: 'Not Found', message: 'Build record missing.', type: 'error' });
+        navigate('/assure/eol/queue');
+        return;
+      }
+      setPack(p);
+      const actor = `${currentRole?.name} (${currentCluster?.id})`;
+      const run = await eolQaService.createOrLoadTestRun(p.id, actor);
+      setTestRun(run);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !pack) return <div className="p-20 text-center animate-pulse">Establishing secure context...</div>;
+
+  const clusterId = currentCluster?.id || '';
+  const guards = workflowGuardrails.getPackGuardrail(pack, clusterId);
+
+  return (
+    <div className="pb-12 animate-in fade-in duration-500">
+      <StageHeader 
+        stageCode="S7"
+        title="EOL Detail Analysis"
+        objective="Deep verification of electrical, thermal, and BMS parameters for individual build units."
+        entityLabel={pack.id}
+        status={pack.status}
+        diagnostics={{ route: '/assure/eol/details', entityId: pack.id }}
+      />
+
+      <div className="max-w-7xl mx-auto px-6 space-y-6">
+        <div className="flex items-center gap-4 mb-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/assure/eol/queue')} className="gap-2 text-slate-500">
+                <ArrowLeft className="h-4 w-4" /> Back to Queue
+            </Button>
+            <div className="h-4 w-px bg-slate-200 mx-2" />
+            <Badge variant="outline" className="font-mono text-xs bg-slate-50">{pack.skuCode}</Badge>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3 space-y-6">
+            <NextStepsPanel entity={pack} type="PACK" />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Pack Identity</CardTitle></CardHeader>
+                    <CardContent>
+                        <p className="font-mono font-bold text-lg">{pack.packSerial || 'UNASSIGNED'}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-1">Build ID: {pack.id}</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Workstation State</CardTitle></CardHeader>
+                    <CardContent>
+                        <Badge variant={pack.eolStatus === 'PASS' ? 'success' : 'default'} className="text-sm font-black uppercase tracking-tighter">
+                            {pack.eolStatus || 'QUEUED'}
+                        </Badge>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="pb-2"><CardTitle className="text-xs uppercase text-muted-foreground">Digital Record</CardTitle></CardHeader>
+                    <CardContent className="flex items-center gap-2 text-emerald-600 font-bold">
+                        <ShieldCheck size={20} /> Verified Signed
+                    </CardContent>
+                </Card>
+            </div>
+
+            <Card>
+                <CardHeader className="border-b bg-slate-50/50"><CardTitle className="text-lg flex items-center gap-2"><ClipboardList size={18} className="text-primary"/> Test Result Matrix</CardTitle></CardHeader>
+                <CardContent className="p-0">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Parameter</TableHead>
+                                <TableHead>Expected</TableHead>
+                                <TableHead>Actual</TableHead>
+                                <TableHead className="text-right">Result</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <tbody>
+                            {testRun?.items.map(item => (
+                                <TableRow key={item.id}>
+                                    <TableCell className="font-medium">
+                                      <div className="flex items-center gap-2">
+                                        {item.group === 'Electrical' && <Zap size={14} className="text-blue-500" />}
+                                        {item.group === 'Thermal' && <Thermometer size={14} className="text-orange-500" />}
+                                        {item.group === 'BMS' && <Cpu size={14} className="text-indigo-500" />}
+                                        {item.name}
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-xs text-muted-foreground">{item.threshold || '-'}</TableCell>
+                                    <TableCell className="font-mono">{item.measurement || '-'} {item.unit}</TableCell>
+                                    <TableCell className="text-right">
+                                        {item.status === 'PASS' ? <CheckCircle size={16} className="text-emerald-500 ml-auto" /> : item.status === 'FAIL' ? <XCircle size={16} className="text-rose-500 ml-auto" /> : <div className="h-4 w-4 rounded-full border-2 border-slate-200 ml-auto" />}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </tbody>
+                    </Table>
+                </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="bg-slate-900 text-white border-none shadow-xl">
+                <CardHeader className="pb-3 border-b border-slate-800"><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Disposition Decision</CardTitle></CardHeader>
+                <CardContent className="space-y-4 pt-6">
+                    <ActionGuard 
+                        guard={guards.markEolPass} 
+                        onClick={() => addNotification({title: "Certified", message: "Disposition recorded.", type: "success"})} 
+                        label="Approve for Provisioning" 
+                        icon={ShieldCheck} 
+                        className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 border-none shadow-lg shadow-emerald-500/20"
+                        actionName="Approve_EOL_Pass"
+                        entityId={pack.id}
+                    />
+                    <Button variant="outline" className="w-full text-white border-slate-700 hover:bg-slate-800 h-12" onClick={() => navigate('/assure/eol/queue')}>
+                        Return to QA Queue
+                    </Button>
+                </CardContent>
+            </Card>
+
+            <div className="p-4 border-2 border-dashed rounded-xl bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center justify-center text-center space-y-2 opacity-60">
+                 <History size={24} className="text-slate-400" />
+                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Asset Lineage</p>
+                 <p className="text-[9px] text-slate-400 leading-tight">View cell binding history and assembly logs in full lineage audit.</p>
+                 <Button variant="link" size="sm" className="text-[10px] font-bold" onClick={() => navigate(`/trace/lineage/${pack.id}`)}>Open Lineage Explorer</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

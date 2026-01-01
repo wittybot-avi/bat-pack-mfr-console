@@ -5,8 +5,9 @@ import { ArrowLeft, CheckCircle, Circle, Lock, ExternalLink, ShieldAlert, ArrowR
 import { useAppStore } from '../lib/store';
 import { StageHeader } from '../components/SopGuidedUX';
 import { cellTraceabilityService } from '../services/cellTraceabilityService';
-import { dispatchService } from '../services/api';
-import { CellLot, DispatchOrder } from '../domain/types';
+import { dispatchService, batteryService } from '../services/api';
+import { packAssemblyService } from '../services/packAssemblyService';
+import { CellLot, DispatchOrder, PackInstance, Battery } from '../domain/types';
 
 // Mock Step Definitions
 const RUNBOOK_STEPS: Record<string, any[]> = {
@@ -16,7 +17,8 @@ const RUNBOOK_STEPS: Record<string, any[]> = {
     { id: 'S5', title: 'Module Integration', objective: 'Bind cell units to module lattice.', route: '/operate/modules', role: 'Operator' },
     { id: 'S6', title: 'Pack Final Assembly', objective: 'Integrate modules and bind BMS.', route: '/operate/packs', role: 'Operator' },
     { id: 'S7', title: 'EOL Testing', objective: 'Execute final electrical verification.', route: '/eol', role: 'QA' },
-    { id: 'S9', title: 'Asset Certification', objective: 'Generate digital compliance certificate.', route: '/eol', role: 'QA' }
+    { id: 'S8', title: 'Battery Certification', objective: 'Generate digital twin and certify identity.', route: '/batteries', role: 'QA' },
+    { id: 'S9', title: 'Provisioning', objective: 'Pair BMS and apply config baseline.', route: '/provisioning', role: 'BMS Engineer' }
   ],
   'cell-receipt': [
     { id: 'S2', title: 'Inbound Documentation', objective: 'Register shipment and capture PO/GRN identifiers.', route: '/trace/cells', role: 'Logistics' },
@@ -58,13 +60,22 @@ export default function RunbookDetail() {
         cellTraceabilityService.listLots().then(setContextList);
     } else if (runbookId === 'logistics-transfer') {
         dispatchService.getOrders().then(setContextList);
+    } else if (runbookId === 'mfg-run') {
+        // Show packs for execution run context
+        packAssemblyService.listPacks().then(setContextList);
     }
   }, [runbookId]);
 
   if (!runbookId || !meta) return <div className="p-20 text-center">Runbook not found.</div>;
 
   const handleRoute = (baseRoute: string) => {
-      const target = selectedContextId ? `${baseRoute}/${selectedContextId}` : baseRoute;
+      let target = baseRoute;
+      if (selectedContextId) {
+          if (baseRoute.includes('/eol')) target = `/assure/eol/${selectedContextId}`;
+          else if (baseRoute.includes('/provisioning')) target = `/provisioning?batteryId=${selectedContextId}`;
+          else if (baseRoute.includes('/operate/packs')) target = `/operate/packs/${selectedContextId}`;
+          else target = `${baseRoute}/${selectedContextId}`;
+      }
       navigate(target);
   };
 
@@ -90,7 +101,7 @@ export default function RunbookDetail() {
                 <CardContent className="p-4 flex items-center gap-4">
                     <Filter className="text-muted-foreground h-4 w-4" />
                     <div className="flex-1 space-y-1">
-                        <label className="text-[10px] font-black uppercase text-slate-400">Target Context (Order/Lot)</label>
+                        <label className="text-[10px] font-black uppercase text-slate-400">Target Context (Order/Lot/Pack)</label>
                         <select 
                             className="w-full bg-white dark:bg-slate-950 border rounded h-10 px-2 text-sm font-bold"
                             value={selectedContextId}
@@ -98,7 +109,9 @@ export default function RunbookDetail() {
                         >
                             <option value="">Select identity to evaluate readiness...</option>
                             {contextList.map(item => (
-                                <option key={item.id} value={item.id}>{item.lotCode || item.orderNumber || item.id}</option>
+                                <option key={item.id} value={item.id}>
+                                  {item.lotCode || item.orderNumber || item.packSerial || item.id}
+                                </option>
                             ))}
                         </select>
                     </div>
@@ -108,10 +121,10 @@ export default function RunbookDetail() {
 
         <div className="relative pl-8 border-l-2 border-slate-200 dark:border-slate-800 ml-4 space-y-12 py-4">
            {steps.map((step, index) => {
-             // Basic role check simulation
              const isPartner = currentCluster?.id === 'C9';
              const isQA = currentCluster?.id === 'C3';
              const isLogistics = currentCluster?.id === 'C6';
+             const isBMS = currentCluster?.id === 'C5';
              const isSuper = currentCluster?.id === 'CS';
              
              let blocked = false;
@@ -128,6 +141,10 @@ export default function RunbookDetail() {
              if (step.role === 'Logistics' && !isLogistics && !isSuper) {
                  blocked = true;
                  reason = "Requires C6 (Logistics) permissions.";
+             }
+             if (step.role === 'BMS Engineer' && !isBMS && !isSuper) {
+                 blocked = true;
+                 reason = "Requires C5 (BMS/Firmware) permissions.";
              }
 
              return (
@@ -158,21 +175,20 @@ export default function RunbookDetail() {
                             )}
                         </div>
 
-                        {/* Visual Progress Guide */}
                         <div className="w-full md:w-48 bg-slate-50 dark:bg-slate-900/50 p-6 flex flex-col items-center justify-center border-t md:border-t-0 md:border-l">
                             {index === 0 && !blocked ? (
                                 <div className="text-center space-y-2">
                                     <div className="h-8 w-8 bg-emerald-500 text-white rounded-full flex items-center justify-center mx-auto">
                                         <CheckCircle size={20} />
                                     </div>
-                                    <p className="text-[10px] font-bold uppercase text-emerald-600">Start Here</p>
+                                    <p className="text-[10px] font-bold uppercase text-emerald-600">Active</p>
                                 </div>
                             ) : (
                                 <div className="text-center space-y-2">
                                     <div className={`h-8 w-8 rounded-full border-2 border-dashed flex items-center justify-center mx-auto ${blocked ? 'border-slate-300' : 'border-slate-300'}`}>
                                         <Circle size={16} className="text-slate-300" />
                                     </div>
-                                    <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">Target Stage</p>
+                                    <p className="text-[10px] font-bold uppercase text-slate-400 tracking-widest">SOP Gate</p>
                                 </div>
                             )}
                         </div>
@@ -187,8 +203,8 @@ export default function RunbookDetail() {
             <CardContent className="p-6 flex items-center gap-6">
                 <BookOpen className="h-10 w-10 text-primary opacity-50 shrink-0" />
                 <div className="space-y-1">
-                    <h4 className="font-bold">Operational Context Registry</h4>
-                    <p className="text-sm text-muted-foreground">Select a specific context above to evaluate real-time readiness across the spine.</p>
+                    <h4 className="font-bold">Operational Spine Compliance</h4>
+                    <p className="text-sm text-muted-foreground">Select a target context to verify real-time certification and provisioning status.</p>
                 </div>
             </CardContent>
         </Card>

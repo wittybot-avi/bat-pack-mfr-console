@@ -1,3 +1,4 @@
+
 import { batchService, batteryService, inventoryService, dispatchService } from './api';
 import { BatteryStatus, BatchStatus, InventoryStatus, DispatchStatus } from '../domain/types';
 
@@ -57,7 +58,8 @@ class DashboardMetricsService {
     const reworkCount = batteries.filter(b => b.reworkFlag).length;
     const scrapCount = batteries.filter(b => b.scrapFlag).length;
     const quarantineCount = batteries.filter(b => b.inventoryStatus === InventoryStatus.QUARANTINED).length;
-    const provFailCount = batteries.filter(b => b.provisioningStatus === 'FAIL').length;
+    // Fix line 60: use correct enum value 'BLOCKED' instead of 'FAIL'
+    const provFailCount = batteries.filter(b => b.provisioningStatus === 'BLOCKED').length;
     const holdBatchesCount = batches.filter(b => b.status === BatchStatus.ON_HOLD).length;
     const openExceptions = reworkCount + scrapCount + quarantineCount + provFailCount + holdBatchesCount;
 

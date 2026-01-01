@@ -53,7 +53,7 @@ export interface IEolService {
   runEolTest(batteryId: string, operator: string): Promise<Battery>;
   setQaDisposition(batteryId: string, disposition: QaDisposition, reasonCode: string, notes: string, operator: string): Promise<Battery>;
   generateCertificate(batteryId: string, operator: string): Promise<Battery>;
-  finalizeQa(batteryId: string, operator: string): Promise<Battery>;
+  finalizeQA(batteryId: string, operator: string): Promise<Battery>;
 }
 
 export interface IInventoryService {
@@ -155,6 +155,9 @@ const generateBatteries = (count: number): Battery[] => {
         return {
             id: `batt-${i}`,
             serialNumber: `SN-${(100000 + i).toString(16).toUpperCase()}`,
+            // Fix line 149: Add mandatory packId and skuId to mock data
+            packId: `PACK-${(2024000 + i)}`,
+            skuId: Math.floor(i / 10) % 2 === 0 ? 'VV360-LFP-48V' : 'EE360-NMC-72V',
             batchId: batchId,
             qrCode: `QR-${100000+i}`,
             plantId: 'PLANT-01',
@@ -171,7 +174,8 @@ const generateBatteries = (count: number): Battery[] => {
             reworkFlag: Math.random() > 0.9,
             scrapFlag: false,
             
-            provisioningStatus: status === BatteryStatus.ASSEMBLY ? 'PENDING' : 'PASS',
+            // Fix provisioningStatus enum values
+            provisioningStatus: status === BatteryStatus.ASSEMBLY ? 'NOT_STARTED' : 'DONE',
             cryptoProvisioned: status !== BatteryStatus.ASSEMBLY,
             firmwareVersion: status === BatteryStatus.ASSEMBLY ? undefined : 'v2.1.4',
             bmsUid: status === BatteryStatus.ASSEMBLY ? undefined : `BMS-${(5000+i)}`,
@@ -483,6 +487,9 @@ class MockBatteryService implements IBatteryService {
         const newBatt: Battery = {
             id: `batt-${idx}`,
             serialNumber: `SN-${(100000 + idx).toString(16).toUpperCase()}`,
+            // Fix: Add packId and skuId to mock registration
+            packId: `PACK-REG-${idx}`,
+            skuId: 'VV360-LFP-48V',
             batchId,
             qrCode: `QR-${100000+idx}`,
             plantId: 'PLANT-01',
@@ -492,7 +499,8 @@ class MockBatteryService implements IBatteryService {
             assemblyEvents: [],
             reworkFlag: false,
             scrapFlag: false,
-            provisioningStatus: 'PENDING',
+            // Fix line 495: use correct enum value
+            provisioningStatus: 'NOT_STARTED',
             cryptoProvisioned: false,
             soh: 100,
             soc: 0,
@@ -535,7 +543,8 @@ class MockBatteryService implements IBatteryService {
       batt.bmsUid = data.bmsUid;
       batt.firmwareVersion = data.firmware;
       batt.calibrationProfile = data.profile;
-      batt.provisioningStatus = 'PASS';
+      // Fix line 538: use correct enum value
+      batt.provisioningStatus = 'DONE';
       batt.cryptoProvisioned = true;
       
       return batt;
@@ -688,7 +697,8 @@ class MockProvisioningService implements IProvisioningService {
     const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
     if (!batt) throw new Error("Not found");
     
-    batt.provisioningStatus = result;
+    // Fix line 691: map result to correct enum values
+    batt.provisioningStatus = result === 'PASS' ? 'DONE' : 'BLOCKED';
     this.logStep(batt, 'Finalization', result, operator);
     
     if (result === 'PASS') {
@@ -799,7 +809,7 @@ class MockEolService implements IEolService {
     return batt;
   }
 
-  async finalizeQa(batteryId: string, operator: string): Promise<Battery> {
+  async finalizeQA(batteryId: string, operator: string): Promise<Battery> {
     await new Promise(resolve => setTimeout(resolve, 600));
     const batt = MOCK_BATTERIES.find(b => b.id === batteryId);
     if (!batt) throw new Error("Not found");

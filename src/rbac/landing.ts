@@ -1,3 +1,4 @@
+
 import { ScreenId } from './screenIds';
 import { canView } from './can';
 import { Cluster } from './clusters';
@@ -10,7 +11,8 @@ export const getLandingRouteForRole = (cluster: Cluster | null): string => {
     { id: ScreenId.DASHBOARD, path: '/' },
     { id: ScreenId.BATCHES_LIST, path: '/batches' },
     { id: ScreenId.INVENTORY, path: '/inventory' },
-    { id: ScreenId.EOL_QA_STATION, path: '/eol' },
+    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    { id: ScreenId.EOL_QA_QUEUE, path: '/eol' },
     { id: ScreenId.TELEMETRY, path: '/telemetry' },
     { id: ScreenId.COMPLIANCE, path: '/compliance' },
     { id: ScreenId.SETTINGS, path: '/settings' },

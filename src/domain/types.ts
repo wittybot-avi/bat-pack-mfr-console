@@ -122,6 +122,13 @@ export interface PackInstance {
   actor?: string;
   requiredModules?: number;
   bmsId?: string;
+  // Patch P40 EOL Fields (S7)
+  eolStatus?: 'PENDING' | 'IN_TEST' | 'PASS' | 'FAIL';
+  eolMeasuredSummary?: Record<string, any>;
+  eolPerformedBy?: string;
+  eolTimestamp?: string;
+  eolFailReason?: string;
+  batteryRecordCreated?: boolean;
 }
 
 export type EolTestStatus = 'NOT_RUN' | 'PASS' | 'FAIL' | 'NA';
@@ -299,6 +306,8 @@ export interface CustodyEvent {
 export interface Battery {
   id: string;
   serialNumber: string;
+  packId: string; // Linked Pack
+  skuId: string; // Derived SKU
   batchId: string;
   qrCode: string;
   plantId: string;
@@ -311,7 +320,7 @@ export interface Battery {
   assemblyEvents: AssemblyEvent[];
   reworkFlag: boolean;
   scrapFlag: boolean;
-  provisioningStatus: string;
+  provisioningStatus: 'NOT_STARTED' | 'IN_PROGRESS' | 'DONE' | 'BLOCKED';
   cryptoProvisioned: boolean;
   firmwareVersion?: string;
   bmsUid?: string;
@@ -344,6 +353,12 @@ export interface Battery {
   eolLog?: EolLogEntry[];
   reservedAt?: string;
   reservedBy?: string;
+  // Patch P40 Fields (S8/S9)
+  certificationStatus?: 'CERTIFIED' | 'REVOKED' | 'PENDING';
+  certificateId?: string;
+  configProfile?: string;
+  provisioningBy?: string;
+  provisioningTimestamp?: string;
 }
 
 export interface KPIData {

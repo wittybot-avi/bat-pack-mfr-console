@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useLocation, Link, Outlet, useNavigate } from 'react-router-dom';
 import { 
@@ -15,7 +16,11 @@ import {
   Database,
   Monitor,
   Loader2,
-  BookOpen
+  BookOpen,
+  ClipboardList,
+  ClipboardCheck,
+  Cpu,
+  Fingerprint
 } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { Button, Input, Badge } from './ui/design-system';
@@ -30,14 +35,36 @@ import { scenarioStore, DemoScenario } from '../demo/scenarioStore';
 import { routerSafe } from '../utils/routerSafe';
 import { logger } from '../utils/logger';
 
-const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean, key?: any }) => (
-  <Link to={path}>
-    <div className={`flex items-center gap-3 px-3 py-2 rounded-md transition-all ${active ? 'bg-primary/10 text-primary font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
-      <Icon size={18} />
-      <span>{label}</span>
+// Typed SidebarItem as a React.FC
+interface SidebarItemProps {
+  icon: any;
+  label: string;
+  path: string;
+  active: boolean;
+  disabled?: boolean;
+  tooltip?: string;
+  mismatch?: boolean;
+}
+
+const SidebarItem: React.FC<SidebarItemProps> = ({ icon: Icon, label, path, active, disabled, tooltip, mismatch }) => {
+  const content = (
+    <div className={`flex items-center justify-between px-3 py-2 rounded-md transition-all ${disabled ? 'opacity-40 cursor-not-allowed' : active ? 'bg-primary/10 text-primary font-medium' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800'}`}>
+      <div className="flex items-center gap-3">
+        <Icon size={18} />
+        <span>{label}</span>
+      </div>
+      {mismatch && DIAGNOSTIC_MODE && <AlertTriangle size={12} className="text-rose-500" title="Path not in Registry" />}
     </div>
-  </Link>
-);
+  );
+
+  if (disabled) return <div title={tooltip}>{content}</div>;
+
+  return (
+    <Link to={path}>
+      {content}
+    </Link>
+  );
+};
 
 export const Layout = () => {
   const { theme, toggleTheme, currentRole, currentCluster, logout, sidebarOpen, toggleSidebar, addNotification } = useAppStore();
@@ -48,7 +75,7 @@ export const Layout = () => {
   const [searching, setSearching] = useState(false);
   const [showNoMatch, setShowNoMatch] = useState(false);
   const [currentScenario, setCurrentScenario] = useState<DemoScenario>(scenarioStore.getScenario());
-  const [isSwitching, setIsSwitching] = useState(false);
+  const [isSwitching, setSearchQueryIsSwitching] = useState(false);
 
   useEffect(() => {
     scenarioStore.init();
@@ -94,8 +121,8 @@ export const Layout = () => {
   };
 
   const handleScenarioChange = (s: DemoScenario) => {
-    if (s === currentScenario || isSwitching) return;
-    setIsSwitching(true);
+    if (s === currentScenario || setSearchQueryIsSwitching) return;
+    setSearchQueryIsSwitching(true);
     scenarioStore.setScenario(s);
     setCurrentScenario(s);
     addNotification({ title: 'Scenario Change', message: `Re-seeding workspace for ${s.replace('_', ' ')} flow...`, type: 'info' });
@@ -106,6 +133,8 @@ export const Layout = () => {
   const renderNavGroup = (groupName: string, screenIds: ScreenId[]) => {
     if (!currentCluster) return null;
     const isSuperUser = currentCluster.id === 'CS';
+    const isSupervisor = currentRole?.id === 'C2_PROD_MGR' || isSuperUser;
+    
     const visibleItems = screenIds.filter(id => canView(currentCluster.id, id));
 
     if (visibleItems.length === 0) return null;
@@ -114,7 +143,6 @@ export const Layout = () => {
       <div className="mb-6">
         <h3 className="px-3 mb-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">{groupName}</h3>
         <div className="space-y-1">
-          {/* HARDCODED OVERRIDE FOR RUNBOOKS TO ENSURE DIRECT PATHING */}
           {groupName === 'SOP Guide' && visibleItems.includes(ScreenId.RUNBOOK_HUB) && (
             <SidebarItem 
                icon={BookOpen}
@@ -123,19 +151,37 @@ export const Layout = () => {
                active={location.pathname === '/runbooks' || location.pathname.startsWith('/runbooks/')}
             />
           )}
-          {/* RENDER OTHER ITEMS */}
           {visibleItems.map(id => {
-            if (id === ScreenId.RUNBOOK_HUB) return null; // Already handled above
+            if (id === ScreenId.RUNBOOK_HUB) return null; 
+            
+            // Detailed pages are usually reached by context, but we keep the ID in screenIds to manage permissions
+            // Fix: Corrected invalid ScreenId property reference from EOL_QA_DETAIL to EOL_DETAILS.
+            if (id === ScreenId.EOL_DETAILS) return null; 
+
+            // Priority rules for specific workstations
+            if (id === ScreenId.PROVISIONING && !isSupervisor) return null;
+
             const config = APP_ROUTES[id];
-            if (!config) return null;
+            
+            // Validation: ensure the ID is in APP_ROUTES
+            if (!config) {
+              if (DIAGNOSTIC_MODE) {
+                  console.error(`Nav stabilization failure: Screen ID ${id} not registered in APP_ROUTES.`);
+              }
+              return null;
+            }
+
             const path = config.path;
+            const displayPath = path.includes(':') ? path.split('/:')[0] : path;
+
             return (
               <SidebarItem 
                 key={id}
                 icon={config.icon} 
                 label={config.label} 
-                path={path} 
-                active={location.pathname === path || (location.pathname.startsWith(path) && path !== '/')}
+                path={displayPath} 
+                active={location.pathname === displayPath || (location.pathname.startsWith(displayPath) && displayPath !== '/')}
+                mismatch={!APP_ROUTES[id]}
               />
             );
           })}
@@ -229,11 +275,11 @@ export const Layout = () => {
             </form>
 
             <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden lg:block"></div>
-            <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${isSwitching ? 'bg-slate-200 dark:bg-slate-700 animate-pulse' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
-                {isSwitching ? <Loader2 size={14} className="animate-spin text-primary" /> : <Database size={14} className="text-primary" />}
+            <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${setSearchQueryIsSwitching ? 'bg-slate-200 dark:bg-slate-700 animate-pulse' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
+                {setSearchQueryIsSwitching ? <Loader2 size={14} className="animate-spin text-primary" /> : <Database size={14} className="text-primary" />}
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Demo:</span>
                 <select 
-                    disabled={isSwitching}
+                    disabled={setSearchQueryIsSwitching}
                     className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-300 disabled:opacity-50"
                     value={currentScenario}
                     onChange={(e) => handleScenarioChange(e.target.value as DemoScenario)}
@@ -270,7 +316,7 @@ export const Layout = () => {
         </header>
 
         <main className="flex-1 p-6 overflow-auto">
-          {isSwitching && (
+          {setSearchQueryIsSwitching && (
              <div className="mb-6 p-4 bg-primary/5 border border-primary/10 rounded-lg flex items-center gap-3 animate-in fade-in">
                 <Loader2 className="animate-spin text-primary h-5 w-5" />
                 <span className="text-sm font-medium text-primary">Synchronizing demo data environment...</span>

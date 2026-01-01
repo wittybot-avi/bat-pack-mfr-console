@@ -1,7 +1,7 @@
-
 import { safeStorage } from '../utils/safeStorage';
-import { EolTestRun, EolTestItem, PackInstance, PackStatus, QuarantineRecord } from '../domain/types';
+import { EolTestRun, EolTestItem, PackInstance, PackStatus, QuarantineRecord, Battery, BatteryStatus, CustodyStatus } from '../domain/types';
 import { packAssemblyService } from './packAssemblyService';
+import { batteryService } from './api';
 
 class EolQaService {
   private TEST_RUN_STORAGE_KEY = 'aayatana_eol_test_runs_v1';
@@ -9,7 +9,7 @@ class EolQaService {
 
   private loadTestRuns(): EolTestRun[] {
     const data = safeStorage.getItem(this.TEST_RUN_STORAGE_KEY);
-    return data ? JSON.parse(data) : this.ensureSeedData();
+    return data ? JSON.parse(data) : [];
   }
 
   private saveTestRuns(runs: EolTestRun[]) {
@@ -25,15 +25,6 @@ class EolQaService {
     safeStorage.setItem(this.QUARANTINE_STORAGE_KEY, JSON.stringify(records));
   }
 
-  private ensureSeedData(): EolTestRun[] {
-    // We seed a completed test for demo purposes
-    return [];
-  }
-
-  /**
-   * Generates a default test plan based on SKUs
-   * In a real system, this would be fetched from a Recipe/Procedure service
-   */
   private getDefaultItems(): EolTestItem[] {
     return [
       { id: 'elec-1', group: 'Electrical', name: 'Open Circuit Voltage (OCV)', required: true, status: 'NOT_RUN', unit: 'V', threshold: '48.0 - 54.0' },
@@ -46,7 +37,7 @@ class EolQaService {
     ];
   }
 
-  async listEolQueue(filters?: { status?: PackStatus }): Promise<PackInstance[]> {
+  async listEolQueue(filters?: { status?: PackStatus, batchId?: string }): Promise<PackInstance[]> {
     const allPacks = await packAssemblyService.listPacks();
     const eolStatuses = [
       PackStatus.READY_FOR_EOL, 
@@ -59,6 +50,9 @@ class EolQaService {
     let filtered = allPacks.filter(p => eolStatuses.includes(p.status));
     if (filters?.status) {
       filtered = filtered.filter(p => p.status === filters.status);
+    }
+    if (filters?.batchId) {
+      filtered = filtered.filter(p => p.batchId === filters.batchId);
     }
     return filtered;
   }
@@ -83,12 +77,10 @@ class EolQaService {
       runs.unshift(run);
       this.saveTestRuns(runs);
       
-      // Also update pack status
-      const pack = await packAssemblyService.getPack(packId);
-      if (pack && pack.status === PackStatus.READY_FOR_EOL) {
-        // Use service to update pack status via existing logic
-        await packAssemblyService.updatePack(packId, { status: PackStatus.IN_EOL_TEST });
-      }
+      await packAssemblyService.updatePack(packId, { 
+        status: PackStatus.IN_EOL_TEST,
+        eolStatus: 'PENDING'
+      });
     }
     return run;
   }
@@ -103,7 +95,6 @@ class EolQaService {
 
     runs[rIdx].items[iIdx] = { ...runs[rIdx].items[iIdx], ...patch };
     
-    // Auto-compute item status based on measurement if threshold is defined (simplified)
     const item = runs[rIdx].items[iIdx];
     if (item.measurement !== undefined && item.threshold) {
       if (item.threshold.startsWith('<')) {
@@ -115,7 +106,6 @@ class EolQaService {
       }
     }
 
-    // Re-compute overall result
     const requiredItems = runs[rIdx].items.filter(i => i.required);
     if (requiredItems.some(i => i.status === 'FAIL')) {
       runs[rIdx].computedResult = 'FAIL';
@@ -127,6 +117,10 @@ class EolQaService {
 
     this.saveTestRuns(runs);
     return runs[rIdx];
+  }
+
+  async startEolTest(packId: string, actor: string): Promise<void> {
+    await packAssemblyService.updatePack(packId, { eolStatus: 'IN_TEST', eolPerformedBy: actor });
   }
 
   async finalizeDecision(packId: string, decision: 'PASS' | 'FAIL' | 'QUARANTINE' | 'SCRAP', payload: { actor: string, notes?: string, ncrId?: string, reason?: string }): Promise<void> {
@@ -141,15 +135,25 @@ class EolQaService {
     runs[rIdx].completedAt = new Date().toISOString();
     this.saveTestRuns(runs);
 
-    // Update Pack Status
     let newStatus = PackStatus.PASSED;
-    if (decision === 'PASS') newStatus = PackStatus.PASSED;
-    if (decision === 'FAIL' || decision === 'QUARANTINE') newStatus = PackStatus.QUARANTINED;
-    if (decision === 'SCRAP') newStatus = PackStatus.SCRAPPED;
+    let eolStatus: any = 'PASS';
+    if (decision === 'PASS') {
+      newStatus = PackStatus.PASSED;
+      eolStatus = 'PASS';
+    } else if (decision === 'FAIL' || decision === 'QUARANTINE') {
+      newStatus = PackStatus.QUARANTINED;
+      eolStatus = 'FAIL';
+    } else if (decision === 'SCRAP') {
+      newStatus = PackStatus.SCRAPPED;
+      eolStatus = 'FAIL';
+    }
 
     await packAssemblyService.updatePack(packId, { 
       status: newStatus,
-      qcStatus: decision === 'PASS' ? 'PASSED' : 'FAILED'
+      qcStatus: decision === 'PASS' ? 'PASSED' : 'FAILED',
+      eolStatus: eolStatus,
+      eolTimestamp: new Date().toISOString(),
+      eolFailReason: payload.reason || payload.notes
     });
 
     if (decision === 'QUARANTINE') {
@@ -167,21 +171,52 @@ class EolQaService {
     }
   }
 
-  async releaseFromQuarantine(packId: string, disposition: QuarantineRecord['disposition'], actor: string): Promise<void> {
-    const records = this.loadQuarantine();
-    const rIdx = records.findIndex(r => r.packId === packId && !r.releasedAt);
-    if (rIdx !== -1) {
-      records[rIdx].releasedAt = new Date().toISOString();
-      records[rIdx].releasedBy = actor;
-      records[rIdx].disposition = disposition;
-      this.saveQuarantine(records);
-    }
+  /**
+   * S8: Battery Create & Identity
+   */
+  async createBatteryFromPack(packId: string, actor: string): Promise<Battery> {
+    const pack = await packAssemblyService.getPack(packId);
+    if (!pack) throw new Error("Pack not found");
+    if (pack.eolStatus !== 'PASS') throw new Error("Requires EOL PASS certification.");
 
-    // Reset pack to a status where it can be handled (usually READY_FOR_EOL if retest needed, or PASSED if minor fix)
-    let nextStatus = PackStatus.READY_FOR_EOL;
-    if (disposition === 'SCRAP') nextStatus = PackStatus.SCRAPPED;
+    const existing = await batteryService.getBatteries();
+    if (existing.some(b => b.packId === packId)) throw new Error("Battery record already initialized.");
+
+    const newBattery: Battery = {
+      id: `batt-${Date.now()}`,
+      serialNumber: pack.packSerial || `SN-B-${Date.now().toString().slice(-4)}`,
+      packId: pack.id,
+      skuId: pack.skuId,
+      batchId: pack.batchId || 'UNLINKED',
+      qrCode: `QR-${pack.packSerial}`,
+      plantId: 'PLANT-01',
+      status: BatteryStatus.PROVISIONING,
+      location: 'QA Testing Area',
+      lastSeen: new Date().toISOString(),
+      manufacturedAt: pack.createdAt,
+      assemblyEvents: [],
+      reworkFlag: false,
+      scrapFlag: false,
+      provisioningStatus: 'NOT_STARTED',
+      cryptoProvisioned: false,
+      soh: 100,
+      soc: 0,
+      voltage: 0,
+      capacityAh: 100,
+      eolResult: 'PASS',
+      certificationStatus: 'CERTIFIED',
+      certificateId: `CERT-${Date.now().toString().slice(-6)}`,
+      notes: [{ author: actor, role: 'QA', text: 'Battery Identity Certified (S8)', timestamp: new Date().toISOString() }]
+    };
+
+    // Simulate creation in global mock store
+    const currentBatts = JSON.parse(localStorage.getItem('aayatana_batteries_mock_v1') || '[]');
+    currentBatts.unshift(newBattery);
+    localStorage.setItem('aayatana_batteries_mock_v1', JSON.stringify(currentBatts));
+
+    await packAssemblyService.updatePack(packId, { batteryRecordCreated: true });
     
-    await packAssemblyService.updatePack(packId, { status: nextStatus });
+    return newBattery;
   }
 
   async getDispatchEligiblePacks(): Promise<PackInstance[]> {

@@ -20,10 +20,10 @@ import {
   FileSpreadsheet,
   BookOpen,
   Map,
-  // Added Globe, Leaf, and Recycle icons
   Globe,
   Leaf,
-  Recycle
+  Recycle,
+  Fingerprint
 } from 'lucide-react';
 import { ScreenId } from '../rbac/screenIds';
 
@@ -42,7 +42,7 @@ export interface RouteConfig {
 export const APP_ROUTES: Record<string, RouteConfig> = {
   // Guided
   [ScreenId.RUNBOOK_HUB]: { icon: BookOpen, label: 'Runbooks', path: '/runbooks', screenId: ScreenId.RUNBOOK_HUB, componentName: 'RunbookHub.tsx' },
-  [ScreenId.RUNBOOK_DETAIL]: { icon: Map, label: 'Runbook Details', path: '/runbooks/:id', screenId: ScreenId.RUNBOOK_DETAIL, componentName: 'RunbookDetail.tsx' },
+  [ScreenId.RUNBOOK_DETAIL]: { icon: Map, label: 'Runbook Details', path: '/runbooks/:runbookId', screenId: ScreenId.RUNBOOK_DETAIL, componentName: 'RunbookDetail.tsx' },
 
   // Observe
   [ScreenId.DASHBOARD]: { icon: LayoutDashboard, label: 'Dashboard', path: '/', screenId: ScreenId.DASHBOARD, componentName: 'Dashboard.tsx' },
@@ -84,10 +84,10 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.PACK_ASSEMBLY_LIST]: { icon: Box, label: 'Pack Assembly', path: '/operate/packs', screenId: ScreenId.PACK_ASSEMBLY_LIST, componentName: 'PackAssemblyList.tsx' },
   [ScreenId.PACK_ASSEMBLY_DETAIL]: { icon: Box, label: 'Pack Detail', path: '/operate/packs/:id', screenId: ScreenId.PACK_ASSEMBLY_DETAIL, componentName: 'PackAssemblyDetail.tsx' },
   
-  [ScreenId.BATTERIES_LIST]: { icon: Zap, label: 'Battery Trace', path: '/batteries', screenId: ScreenId.BATTERIES_LIST, componentName: 'Batteries.tsx' },
+  [ScreenId.BATTERIES_LIST]: { icon: Fingerprint, label: 'Battery Identity', path: '/batteries', screenId: ScreenId.BATTERIES_LIST, componentName: 'Batteries.tsx' },
   [ScreenId.BATTERIES_DETAIL]: { icon: Zap, label: 'Battery Detail', path: '/batteries/:id', screenId: ScreenId.BATTERIES_DETAIL, componentName: 'BatteryDetail.tsx' },
   
-  [ScreenId.PROVISIONING]: { icon: Cpu, label: 'BMS Provisioning', path: '/provisioning', screenId: ScreenId.PROVISIONING, componentName: 'ProvisioningConsole.tsx' },
+  [ScreenId.PROVISIONING]: { icon: Cpu, label: 'Provisioning', path: '/provisioning', screenId: ScreenId.PROVISIONING, componentName: 'ProvisioningConsole.tsx' },
   [ScreenId.PROVISIONING_STATION_SETUP]: { icon: Settings, label: 'Provisioning Setup', path: '/provisioning/setup', screenId: ScreenId.PROVISIONING_STATION_SETUP, componentName: 'ProvisioningStationSetup.tsx' },
   
   [ScreenId.INVENTORY]: { icon: Warehouse, label: 'Inventory', path: '/inventory', screenId: ScreenId.INVENTORY, componentName: 'InventoryList.tsx' },
@@ -95,11 +95,11 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.DISPATCH_LIST]: { icon: Truck, label: 'Dispatch Orders', path: '/dispatch', screenId: ScreenId.DISPATCH_LIST, componentName: 'DispatchList.tsx' },
   [ScreenId.DISPATCH_DETAIL]: { icon: Truck, label: 'Dispatch Details', path: '/dispatch/:orderId', screenId: ScreenId.DISPATCH_DETAIL, componentName: 'DispatchDetail.tsx' },
 
-  // Assure
-  [ScreenId.EOL_QA_STATION]: { icon: ClipboardCheck, label: 'EOL / QA Queue', path: '/eol', screenId: ScreenId.EOL_QA_STATION, componentName: 'EolQaList.tsx' },
-  [ScreenId.EOL_QA_DETAIL]: { icon: ClipboardList, label: 'EOL Details', path: '/assure/eol/:id', screenId: ScreenId.EOL_QA_DETAIL, componentName: 'EolQaDetail.tsx' },
-  [ScreenId.EOL_QA_STATION_SETUP]: { icon: Settings, label: 'EOL Station Setup', path: '/assure/eol-setup', screenId: ScreenId.EOL_QA_STATION_SETUP, componentName: 'EolStationSetup.tsx' },
-  [ScreenId.EOL_QA_REVIEW]: { icon: ClipboardCheck, label: 'EOL Review', path: '/eol', screenId: ScreenId.EOL_QA_REVIEW, componentName: 'EolQaList.tsx' },
+  // Assure (Stabilized Canonical Routes for P44)
+  [ScreenId.EOL_QA_QUEUE]: { icon: ClipboardCheck, label: 'EOL / QA Queue', path: '/assure/eol/queue', screenId: ScreenId.EOL_QA_QUEUE, componentName: 'EolQaList.tsx' },
+  [ScreenId.EOL_SETUP]: { icon: Settings, label: 'EOL Station Setup', path: '/assure/eol/setup', screenId: ScreenId.EOL_SETUP, componentName: 'EolStationSetup.tsx' },
+  [ScreenId.EOL_REVIEW]: { icon: ClipboardList, label: 'EOL Review', path: '/assure/eol/review', screenId: ScreenId.EOL_REVIEW, componentName: 'EolReview.tsx' },
+  [ScreenId.EOL_DETAILS]: { icon: Search, label: 'EOL Analysis', path: '/assure/eol/details/:id', screenId: ScreenId.EOL_DETAILS, componentName: 'EolDetails.tsx' },
 
   // Govern
   [ScreenId.COMPLIANCE]: { icon: ShieldCheck, label: 'Compliance', path: '/compliance', screenId: ScreenId.COMPLIANCE, componentName: 'Compliance.tsx' },

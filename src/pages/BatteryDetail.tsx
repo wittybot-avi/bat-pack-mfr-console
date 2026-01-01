@@ -1,10 +1,11 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { batteryService } from '../services/api';
 import { Battery, BatteryStatus } from '../domain/types';
 import { useAppStore } from '../lib/store';
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from '../components/ui/design-system';
-import { ArrowLeft, CheckCircle, Truck, Cpu, ClipboardCheck, History, Fingerprint, Zap } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Truck, Cpu, ClipboardCheck, History, Fingerprint, Zap, Info } from 'lucide-react';
 import { workflowGuardrails } from '../services/workflowGuardrails';
 import { StageHeader, NextStepsPanel, ActionGuard } from '../components/SopGuidedUX';
 
@@ -50,15 +51,16 @@ export default function BatteryDetail() {
   if (loading || !battery) return <div className="p-10 text-center animate-pulse">Syncing traceable record...</div>;
 
   const guards = workflowGuardrails.getBatteryGuardrail(battery, clusterId);
+  const isCertified = battery.certificationStatus === 'CERTIFIED';
 
   return (
     <div className="pb-12">
       <StageHeader 
         stageCode="S8"
-        title="Asset Digital Twin"
-        objective="Verify individual asset health metrics, provisioning status, and genealogy integrity."
+        title="Battery Identity & Certification"
+        objective="Verify individual asset health metrics and authorize immutable certification identity."
         entityLabel={battery.serialNumber}
-        status={battery.status}
+        status={isCertified ? 'COMPLETED' : 'ACTIVE'}
         diagnostics={{ route: '/batteries', entityId: battery.id }}
       />
 
@@ -67,6 +69,11 @@ export default function BatteryDetail() {
             <Button variant="ghost" size="sm" onClick={() => navigate('/batteries')} className="gap-2 text-slate-500">
                 <ArrowLeft className="h-4 w-4" /> Back to Global Trace
             </Button>
+            <div className="h-4 w-px bg-slate-200 mx-2" />
+            <div className="flex items-center gap-2">
+               <span className="text-[10px] font-black uppercase text-slate-400">Pack Origin:</span>
+               <Badge variant="outline" className="font-mono text-xs">{battery.packId || 'N/A'}</Badge>
+            </div>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-6">
@@ -78,8 +85,8 @@ export default function BatteryDetail() {
                     <CardHeader className="border-b bg-slate-50/50 dark:bg-slate-800/30"><CardTitle className="text-lg flex items-center gap-2"><Fingerprint size={18} className="text-primary"/> Core Identity</CardTitle></CardHeader>
                     <CardContent className="grid grid-cols-2 gap-y-6 pt-6">
                         <InfoRow label="Serial Number" value={battery.serialNumber} />
+                        <InfoRow label="Certificate Ref" value={battery.certificateId || 'PENDING'} />
                         <InfoRow label="Internal ID" value={battery.id} />
-                        <InfoRow label="Last Reported" value={battery.location} />
                         <InfoRow label="Lot Link" value={battery.batchId} isLink linkTo={`/batches/${battery.batchId}`} />
                     </CardContent>
                 </Card>
@@ -90,7 +97,7 @@ export default function BatteryDetail() {
                         <InfoRow label="State of Health" value={`${battery.soh?.toFixed(1)}%`} />
                         <InfoRow label="Nominal Voltage" value={`${battery.voltage?.toFixed(1)}V`} />
                         <InfoRow label="Nominal Capacity" value={`${battery.capacityAh}Ah`} />
-                        <InfoRow label="EOL Decision" value={battery.eolResult || 'PENDING'} />
+                        <InfoRow label="Certification" value={battery.certificationStatus || 'PENDING'} />
                     </CardContent>
                 </Card>
             </div>
@@ -107,37 +114,30 @@ export default function BatteryDetail() {
 
           <div className="w-full lg:w-80 space-y-4 shrink-0">
              <Card className="bg-slate-900 text-white border-none shadow-xl">
-                 <CardHeader className="pb-3 border-b border-slate-800"><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Asset Operations</CardTitle></CardHeader>
+                 <CardHeader className="pb-3 border-b border-slate-800"><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Stage S9: Operations</CardTitle></CardHeader>
                  <CardContent className="space-y-3 pt-6">
                     <ActionGuard 
                         guard={guards.provision} 
-                        onClick={() => navigate('/provisioning')} 
-                        label="Provision BMS Controller" 
+                        onClick={() => navigate(`/provisioning?batteryId=${battery.id}`)} 
+                        label="Execute Provisioning (S9)" 
                         icon={Cpu} 
-                        className="w-full justify-start h-12 bg-indigo-600 hover:bg-indigo-700 border-none"
-                        actionName="Provision_Battery_BMS"
+                        className="w-full justify-start h-12 bg-indigo-600 hover:bg-indigo-700 border-none font-bold"
+                        actionName="Provision_Battery_Bridge"
                         entityId={battery.id}
                     />
-                    <ActionGuard 
-                        guard={guards.test} 
-                        onClick={() => navigate(`/assure/eol/${battery.id}`)} 
-                        label="Execute QA Testing" 
-                        icon={ClipboardCheck} 
-                        variant="outline"
-                        className="w-full justify-start h-12 text-white border-slate-700 hover:bg-slate-800"
-                        actionName="Battery_Detail_Test_Navigate"
-                        entityId={battery.id}
-                    />
-                    <Button variant="outline" className="w-full justify-start h-12 text-white border-slate-700 hover:bg-slate-800 opacity-40 cursor-not-allowed" disabled>
-                        <CheckCircle className="mr-2 h-4 w-4" /> Release to Inventory
-                    </Button>
-                    <Button variant="outline" className="w-full justify-start h-12 text-white border-slate-700 hover:bg-slate-800 opacity-40 cursor-not-allowed" disabled>
-                        <Truck className="mr-2 h-4 w-4" /> Dispatch Unit
-                    </Button>
-                    <div className="bg-slate-800/50 p-3 rounded text-[10px] text-slate-400 font-bold uppercase tracking-tighter text-center pt-2 italic">
-                        Use workflow-specific consoles for bulk actions.
+                    <div className="pt-4 border-t border-slate-800 opacity-40">
+                        <Button variant="outline" className="w-full justify-start h-12 text-white border-slate-700 hover:bg-slate-800 cursor-not-allowed" disabled>
+                            <CheckCircle className="mr-2 h-4 w-4" /> Move to Inventory (S10)
+                        </Button>
                     </div>
                  </CardContent>
+             </Card>
+
+             <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-100">
+                <CardContent className="p-4 flex gap-3">
+                    <Info size={16} className="shrink-0 mt-1" />
+                    <p className="text-xs leading-relaxed font-medium">Provisioning is the final gated step before this identity can be allocated to a dispatch shipment.</p>
+                </CardContent>
              </Card>
           </div>
         </div>
