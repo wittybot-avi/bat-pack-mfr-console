@@ -8,7 +8,10 @@ import {
   Battery, 
   ModuleInstance, 
   PackInstance, 
-  Batch 
+  Batch,
+  CellLot,
+  DispatchOrder,
+  DispatchStatus
 } from '../domain/types';
 
 export interface GuardrailResult {
@@ -59,6 +62,29 @@ export const STATUS_LABELS = {
 };
 
 class WorkflowGuardrailsService {
+  /**
+   * S2: Cell Lot Guardrails
+   */
+  getCellLotGuardrail(lot: CellLot, clusterId: string): Record<string, GuardrailResult> {
+    const isLogistics = clusterId === 'C6' || clusterId === 'CS';
+    const isOperator = clusterId === 'C2' || clusterId === 'CS';
+    
+    const docsComplete = !!(lot.poNumber && lot.invoiceNumber && lot.grnNumber);
+    const serializationComplete = lot.generatedCount > 0;
+    const scanComplete = lot.scannedCount >= lot.generatedCount && serializationComplete;
+
+    return {
+      generateSerials: {
+        allowed: isLogistics && lot.status === 'DRAFT' && docsComplete,
+        reason: !docsComplete ? "Prerequisite: Capture PO/Invoice/GRN docs" : lot.status !== 'DRAFT' ? "Already serialized" : "Logistics permissions required"
+      },
+      releaseToProd: {
+        allowed: isLogistics && scanComplete && lot.qcPassed === true,
+        reason: !scanComplete ? "Identity binding incomplete" : !lot.qcPassed ? "Incoming QC required" : ""
+      }
+    };
+  }
+
   /**
    * SKU Guardrails
    */
@@ -130,7 +156,7 @@ class WorkflowGuardrailsService {
   }
 
   /**
-   * Battery Guardrails (New P34)
+   * Battery Guardrails
    */
   getBatteryGuardrail(battery: Battery, clusterId: string): Record<string, GuardrailResult> {
     const isEng = clusterId === 'C5' || clusterId === 'CS';
@@ -148,10 +174,49 @@ class WorkflowGuardrailsService {
   }
 
   /**
+   * S11: Dispatch Order Guardrails
+   */
+  getDispatchGuardrail(order: DispatchOrder, batteries: Battery[], clusterId: string): Record<string, GuardrailResult> {
+    const isLogistics = clusterId === 'C6' || clusterId === 'CS';
+    const allBatteriesReady = batteries.length > 0 && batteries.every(b => this.isBatteryDispatchReady(b).allowed);
+    const hasDocs = !!(order.packingListRef && order.manifestRef);
+
+    return {
+      authorize: {
+        allowed: isLogistics && order.status === DispatchStatus.DRAFT && allBatteriesReady && hasDocs,
+        reason: !allBatteriesReady ? "Some units are not dispatch-ready" : !hasDocs ? "Missing required transport documents" : "Order already processed"
+      }
+    };
+  }
+
+  /**
+   * Dispatch Readiness Check
+   */
+  isBatteryDispatchReady(battery: Battery): GuardrailResult {
+    if (battery.status !== BatteryStatus.IN_INVENTORY) {
+      return { allowed: false, reason: "Asset not in final inventory" };
+    }
+    if (battery.eolResult !== 'PASS') {
+      return { allowed: false, reason: "Missing EOL Certification" };
+    }
+    if (battery.provisioningStatus !== 'PASS') {
+      return { allowed: false, reason: "Incomplete BMS provisioning" };
+    }
+    return { allowed: true, reason: "" };
+  }
+
+  /**
    * Guidance Logic
    */
-  getNextRecommendedStep(entity: any, type: 'SKU' | 'BATCH' | 'MODULE' | 'PACK' | 'BATTERY'): NextStep | null {
+  getNextRecommendedStep(entity: any, type: 'SKU' | 'BATCH' | 'MODULE' | 'PACK' | 'BATTERY' | 'LOT' | 'DISPATCH'): NextStep | null {
     switch (type) {
+      case 'LOT':
+        if (!entity.poNumber) return { label: 'Capture Docs', path: '', description: 'Bind PO/GRN identifiers to this lot.', roleRequired: 'Logistics' };
+        if (entity.status === 'DRAFT') return { label: 'Generate IDs', path: '', description: 'Initialize unique cell identities.', roleRequired: 'Logistics' };
+        if (entity.scannedCount < entity.generatedCount) return { label: 'Complete Scans', path: '', description: 'Perform physical verification of identities.', roleRequired: 'Operator' };
+        if (!entity.qcPassed) return { label: 'Incoming QC', path: '', description: 'Record material inspection result.', roleRequired: 'QA' };
+        if (entity.status === 'READY_TO_BIND') return { label: 'Release to Production', path: '', description: 'Allow these cells to be consumed in assembly.', roleRequired: 'Logistics' };
+        break;
       case 'SKU':
         if (entity.status === 'DRAFT') return { label: 'Activate Spec', path: '', description: 'Promote this blueprint to production status.', roleRequired: 'Engineering' };
         if (entity.status === 'ACTIVE') return { label: 'Create Batch', path: '/batches', description: 'Start a manufacturing run using this blueprint.', roleRequired: 'Production' };
@@ -174,6 +239,11 @@ class WorkflowGuardrailsService {
         if (entity.status === BatteryStatus.PROVISIONING && entity.provisioningStatus !== 'PASS') return { label: 'Finalize Identity', path: '/provisioning', description: 'Verify security certificates and release to QA.', roleRequired: 'BMS Engineer' };
         if (entity.status === BatteryStatus.QA_TESTING) return { label: 'Run EOL Verification', path: '/eol', description: 'Complete final electrical and safety checks.', roleRequired: 'QA' };
         if (entity.status === BatteryStatus.IN_INVENTORY) return { label: 'Reserve for Order', path: '/inventory', description: 'Allocate this pack to a customer dispatch order.', roleRequired: 'Logistics' };
+        break;
+      case 'DISPATCH':
+        if (entity.batteryIds.length === 0) return { label: 'Add Units', path: '', description: 'Select certified packs for this shipment.', roleRequired: 'Logistics' };
+        if (!entity.packingListRef) return { label: 'Prepare Docs', path: '', description: 'Generate required transport documentation.', roleRequired: 'Logistics' };
+        if (entity.status === DispatchStatus.DRAFT) return { label: 'Authorize', path: '', description: 'Formal release for transport execution.', roleRequired: 'Supervisor' };
         break;
     }
     return null;

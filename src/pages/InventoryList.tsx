@@ -1,13 +1,14 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { inventoryService } from '../services/api';
 import { Battery, InventoryStatus } from '../domain/types';
 import { Button, Input, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Card, CardContent, Tooltip } from '../components/ui/design-system';
-import { Search, Filter, Eye, Box, ArrowRightLeft, ShieldAlert, Lock, Unlock } from 'lucide-react';
+import { Search, Filter, Eye, Box, ArrowRightLeft, ShieldAlert, Lock, Unlock, CheckCircle, XCircle } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { canDo } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
+import { workflowGuardrails } from '../services/workflowGuardrails';
+import { StageHeader } from '../components/SopGuidedUX';
 
 // --- Types & Helpers ---
 
@@ -25,6 +26,18 @@ const calculateAging = (enteredAt?: string) => {
     if (!enteredAt) return '-';
     const days = Math.floor((Date.now() - new Date(enteredAt).getTime()) / (1000 * 60 * 60 * 24));
     return `${days}d`;
+};
+
+const ReadinessBadge = ({ battery }: { battery: Battery }) => {
+    const ready = workflowGuardrails.isBatteryDispatchReady(battery);
+    return (
+        <Tooltip content={ready.allowed ? "Compliant and ready for dispatch" : ready.reason}>
+            <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${ready.allowed ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                {ready.allowed ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                {ready.allowed ? 'READY' : 'NOT READY'}
+            </div>
+        </Tooltip>
+    );
 };
 
 // --- Modals ---
@@ -127,9 +140,6 @@ export default function InventoryList() {
     const [processing, setProcessing] = useState(false);
 
     // RBAC
-    const canManageInventory = canDo(currentCluster?.id || '', ScreenId.INVENTORY, 'E'); // C6 + Super
-    const canQuarantine = canDo(currentCluster?.id || '', ScreenId.INVENTORY, 'E') && (currentCluster?.id === 'C3' || currentCluster?.id === 'CS'); // C3 + Super
-    // Actually C6 policy is full access, C3 is partial. Let's rely on specific checks.
     const isLogistics = currentCluster?.id === 'C6' || currentCluster?.id === 'CS';
     const isQA = currentCluster?.id === 'C3' || currentCluster?.id === 'CS';
 
@@ -219,134 +229,125 @@ export default function InventoryList() {
     );
 
     return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Finished Goods Inventory</h2>
-                    <p className="text-muted-foreground">Manage storage, movement, and availability of certified packs.</p>
-                </div>
+        <div className="pb-12">
+            <StageHeader 
+                stageCode="S10"
+                title="Finished Goods Inventory"
+                objective="Manage storage, movement, and availability of certified packs for supply chain handover."
+                entityLabel="Inventory Console"
+                status="ACTIVE"
+                diagnostics={{ route: '/inventory', entityId: 'FG-LOG' }}
+            />
+
+            <div className="max-w-7xl mx-auto px-6 space-y-6">
+                <Card>
+                    <CardContent className="p-4">
+                        <div className="flex flex-col md:flex-row gap-4 mb-6">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Search by SN or Batch..." 
+                                    className="pl-9" 
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Filter className="h-4 w-4 text-muted-foreground" />
+                                <select 
+                                    className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                >
+                                    <option value="All">All Statuses</option>
+                                    {Object.values(InventoryStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                                </select>
+                            </div>
+                        </div>
+
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Serial Number</TableHead>
+                                    <TableHead>Readiness</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Aging</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <tbody>
+                                {loading ? (
+                                    <TableRow><TableCell colSpan={6} className="text-center py-10">Loading...</TableCell></TableRow>
+                                ) : filteredItems.length === 0 ? (
+                                    <TableRow><TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No inventory records found.</TableCell></TableRow>
+                                ) : (
+                                    filteredItems.map(item => (
+                                        <TableRow key={item.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => navigate(`/batteries/${item.id}`)}>
+                                            <TableCell className="font-mono font-medium">{item.serialNumber}</TableCell>
+                                            <TableCell><ReadinessBadge battery={item} /></TableCell>
+                                            <TableCell>
+                                                <Badge variant={getStatusVariant(item.inventoryStatus)}>{item.inventoryStatus}</Badge>
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm">{item.inventoryLocation || '-'}</TableCell>
+                                            <TableCell>{calculateAging(item.inventoryEnteredAt)}</TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
+                                                    <Tooltip content="View Detail">
+                                                        <Button variant="ghost" size="icon" onClick={() => navigate(`/batteries/${item.id}`)}>
+                                                            <Eye className="h-4 w-4" />
+                                                        </Button>
+                                                    </Tooltip>
+
+                                                    {isLogistics && item.inventoryStatus === InventoryStatus.PENDING_PUTAWAY && (
+                                                        <Tooltip content="Put Away">
+                                                            <Button variant="ghost" size="icon" onClick={() => { setActiveBattery(item); setModalType('putaway'); }}>
+                                                                <Box className="h-4 w-4 text-blue-600" />
+                                                            </Button>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    {isLogistics && item.inventoryStatus === InventoryStatus.AVAILABLE && (
+                                                        <Tooltip content="Move Location">
+                                                            <Button variant="ghost" size="icon" onClick={() => { setActiveBattery(item); setModalType('move'); }}>
+                                                                <ArrowRightLeft className="h-4 w-4 text-slate-600" />
+                                                            </Button>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    {isLogistics && item.inventoryStatus === InventoryStatus.AVAILABLE && (
+                                                        <Tooltip content="Reserve for Dispatch">
+                                                            <Button variant="ghost" size="icon" onClick={() => handleReserve(item)}>
+                                                                <Lock className="h-4 w-4 text-amber-600" />
+                                                            </Button>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    {isQA && item.inventoryStatus !== InventoryStatus.QUARANTINED && (
+                                                        <Tooltip content="Quarantine">
+                                                            <Button variant="ghost" size="icon" onClick={() => { setActiveBattery(item); setModalType('quarantine'); }}>
+                                                                <ShieldAlert className="h-4 w-4 text-rose-600" />
+                                                            </Button>
+                                                        </Tooltip>
+                                                    )}
+
+                                                    {isQA && item.inventoryStatus === InventoryStatus.QUARANTINED && (
+                                                        <Tooltip content="Release from Quarantine">
+                                                            <Button variant="ghost" size="icon" onClick={() => handleRelease(item)}>
+                                                                <Unlock className="h-4 w-4 text-emerald-600" />
+                                                            </Button>
+                                                        </Tooltip>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </tbody>
+                        </Table>
+                    </CardContent>
+                </Card>
             </div>
-
-            <Card>
-                <CardContent className="p-4">
-                    <div className="flex flex-col md:flex-row gap-4 mb-6">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                placeholder="Search by SN or Batch..." 
-                                className="pl-9" 
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                            />
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Filter className="h-4 w-4 text-muted-foreground" />
-                            <select 
-                                className="h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                value={statusFilter}
-                                onChange={(e) => setStatusFilter(e.target.value)}
-                            >
-                                <option value="All">All Statuses</option>
-                                {Object.values(InventoryStatus).map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                        </div>
-                    </div>
-
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Serial Number</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Location</TableHead>
-                                <TableHead>Aging</TableHead>
-                                <TableHead>Last Move</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <tbody>
-                            {loading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">Loading...</TableCell>
-                                </TableRow>
-                            ) : filteredItems.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">No inventory records found.</TableCell>
-                                </TableRow>
-                            ) : (
-                                filteredItems.map(item => (
-                                    <TableRow key={item.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => navigate(`/batteries/${item.id}`)}>
-                                        <TableCell className="font-mono font-medium">{item.serialNumber}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={getStatusVariant(item.inventoryStatus)}>{item.inventoryStatus}</Badge>
-                                        </TableCell>
-                                        <TableCell className="font-mono text-sm">{item.inventoryLocation || '-'}</TableCell>
-                                        <TableCell>{calculateAging(item.inventoryEnteredAt)}</TableCell>
-                                        <TableCell className="text-xs text-muted-foreground">
-                                            {item.inventoryMovementLog?.[item.inventoryMovementLog.length - 1]?.timestamp 
-                                                ? new Date(item.inventoryMovementLog[item.inventoryMovementLog.length - 1].timestamp).toLocaleString()
-                                                : '-'}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-1" onClick={e => e.stopPropagation()}>
-                                                <Tooltip content="View Detail">
-                                                    <Button variant="ghost" size="icon" onClick={() => navigate(`/batteries/${item.id}`)}>
-                                                        <Eye className="h-4 w-4" />
-                                                    </Button>
-                                                </Tooltip>
-
-                                                {/* Put Away (Logistics) */}
-                                                {isLogistics && item.inventoryStatus === InventoryStatus.PENDING_PUTAWAY && (
-                                                    <Tooltip content="Put Away">
-                                                        <Button variant="ghost" size="icon" onClick={() => { setActiveBattery(item); setModalType('putaway'); }}>
-                                                            <Box className="h-4 w-4 text-blue-600" />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
-
-                                                {/* Move (Logistics) */}
-                                                {isLogistics && item.inventoryStatus === InventoryStatus.AVAILABLE && (
-                                                     <Tooltip content="Move Location">
-                                                        <Button variant="ghost" size="icon" onClick={() => { setActiveBattery(item); setModalType('move'); }}>
-                                                            <ArrowRightLeft className="h-4 w-4 text-slate-600" />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
-
-                                                {/* Reserve (Logistics) */}
-                                                {isLogistics && item.inventoryStatus === InventoryStatus.AVAILABLE && (
-                                                     <Tooltip content="Reserve for Dispatch">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleReserve(item)}>
-                                                            <Lock className="h-4 w-4 text-amber-600" />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
-
-                                                {/* Quarantine (QA) */}
-                                                {isQA && item.inventoryStatus !== InventoryStatus.QUARANTINED && (
-                                                    <Tooltip content="Quarantine">
-                                                        <Button variant="ghost" size="icon" onClick={() => { setActiveBattery(item); setModalType('quarantine'); }}>
-                                                            <ShieldAlert className="h-4 w-4 text-rose-600" />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
-
-                                                {/* Release (QA) */}
-                                                {isQA && item.inventoryStatus === InventoryStatus.QUARANTINED && (
-                                                    <Tooltip content="Release from Quarantine">
-                                                        <Button variant="ghost" size="icon" onClick={() => handleRelease(item)}>
-                                                            <Unlock className="h-4 w-4 text-emerald-600" />
-                                                        </Button>
-                                                    </Tooltip>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </tbody>
-                    </Table>
-                </CardContent>
-            </Card>
 
             <LocationModal 
                 isOpen={modalType === 'putaway' || modalType === 'move'} 

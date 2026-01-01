@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardMetricsService, DashboardMetrics } from '../services/dashboardMetrics';
@@ -35,7 +34,7 @@ const ProductionWidget = ({ data }: { data: DashboardMetrics['production'] }) =>
   <Card className="col-span-1 lg:col-span-2">
     <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Layers className="h-5 w-5" /> Production Output</CardTitle></CardHeader>
     <CardContent>
-      <div className="h-[250px]">
+      <div className="h-[250px] min-h-[250px] w-full">
         {data.outputTrend.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data.outputTrend}>
@@ -102,7 +101,7 @@ const QualityWidget = ({ data }: { data: DashboardMetrics['quality'] }) => (
     <Card className="col-span-1 lg:col-span-2">
         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Activity className="h-5 w-5" /> Quality Trends</CardTitle></CardHeader>
         <CardContent>
-            <div className="h-[250px]">
+            <div className="h-[250px] min-h-[250px] w-full">
                 {data.passFailTrend.length > 0 ? (
                   <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={data.passFailTrend}>

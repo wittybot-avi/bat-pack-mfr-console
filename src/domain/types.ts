@@ -68,11 +68,6 @@ export enum UserRole {
   LOGISTICS_OPERATOR = 'Logistics Operator'
 }
 
-/**
- * MODULE & PACK ASSEMBLY TYPES (Patch C + E + F + G)
- * ---------------------------------------------------------------------
- */
-
 export enum ModuleStatus {
   DRAFT = 'DRAFT',
   IN_PROGRESS = 'IN_PROGRESS',
@@ -127,7 +122,6 @@ export interface PackInstance {
   bmsId?: string;
 }
 
-// PATCH G - EOL/QA Domain Types
 export type EolTestStatus = 'NOT_RUN' | 'PASS' | 'FAIL' | 'NA';
 
 export interface EolTestItem {
@@ -185,6 +179,11 @@ export interface CellLot {
   generatedCount: number;
   scannedCount: number;
   boundCount: number;
+  // Patch P36 Inbound Docs
+  poNumber?: string;
+  invoiceNumber?: string;
+  grnNumber?: string;
+  qcPassed?: boolean;
 }
 
 export interface BatchNote {
@@ -441,6 +440,9 @@ export interface DispatchOrder {
   manifestRef?: string;
   invoiceRef?: string;
   carrierName?: string;
+  // Patch P36 Transport Docs
+  vehicleNumber?: string;
+  driverContact?: string;
 }
 
 export enum ClaimStatus {

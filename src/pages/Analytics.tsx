@@ -45,7 +45,7 @@ const OverviewTab = ({ data }: { data: AnalyticsOverview }) => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
                 <CardHeader><CardTitle className="text-base">Yield Trend</CardTitle></CardHeader>
-                <CardContent className="h-[300px]">
+                <CardContent className="h-[300px] min-h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <AreaChart data={data.yieldTrend}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -59,7 +59,7 @@ const OverviewTab = ({ data }: { data: AnalyticsOverview }) => (
             </Card>
             <Card>
                 <CardHeader><CardTitle className="text-base">Exceptions Volume</CardTitle></CardHeader>
-                <CardContent className="h-[300px]">
+                <CardContent className="h-[300px] min-h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data.exceptionsTrend}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -119,7 +119,7 @@ const QualityTab = ({ pareto }: { pareto: QualityPareto[] }) => (
     <div className="space-y-6 animate-in fade-in">
         <Card>
             <CardHeader><CardTitle>Failure Pareto Analysis</CardTitle></CardHeader>
-            <CardContent className="h-[400px]">
+            <CardContent className="h-[400px] min-h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={pareto} layout="vertical" margin={{ left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
@@ -164,7 +164,7 @@ const LocationTab = ({ data }: { data: LocationMovementAnalytics }) => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
                 <CardHeader><CardTitle className="text-base">Dwell Time by Stage</CardTitle></CardHeader>
-                <CardContent className="h-[300px]">
+                <CardContent className="h-[300px] min-h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={data.dwellTimeByStage}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} />

@@ -1,14 +1,14 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { dispatchService, inventoryService, batteryService } from '../services/api';
 import { eolQaService } from '../services/eolQaService';
-import { DispatchOrder, DispatchStatus, Battery, InventoryStatus } from '../domain/types';
+import { DispatchOrder, DispatchStatus, Battery, InventoryStatus, CustodyStatus } from '../domain/types';
 import { useAppStore } from '../lib/store';
-import { canDo } from '../rbac/can';
-import { ScreenId } from '../rbac/screenIds';
+import { workflowGuardrails } from '../services/workflowGuardrails';
 import { Card, CardContent, CardHeader, CardTitle, Button, Badge, Table, TableHeader, TableRow, TableHead, TableCell, Input, Tooltip } from '../components/ui/design-system';
-import { ArrowLeft, Truck, Plus, FileText, CheckCircle, Trash2, Printer, Send, Loader2, AlertTriangle, Search } from 'lucide-react';
+// Added Box and ShieldCheck to imports to fix undefined icon errors
+import { ArrowLeft, Truck, Plus, FileText, CheckCircle, Trash2, Printer, Send, Loader2, AlertTriangle, Search, CheckSquare, Square, ClipboardList, Info, MapPin, Box, ShieldCheck } from 'lucide-react';
+import { StageHeader, NextStepsPanel, ActionGuard } from '../components/SopGuidedUX';
 
 const BatteryPickerModal = ({ isOpen, onClose, onAdd, alreadySelectedIds }: any) => {
     const [available, setAvailable] = useState<Battery[]>([]);
@@ -26,7 +26,7 @@ const BatteryPickerModal = ({ isOpen, onClose, onAdd, alreadySelectedIds }: any)
                 const eligibleIds = new Set(eligiblePacks.map(p => p.id));
                 const valid = inventoryData.filter(b => 
                     !alreadySelectedIds.includes(b.id) && 
-                    (b.inventoryStatus === InventoryStatus.AVAILABLE) &&
+                    (b.inventoryStatus === InventoryStatus.AVAILABLE || b.inventoryStatus === InventoryStatus.RESERVED) &&
                     (eligibleIds.has(b.id) || b.eolResult === 'PASS')
                 );
                 setAvailable(valid);
@@ -70,7 +70,7 @@ const BatteryPickerModal = ({ isOpen, onClose, onAdd, alreadySelectedIds }: any)
                                 <TableHead className="w-10"></TableHead>
                                 <TableHead>Serial Number</TableHead>
                                 <TableHead>Batch</TableHead>
-                                <TableHead>Status</TableHead>
+                                <TableHead>Ready</TableHead>
                             </TableRow>
                         </TableHeader>
                         <tbody>
@@ -86,7 +86,9 @@ const BatteryPickerModal = ({ isOpen, onClose, onAdd, alreadySelectedIds }: any)
                                         </TableCell>
                                         <TableCell className="font-mono font-bold">{b.serialNumber}</TableCell>
                                         <TableCell className="text-xs">{b.batchId}</TableCell>
-                                        <TableCell><Badge variant="outline" className="text-[10px]">{b.inventoryStatus}</Badge></TableCell>
+                                        <TableCell>
+                                            {workflowGuardrails.isBatteryDispatchReady(b).allowed ? <Badge variant="success">READY</Badge> : <Badge variant="outline">QA REQ</Badge>}
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
@@ -196,175 +198,205 @@ export function DispatchDetail() {
         }
     };
 
+    const handleUpdateOrder = async (field: keyof DispatchOrder, val: any) => {
+        if (!order) return;
+        try {
+            await dispatchService.updateOrder(order.id, { [field]: val }, userLabel);
+            await loadData();
+        } catch (e) {}
+    };
+
     if (loading) return <div className="p-20 text-center animate-pulse">Syncing logistics ledger...</div>;
     if (!order) return <div className="p-20 text-center">Order not found.</div>;
 
+    // Fixed: Define clusterId to resolve the 'Cannot find name clusterId' error
+    const clusterId = currentCluster?.id || '';
+    const guards = workflowGuardrails.getDispatchGuardrail(order, batteries, clusterId);
     const isDispatched = order.status === DispatchStatus.DISPATCHED;
-    const readyForDispatch = order.batteryIds.length > 0 && order.packingListRef && order.status !== DispatchStatus.DISPATCHED;
+    
+    const checklist = [
+        { label: 'Batteries Selected', status: order.batteryIds.length > 0 ? 'DONE' : 'PENDING', icon: Box },
+        { label: 'Compliance Pass', status: (order.batteryIds.length > 0 && batteries.every(b => workflowGuardrails.isBatteryDispatchReady(b).allowed)) ? 'DONE' : 'PENDING', icon: ShieldCheck },
+        { label: 'Documents Ready', status: (order.packingListRef && order.manifestRef) ? 'DONE' : 'PENDING', icon: FileText },
+        { label: 'Transport Bound', status: order.vehicleNumber ? 'DONE' : 'PENDING', icon: Truck }
+    ];
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/dispatch')}>
-                        <ArrowLeft className="h-4 w-4" />
+        <div className="pb-12">
+            <StageHeader 
+                stageCode={isDispatched ? "S12" : "S11"}
+                title={isDispatched ? "Dispatch Execution & Custody Transfer" : "Dispatch Planning & Authorization"}
+                objective={isDispatched ? "Formal handover of certified assets to transport carrier." : "Configure shipment manifests and verify asset compliance."}
+                entityLabel={order.orderNumber}
+                status={order.status}
+                diagnostics={{ route: '/dispatch', entityId: order.id }}
+            />
+
+            <div className="max-w-7xl mx-auto px-6 space-y-6">
+                <div className="flex items-center justify-between">
+                    <Button variant="ghost" size="sm" onClick={() => navigate('/dispatch')} className="gap-2 text-slate-500">
+                        <ArrowLeft className="h-4 w-4" /> Back to Queue
                     </Button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-2xl font-bold font-mono">{order.orderNumber}</h2>
-                            <Badge variant={isDispatched ? 'success' : 'default'}>{order.status}</Badge>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                    <div className="lg:col-span-3 space-y-6">
+                        <NextStepsPanel entity={order} type="DISPATCH" />
+
+                        <Card className="shadow-sm">
+                            <CardHeader className="border-b bg-slate-50/50 dark:bg-slate-800/30">
+                                <CardTitle className="text-base flex items-center gap-2"><CheckSquare size={18} className="text-primary"/> S11 Dispatch Checklist</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    {checklist.map((item, i) => (
+                                        <div key={i} className={`p-4 rounded-xl border flex items-center gap-3 transition-all ${item.status === 'DONE' ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-800' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 opacity-60'}`}>
+                                            <div className={`${item.status === 'DONE' ? 'text-emerald-600' : 'text-slate-400'}`}>
+                                                <item.icon size={20} />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black uppercase text-slate-400 mb-1">{item.status}</p>
+                                                <p className="text-xs font-bold leading-tight">{item.label}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Card>
+                                <CardHeader><CardTitle className="text-base">Order Details</CardTitle></CardHeader>
+                                <CardContent className="grid grid-cols-2 gap-y-4 text-sm">
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase">Customer</p>
+                                        <p className="font-bold">{order.customerName}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase">Est. Ship Date</p>
+                                        <p className="font-bold">{order.expectedShipDate}</p>
+                                    </div>
+                                    <div className="col-span-2 space-y-1">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase">Destination</p>
+                                        <p className="font-bold flex items-center gap-1"><MapPin size={12} className="text-slate-400"/> {order.destinationAddress}</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card>
+                                <CardHeader><CardTitle className="text-base">Transport Information</CardTitle></CardHeader>
+                                <CardContent className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase">Vehicle Number</label>
+                                        <Input disabled={isDispatched} value={order.vehicleNumber || ''} onChange={e => handleUpdateOrder('vehicleNumber', e.target.value)} placeholder="e.g. KA-01-AB-1234" className="font-mono h-9" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase">Carrier Name</label>
+                                        <Input disabled={isDispatched} value={order.carrierName || ''} onChange={e => handleUpdateOrder('carrierName', e.target.value)} placeholder="e.g. BlueDart" className="h-9" />
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </div>
-                        <p className="text-sm text-muted-foreground">{order.customerName}</p>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
+                                <CardTitle className="text-base flex items-center gap-2"><Truck className="h-5 w-5 text-primary" /> Shipment Contents</CardTitle>
+                                {canManageOrder && (
+                                    <Button size="sm" variant="outline" onClick={() => setIsPickerOpen(true)} className="h-8">
+                                        <Plus className="h-4 w-4 mr-2" /> Add Packs
+                                    </Button>
+                                )}
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader className="bg-slate-50 dark:bg-slate-900/50">
+                                        <TableRow>
+                                            <TableHead>Serial Number</TableHead>
+                                            <TableHead>Batch</TableHead>
+                                            <TableHead>Compliance</TableHead>
+                                            <TableHead className="text-right">Action</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <tbody>
+                                        {batteries.length === 0 ? (
+                                            <TableRow><TableCell colSpan={4} className="text-center py-12 text-slate-400 italic text-sm">No batteries added to this shipment manifest.</TableCell></TableRow>
+                                        ) : (
+                                            batteries.map(b => {
+                                                const ready = workflowGuardrails.isBatteryDispatchReady(b);
+                                                return (
+                                                    <TableRow key={b.id}>
+                                                        <TableCell className="font-mono font-bold text-primary">{b.serialNumber}</TableCell>
+                                                        <TableCell className="text-xs">{b.batchId}</TableCell>
+                                                        <TableCell>
+                                                            <Badge variant={ready.allowed ? "success" : "outline"} className="text-[9px]">
+                                                                {ready.allowed ? "PASSED" : "FAILED"}
+                                                            </Badge>
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            {canManageOrder && (
+                                                                <Button variant="ghost" size="icon" className="text-rose-500 hover:bg-rose-50" onClick={() => handleRemoveBattery(b.id)}>
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                );
+                                            })
+                                        )}
+                                    </tbody>
+                                </Table>
+                            </CardContent>
+                        </Card>
                     </div>
-                </div>
-                <div className="flex gap-2">
-                    {readyForDispatch && isLogistics && (
-                        <Button className="bg-indigo-600 hover:bg-indigo-700" onClick={handleDispatch} disabled={processing}>
-                            <Send className="mr-2 h-4 w-4" /> Confirm Dispatch
-                        </Button>
-                    )}
-                </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle className="text-base">Logistics Details</CardTitle></CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-4 text-sm">
-                            <div className="space-y-1">
-                                <p className="text-muted-foreground uppercase text-[10px] font-bold">Destination</p>
-                                <p className="font-medium">{order.destinationAddress}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-muted-foreground uppercase text-[10px] font-bold">Est. Ship Date</p>
-                                <p className="font-medium">{order.expectedShipDate}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-muted-foreground uppercase text-[10px] font-bold">Carrier</p>
-                                <p className="font-medium">{order.carrierName || 'TBD'}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-muted-foreground uppercase text-[10px] font-bold">Creator</p>
-                                <p className="font-medium">{order.createdBy}</p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between pb-2">
-                            <CardTitle className="text-base flex items-center gap-2"><Truck className="h-5 w-5" /> Shipment Contents</CardTitle>
-                            {canManageOrder && (
-                                <Button size="sm" variant="outline" onClick={() => setIsPickerOpen(true)}>
-                                    <Plus className="h-4 w-4 mr-2" /> Add Packs
-                                </Button>
-                            )}
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Serial Number</TableHead>
-                                        <TableHead>Batch</TableHead>
-                                        <TableHead>QA Status</TableHead>
-                                        <TableHead className="text-right">Action</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <tbody>
-                                    {batteries.length === 0 ? (
-                                        <TableRow><TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">No batteries added to this shipment yet.</TableCell></TableRow>
-                                    ) : (
-                                        batteries.map(b => (
-                                            <TableRow key={b.id}>
-                                                <TableCell className="font-mono font-bold text-primary">{b.serialNumber}</TableCell>
-                                                <TableCell className="text-xs">{b.batchId}</TableCell>
-                                                <TableCell>
-                                                    <Badge variant="success" className="text-[10px]">CERTIFIED</Badge>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    {canManageOrder && (
-                                                        <Button variant="ghost" size="icon" className="text-rose-500" onClick={() => handleRemoveBattery(b.id)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    )}
-                                </tbody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="space-y-6">
-                    <Card>
-                        <CardHeader><CardTitle className="text-base">Shipping Documents</CardTitle></CardHeader>
-                        <CardContent className="space-y-3">
-                            <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900">
-                                <div className="flex items-center gap-3">
-                                    <FileText className="h-4 w-4 text-blue-500" />
-                                    <div>
-                                        <p className="text-xs font-bold">Packing List</p>
-                                        <p className="text-[10px] text-muted-foreground">{order.packingListRef || 'Missing'}</p>
+                    <div className="space-y-6">
+                        <Card className="bg-slate-900 text-white border-none shadow-xl">
+                            <CardHeader className="pb-3 border-b border-slate-800"><CardTitle className="text-sm uppercase tracking-wider text-slate-400">Execution Hub</CardTitle></CardHeader>
+                            <CardContent className="space-y-4 pt-6">
+                                <ActionGuard 
+                                    guard={guards.authorize} 
+                                    onClick={handleDispatch} 
+                                    label="Authorize Dispatch" 
+                                    icon={Send} 
+                                    loading={processing}
+                                    className="w-full h-14 bg-indigo-600 hover:bg-indigo-700 text-white border-none shadow-xl shadow-indigo-500/30"
+                                    actionName="Authorize_Dispatch_S11"
+                                    entityId={order.id}
+                                />
+                                <div className="p-3 bg-slate-800/50 rounded-xl space-y-2 border border-slate-800">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Digital Signatures</p>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500">Logistics Auth</span>
+                                        {isLogistics ? <CheckCircle size={14} className="text-emerald-500" /> : <Square size={14} className="text-slate-700" />}
+                                    </div>
+                                    <div className="flex justify-between items-center text-xs">
+                                        <span className="text-slate-500">QA Pass-Through</span>
+                                        {batteries.every(b => b.eolResult === 'PASS') ? <CheckCircle size={14} className="text-emerald-500" /> : <Square size={14} className="text-slate-700" />}
                                     </div>
                                 </div>
-                                {order.packingListRef ? (
-                                    <Button variant="ghost" size="icon"><Printer size={14} /></Button>
-                                ) : (
-                                    <Button variant="outline" className="h-7 text-[10px] px-2" onClick={() => handleGenerateDoc('packing')} disabled={!canManageOrder || batteries.length === 0}>Generate</Button>
-                                )}
-                            </div>
+                            </CardContent>
+                        </Card>
 
-                            <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900">
-                                <div className="flex items-center gap-3">
-                                    <FileText className="h-4 w-4 text-indigo-500" />
-                                    <div>
-                                        <p className="text-xs font-bold">Shipping Manifest</p>
-                                        <p className="text-[10px] text-muted-foreground">{order.manifestRef || 'Missing'}</p>
+                        <Card>
+                            <CardHeader><CardTitle className="text-xs uppercase tracking-widest text-slate-400">Documents</CardTitle></CardHeader>
+                            <CardContent className="space-y-2">
+                                <div className="flex items-center justify-between p-2 border rounded-lg bg-slate-50 dark:bg-slate-900 group">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-blue-500" />
+                                        <span className="text-[10px] font-bold">Packing List</span>
                                     </div>
+                                    {order.packingListRef ? <Printer size={12} className="opacity-40 group-hover:opacity-100 cursor-pointer"/> : <Button variant="ghost" className="h-6 px-2 text-[8px]" onClick={() => handleGenerateDoc('packing')}>GEN</Button>}
                                 </div>
-                                {order.manifestRef ? (
-                                    <Button variant="ghost" size="icon"><Printer size={14} /></Button>
-                                ) : (
-                                    <Button variant="outline" className="h-7 text-[10px] px-2" onClick={() => handleGenerateDoc('manifest')} disabled={!canManageOrder || batteries.length === 0}>Generate</Button>
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 dark:bg-slate-900">
-                                <div className="flex items-center gap-3">
-                                    <FileText className="h-4 w-4 text-emerald-500" />
-                                    <div>
-                                        <p className="text-xs font-bold">Commercial Invoice</p>
-                                        <p className="text-[10px] text-muted-foreground">{order.invoiceRef || 'Missing'}</p>
+                                <div className="flex items-center justify-between p-2 border rounded-lg bg-slate-50 dark:bg-slate-900 group">
+                                    <div className="flex items-center gap-2">
+                                        <FileText className="h-4 w-4 text-indigo-500" />
+                                        <span className="text-[10px] font-bold">Manifest</span>
                                     </div>
+                                    {order.manifestRef ? <Printer size={12} className="opacity-40 group-hover:opacity-100 cursor-pointer"/> : <Button variant="ghost" className="h-6 px-2 text-[8px]" onClick={() => handleGenerateDoc('manifest')}>GEN</Button>}
                                 </div>
-                                {order.invoiceRef ? (
-                                    <Button variant="ghost" size="icon"><Printer size={14} /></Button>
-                                ) : (
-                                    <Button variant="outline" className="h-7 text-[10px] px-2" onClick={() => handleGenerateDoc('invoice')} disabled={!canManageOrder || batteries.length === 0}>Generate</Button>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {isDispatched && (
-                        <div className="p-4 border-2 border-emerald-100 bg-emerald-50 dark:bg-emerald-950/20 rounded-lg flex items-start gap-3">
-                            <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
-                            <div>
-                                <p className="text-sm font-bold text-emerald-800 dark:text-emerald-400">Order Dispatched</p>
-                                <p className="text-xs text-emerald-700/80 dark:text-emerald-500">Inventory levels adjusted and custody transfer logs initialized.</p>
-                            </div>
-                        </div>
-                    )}
-
-                    {!isDispatched && !readyForDispatch && batteries.length > 0 && (
-                        <div className="p-4 border-2 border-dashed border-amber-200 bg-amber-50 dark:bg-amber-950/20 rounded-lg flex items-start gap-3">
-                            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                            <p className="text-[10px] text-amber-800 dark:text-amber-400 font-bold uppercase tracking-tight">
-                                Documents Required: Generate Packing List to unlock final dispatch.
-                            </p>
-                        </div>
-                    )}
+                            </CardContent>
+                        </Card>
+                    </div>
                 </div>
             </div>
 

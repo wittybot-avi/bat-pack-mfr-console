@@ -1,25 +1,24 @@
-
-import React from 'react';
+import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from './ui/design-system';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home, Database, ClipboardCopy, Trash2 } from 'lucide-react';
 import { logger } from '../utils/logger';
 
 interface Props {
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 interface State {
   hasError: boolean;
   error: Error | null;
-  errorInfo: React.ErrorInfo | null;
+  errorInfo: ErrorInfo | null;
   showDetails: boolean;
 }
 
 /**
  * Standard React Error Boundary component to catch rendering errors.
- * Improved TypeScript inheritance resolution by extending React.Component directly.
+ * Explicitly using Component from react to resolve TS inheritance issues.
  */
-class ErrorBoundary extends React.Component<Props, State> {
+class ErrorBoundary extends Component<Props, State> {
   // Explicitly declaring state as a property on the class to ensure visibility
   public state: State = {
     hasError: false,
@@ -36,9 +35,9 @@ class ErrorBoundary extends React.Component<Props, State> {
     return { hasError: true, error, errorInfo: null, showDetails: false };
   }
 
-  // Fix: Correctly typed componentDidCatch to handle error tracking
-  public componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Fix: Accessing setState via inherited React.Component method
+  // Correctly typed componentDidCatch to handle error tracking
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Correctly using setState inherited from Component base class
     this.setState({ error, errorInfo });
     logger.error("Global Error Boundary caught exception", error);
   }
@@ -55,19 +54,19 @@ class ErrorBoundary extends React.Component<Props, State> {
   };
 
   private copyDiagnostics = () => {
-    // Fix: Accessing state via inherited React.Component property
+    // Correctly accessing state inherited from Component base class
     const data = logger.getDiagnostics(this.state.error || undefined);
     navigator.clipboard.writeText(data);
     alert("Diagnostic info copied to clipboard.");
   };
 
   private toggleDetails = () => {
-    // Fix: Using setState via inherited React.Component method
+    // Correctly using setState inherited from Component base class
     this.setState((prev: State) => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
-    // Fix: Accessing state via inherited React.Component property
+    // Correctly accessing state inherited from Component base class
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
@@ -132,7 +131,7 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Fix: Accessing children through inherited props property from React.Component
+    // Accessing children through inherited props property from Component base class
     return this.props.children;
   }
 }

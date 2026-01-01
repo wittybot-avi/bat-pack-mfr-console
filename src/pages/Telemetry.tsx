@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import { useAppStore } from '../lib/store';
 import { telemetryService, TelemetryHistory, TelemetryEvent } from '../services/telemetryService';
@@ -26,7 +25,6 @@ const MetricCard = ({ label, value, unit, color, icon: Icon, simple }: any) => (
   </Card>
 );
 
-// Fix: Add optional key prop to satisfy TS when used in list mapping
 const EventMarker = ({ event }: { event: TelemetryEvent, key?: any }) => (
     <div className="flex gap-2 items-start text-xs border-l-2 border-primary pl-2 py-1 mb-2">
         <div className="text-muted-foreground w-20 shrink-0">{new Date(event.timestamp).toLocaleTimeString()}</div>
@@ -275,7 +273,7 @@ export default function Telemetry() {
                             <Card>
                                 <CardHeader><CardTitle>Real-time Voltage & Current</CardTitle></CardHeader>
                                 <CardContent>
-                                    <div className="h-[300px]">
+                                    <div className="h-[300px] min-h-[300px] w-full">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <AreaChart data={liveData}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.2} />
@@ -309,7 +307,7 @@ export default function Telemetry() {
                                     <Card>
                                         <CardHeader><CardTitle>Historical Performance ({historyRange})</CardTitle></CardHeader>
                                         <CardContent>
-                                            <div className="h-[300px]">
+                                            <div className="h-[300px] min-h-[300px] w-full">
                                                 <ResponsiveContainer width="100%" height="100%">
                                                     <LineChart data={historyData?.samples}>
                                                         <CartesianGrid strokeDasharray="3 3" vertical={false} />
