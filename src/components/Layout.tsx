@@ -11,7 +11,10 @@ import {
   Zap,
   AlertTriangle,
   History,
-  X
+  X,
+  Settings,
+  Database,
+  Monitor
 } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { Button, Input, Badge } from './ui/design-system';
@@ -22,6 +25,7 @@ import { APP_ROUTES, checkConsistency } from '../app/routeRegistry';
 import { DIAGNOSTIC_MODE } from '../app/diagnostics';
 import { safeStorage } from '../utils/safeStorage';
 import { traceSearchService } from '../services/traceSearchService';
+import { scenarioStore, DemoScenario } from '../demo/scenarioStore';
 
 const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean, key?: any }) => (
   <Link to={path}>
@@ -40,8 +44,10 @@ export const Layout = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searching, setSearching] = useState(false);
   const [showNoMatch, setShowNoMatch] = useState(false);
+  const [currentScenario, setCurrentScenario] = useState<DemoScenario>(scenarioStore.getScenario());
 
   useEffect(() => {
+    scenarioStore.init();
     if (DIAGNOSTIC_MODE) {
       const warnings = checkConsistency();
       if (warnings.length > 0) {
@@ -75,6 +81,13 @@ export const Layout = () => {
     } finally {
         setSearching(false);
     }
+  };
+
+  const handleScenarioChange = (s: DemoScenario) => {
+    scenarioStore.setScenario(s);
+    addNotification({ title: 'Data Switched', message: `Scenario loaded: ${s.replace('_', ' ')}`, type: 'info' });
+    // Reload is the cleanest way to reset all singleton service states reading from storage
+    window.location.reload();
   };
 
   const renderNavGroup = (groupName: string, screenIds: ScreenId[]) => {
@@ -171,11 +184,12 @@ export const Layout = () => {
             <Button variant="ghost" size="icon" onClick={toggleSidebar}>
               <Menu size={20} />
             </Button>
-            <form onSubmit={handleGlobalSearch} className="relative hidden md:block w-96">
+            
+            <form onSubmit={handleGlobalSearch} className="relative hidden md:block w-72 lg:w-96">
               <Search className={`absolute left-2.5 top-2.5 h-4 w-4 ${searching ? 'text-primary animate-pulse' : 'text-muted-foreground'}`} />
               <Input 
                 type="search" 
-                placeholder="Global Trace Search (IDs, Serials, Lots)..." 
+                placeholder="Global Search (IDs, Serials)..." 
                 className="pl-9 bg-slate-100 dark:bg-slate-800 border-none h-10" 
                 value={searchQuery}
                 onChange={e => {
@@ -186,43 +200,49 @@ export const Layout = () => {
               {showNoMatch && (
                   <div className="absolute top-12 left-0 w-full bg-white dark:bg-slate-900 border rounded-lg shadow-2xl p-4 z-[100] animate-in slide-in-from-top-2">
                       <div className="flex justify-between items-start mb-2">
-                          <h4 className="text-sm font-bold flex items-center gap-2"><XCircle size={14} className="text-rose-500" /> No Record Found</h4>
+                          <h4 className="text-sm font-bold flex items-center gap-2"><AlertTriangle size={14} className="text-rose-500" /> Not Found</h4>
                           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowNoMatch(false)}><X size={14}/></Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mb-3">Identifier not recognized in current ledger. Ensure query matches an ID, Serial, or SKU.</p>
-                      <div className="space-y-1">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Valid Examples</p>
-                          <ul className="text-[10px] space-y-1">
-                              <li className="flex justify-between border-b pb-1"><span>Cell Serial</span> <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-primary">CATL-1001</code></li>
-                              <li className="flex justify-between border-b pb-1"><span>Pack ID</span> <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-primary">PB-938210</code></li>
-                              <li className="flex justify-between border-b pb-1"><span>SKU Code</span> <code className="bg-slate-100 dark:bg-slate-800 px-1 rounded text-primary">VV360-LFP-48V</code></li>
-                          </ul>
-                      </div>
+                      <p className="text-[10px] text-muted-foreground italic">No record matches your query in current scenario.</p>
                   </div>
               )}
             </form>
+
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden lg:block"></div>
+
+            {/* Scenario Switcher */}
+            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-full border">
+                <Database size={14} className="text-primary" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Demo:</span>
+                <select 
+                    className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-300"
+                    value={currentScenario}
+                    onChange={(e) => handleScenarioChange(e.target.value as DemoScenario)}
+                >
+                    <option value="HAPPY_PATH">Happy Path</option>
+                    <option value="MISMATCH">Mismatch Gaps</option>
+                    <option value="TAMPER">Audit Tamper</option>
+                    <option value="EMPTY">Blank Slate</option>
+                </select>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
               <Bell size={20} />
             </Button>
             <div className="flex items-center border rounded-md p-1 bg-slate-100 dark:bg-slate-800">
-              <button onClick={toggleTheme} className="px-2 py-1 text-xs rounded shadow-sm bg-white dark:bg-slate-700 font-medium">
+              <button onClick={toggleTheme} className="px-2 py-1 text-xs rounded shadow-sm bg-white dark:bg-slate-700 font-medium transition-all">
                 {theme === 'light' ? 'Light' : 'Dark'}
               </button>
             </div>
             <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 mx-1"></div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={`hidden sm:flex items-center gap-1 font-normal ${isSuperUser ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400' : 'bg-slate-50 dark:bg-slate-800'}`}>
+              <Badge variant="outline" className={`hidden xl:flex items-center gap-1 font-normal ${isSuperUser ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400' : 'bg-slate-50 dark:bg-slate-800'}`}>
                 {isSuperUser && <Zap size={12} fill="currentColor" />}
                 <span className="font-semibold">{currentCluster.id}</span>
-                <span className="truncate max-w-[100px]">{currentRole.name}</span>
+                <span className="truncate max-w-[80px]">{currentRole.name}</span>
               </Badge>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/login')} title="Switch Identity">
-                <UserCircle className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Switch</span>
-              </Button>
               <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30">
                 <LogOut className="h-4 w-4" />
               </Button>
@@ -231,21 +251,19 @@ export const Layout = () => {
         </header>
 
         <main className="flex-1 p-6 overflow-auto">
+          {DIAGNOSTIC_MODE && (
+            <div className="mb-4 px-4 py-1.5 bg-slate-900 text-[10px] text-white font-mono flex items-center justify-between rounded-t-lg">
+                <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1 text-emerald-400"><Database size={12}/> Scenario: {currentScenario}</span>
+                    <span className="opacity-50">|</span>
+                    <span className="flex items-center gap-1"><Monitor size={12}/> {location.pathname}</span>
+                </div>
+                <span>Patch: {LAST_PATCH_ID}</span>
+            </div>
+          )}
           <Outlet />
         </main>
-
-        {DIAGNOSTIC_MODE && (
-            <footer className="h-8 bg-slate-900 text-slate-400 text-[10px] font-mono flex items-center justify-between px-6 border-t border-slate-800 shrink-0">
-                <span>DIAGNOSTIC MODE ACTIVE</span>
-                <span>PATCH: {LAST_PATCH_ID}</span>
-                <span>BUILD: {new Date().toISOString()}</span>
-            </footer>
-        )}
       </div>
     </div>
   );
 };
-
-const XCircle = ({ size, className }: any) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
-);

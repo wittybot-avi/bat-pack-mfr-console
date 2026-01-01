@@ -1,24 +1,24 @@
 
 # Patch Log
 
-## UI_PATCH_I_TRACE_SEARCH_EXPORT_V1
+## UI_PATCH_J_SCENARIO_SWITCHER_V1
 - **Date**: 2024-05-24
-- **Summary**: Implemented Global Trace Search, Quick Jump, and Multi-format Exports.
-  - **Global Search**: Search bar now resolves Cell Serials, Pack IDs, SKU Codes, and Lot Codes to navigate users to the correct context.
-  - **Trace Quick View**: Added a reusable `TraceDrawer` side panel to main asset lists for instant genealogy inspection.
-  - **Client-side Exports**: Built browser-based exporters for JSON, CSV, and "DPP-lite" (Digital Product Passport preview) formats.
-  - **Lineage UI Enhancement**: Improved Lineage Audit view with internal search filters, copy-to-clipboard actions, and explicit compliance rule failure descriptions.
+- **Summary**: Implemented a global Demo Scenario Switcher to ensure coherent mock data states across different demo flows.
+  - **Scenario Store**: Added `scenarioStore.ts` as the orchestrator for wiping and reseeding mock data.
+  - **Happy Path**: Pre-seeds a complete manufacturing cycle with active SKUs, lots, sealed modules, and finalized packs.
+  - **Mismatch Gaps**: Seeds a module with missing cell counts (14/16) to demonstrate binding rule enforcement.
+  - **Audit Tamper**: Seeds duplicate cell serials across two modules and marks the resulting pack as QC FAIL/Quarantined.
+  - **Empty Slate**: Wipes all assets to demonstrate clean empty states.
+  - **UI Integration**: Added a scenario dropdown to the top bar for instant switching. Added persistent banners in the diagnostic mode to indicate current scenario context.
 - **Files changed**:
-  - src/services/traceSearchService.ts
-  - src/utils/exporters.ts
-  - src/components/TraceDrawer.tsx
+  - src/demo/scenarioStore.ts
+  - src/demo/scenarios/happyPath.ts
+  - src/demo/scenarios/mismatch.ts
+  - src/demo/scenarios/tamper.ts
+  - src/demo/scenarios/empty.ts
   - src/components/Layout.tsx
-  - src/pages/CellLotsList.tsx
-  - src/pages/ModuleAssemblyList.tsx
-  - src/pages/PackAssemblyList.tsx
-  - src/pages/LineageView.tsx
   - src/app/patchInfo.ts
 
-## UI_PATCH_H_ASSEMBLY_BINDING_LINEAGE_V1
+## UI_PATCH_I_TRACE_SEARCH_EXPORT_V1
 - **Date**: 2024-05-24
 ... (existing logs) ...

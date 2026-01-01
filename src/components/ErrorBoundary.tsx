@@ -1,5 +1,4 @@
-
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React, { ErrorInfo, ReactNode } from 'react';
 import { Button, Card, CardContent, CardHeader, CardTitle } from './ui/design-system';
 import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home } from 'lucide-react';
 
@@ -16,12 +15,13 @@ interface State {
 
 /**
  * Standard React Error Boundary component.
- * Fixed property access errors by ensuring inheritance from Component is correctly recognized.
+ * Inherits from React.Component to provide lifecycle hooks for error tracking.
  */
-class ErrorBoundary extends Component<Props, State> {
+// Explicitly extending React.Component to ensure TypeScript correctly recognizes props, state, and setState members
+class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    // Initialize state
+    // Initialize state using the defined State interface
     this.state = {
       hasError: false,
       error: null,
@@ -36,7 +36,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Correctly accessing setState from Component base class
+    // Correctly updating state using the setState method inherited from React.Component
     this.setState({ error, errorInfo });
     console.error("ErrorBoundary caught an error:", error, errorInfo);
   }
@@ -46,12 +46,12 @@ class ErrorBoundary extends Component<Props, State> {
   };
 
   private toggleDetails = () => {
-    // Correctly accessing setState from Component base class
+    // Correctly updating state using the setState method inherited from React.Component
     this.setState(prev => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
-    // Correctly accessing state from Component base class
+    // Accessing component state to determine whether to show error UI
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
@@ -99,7 +99,7 @@ class ErrorBoundary extends Component<Props, State> {
       );
     }
 
-    // Correctly accessing children from props
+    // Accessing children from props as defined in the React.Component base class
     return this.props.children;
   }
 }
