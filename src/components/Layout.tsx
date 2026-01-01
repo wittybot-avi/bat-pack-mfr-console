@@ -14,7 +14,8 @@ import {
   X,
   Settings,
   Database,
-  Monitor
+  Monitor,
+  Loader2
 } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { Button, Input, Badge } from './ui/design-system';
@@ -26,6 +27,8 @@ import { DIAGNOSTIC_MODE } from '../app/diagnostics';
 import { safeStorage } from '../utils/safeStorage';
 import { traceSearchService } from '../services/traceSearchService';
 import { scenarioStore, DemoScenario } from '../demo/scenarioStore';
+import { routerSafe } from '../utils/routerSafe';
+import { logger } from '../utils/logger';
 
 const SidebarItem = ({ icon: Icon, label, path, active }: { icon: any, label: string, path: string, active: boolean, key?: any }) => (
   <Link to={path}>
@@ -45,16 +48,32 @@ export const Layout = () => {
   const [searching, setSearching] = useState(false);
   const [showNoMatch, setShowNoMatch] = useState(false);
   const [currentScenario, setCurrentScenario] = useState<DemoScenario>(scenarioStore.getScenario());
+  const [isSwitching, setIsSwitching] = useState(false);
 
   useEffect(() => {
+    // Initial sync of the scenario store
     scenarioStore.init();
+    
+    // Validate scenario selection on boot
+    const saved = scenarioStore.getScenario();
+    const VALID_SCENARIOS: DemoScenario[] = ['HAPPY_PATH', 'MISMATCH', 'TAMPER', 'EMPTY'];
+    if (!VALID_SCENARIOS.includes(saved)) {
+      logger.warn(`Invalid scenario "${saved}" detected. Resetting to HAPPY_PATH.`);
+      scenarioStore.setScenario('HAPPY_PATH');
+      setCurrentScenario('HAPPY_PATH');
+      addNotification({ title: 'Safety Reset', message: 'Demo scenario was reset to default.', type: 'info' });
+    }
+    
+    // Route Persistence Tracking
+    routerSafe.trackRoute(location.pathname, location.search);
+
     if (DIAGNOSTIC_MODE) {
       const warnings = checkConsistency();
       if (warnings.length > 0) {
         console.warn('Diagnostic Mode - Route Consistency Check:', warnings);
       }
     }
-  }, []);
+  }, [location]);
 
   const handleLogout = () => {
     logout();
@@ -84,10 +103,28 @@ export const Layout = () => {
   };
 
   const handleScenarioChange = (s: DemoScenario) => {
+    if (s === currentScenario || isSwitching) return;
+
+    logger.info(`Initiating scenario switch to ${s}`);
+    setIsSwitching(true);
+    
+    // Write new scenario state
     scenarioStore.setScenario(s);
-    addNotification({ title: 'Data Switched', message: `Scenario loaded: ${s.replace('_', ' ')}`, type: 'info' });
-    // Reload is the cleanest way to reset all singleton service states reading from storage
-    window.location.reload();
+    setCurrentScenario(s);
+    
+    addNotification({ 
+      title: 'Scenario Change', 
+      message: `Re-seeding workspace for ${s.replace('_', ' ')} flow...`, 
+      type: 'info' 
+    });
+
+    // Force navigation to dashboard before reload to avoid 404s on dynamic paths
+    navigate('/', { replace: true });
+    
+    // Artificial delay for UI feedback and storage sync
+    setTimeout(() => {
+      window.location.reload();
+    }, 450);
   };
 
   const renderNavGroup = (groupName: string, screenIds: ScreenId[]) => {
@@ -133,7 +170,7 @@ export const Layout = () => {
     <div className={`min-h-screen bg-slate-50 dark:bg-slate-950 flex font-sans text-slate-900 dark:text-slate-100`}>
       <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} fixed inset-y-0 z-50 flex flex-col transition-all duration-300 border-r bg-white dark:bg-slate-900 dark:border-slate-800 overflow-hidden`}>
         <div className="h-16 flex items-center px-6 border-b dark:border-slate-800 shrink-0">
-          <div className={`h-8 w-8 rounded mr-3 flex items-center justify-center text-white font-bold ${isSuperUser ? 'bg-amber-500' : 'bg-primary'}`}>
+          <div className={`h-8 w-8 rounded mr-3 flex items-center justify-center text-white font-bold ${isSuperUser ? 'bg-amber-50' : 'bg-primary'}`}>
             {isSuperUser ? <Zap size={18} fill="currentColor" /> : 'A'}
           </div>
           <span className="font-bold text-lg tracking-tight">Aayatana Tech</span>
@@ -210,12 +247,13 @@ export const Layout = () => {
 
             <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden lg:block"></div>
 
-            {/* Scenario Switcher */}
-            <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-800/50 rounded-full border">
-                <Database size={14} className="text-primary" />
+            {/* Scenario Switcher - Safe Implementation */}
+            <div className={`hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all ${isSwitching ? 'bg-slate-200 dark:bg-slate-700 animate-pulse' : 'bg-slate-50 dark:bg-slate-800/50'}`}>
+                {isSwitching ? <Loader2 size={14} className="animate-spin text-primary" /> : <Database size={14} className="text-primary" />}
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Demo:</span>
                 <select 
-                    className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-300"
+                    disabled={isSwitching}
+                    className="bg-transparent text-xs font-bold focus:outline-none cursor-pointer text-slate-700 dark:text-slate-300 disabled:opacity-50"
                     value={currentScenario}
                     onChange={(e) => handleScenarioChange(e.target.value as DemoScenario)}
                 >
@@ -251,6 +289,12 @@ export const Layout = () => {
         </header>
 
         <main className="flex-1 p-6 overflow-auto">
+          {isSwitching && (
+             <div className="mb-6 p-4 bg-primary/5 border border-primary/10 rounded-lg flex items-center gap-3 animate-in fade-in">
+                <Loader2 className="animate-spin text-primary h-5 w-5" />
+                <span className="text-sm font-medium text-primary">Synchronizing demo data environment...</span>
+             </div>
+          )}
           {DIAGNOSTIC_MODE && (
             <div className="mb-4 px-4 py-1.5 bg-slate-900 text-[10px] text-white font-mono flex items-center justify-between rounded-t-lg">
                 <div className="flex items-center gap-3">

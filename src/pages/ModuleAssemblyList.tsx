@@ -1,14 +1,14 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { moduleService } from '../services/moduleService';
 import { ModuleInstance, ModuleStatus } from '../domain/types';
 import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button, Tooltip } from '../components/ui/design-system';
-import { Plus, Eye, Archive, User, Calendar, Loader2, History } from 'lucide-react';
+import { Plus, Eye, User, Calendar, Loader2, History } from 'lucide-react';
 import { useAppStore } from '../lib/store';
 import { canDo } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
 import { TraceDrawer } from '../components/TraceDrawer';
+import { STATUS_LABELS } from '../services/workflowGuardrails';
 
 export default function ModuleAssemblyList() {
   const navigate = useNavigate();
@@ -28,10 +28,10 @@ export default function ModuleAssemblyList() {
 
   const getStatusBadge = (status: ModuleStatus) => {
     switch (status) {
-      case ModuleStatus.SEALED: return <Badge variant="success">SEALED</Badge>;
-      case ModuleStatus.IN_PROGRESS: return <Badge variant="default">IN PROGRESS</Badge>;
-      case ModuleStatus.DRAFT: return <Badge variant="outline">DRAFT</Badge>;
-      case ModuleStatus.QUARANTINED: return <Badge variant="destructive">QUARANTINED</Badge>;
+      case ModuleStatus.SEALED: return <Badge variant="success">{STATUS_LABELS.COMPLETED}</Badge>;
+      case ModuleStatus.IN_PROGRESS: return <Badge variant="default">{STATUS_LABELS.IN_PROGRESS}</Badge>;
+      case ModuleStatus.DRAFT: return <Badge variant="outline">{STATUS_LABELS.DRAFT}</Badge>;
+      case ModuleStatus.QUARANTINED: return <Badge variant="destructive">{STATUS_LABELS.FAILED}</Badge>;
       case ModuleStatus.CONSUMED: return <Badge variant="secondary">CONSUMED</Badge>;
       default: return <Badge variant="secondary">{status}</Badge>;
     }
@@ -58,7 +58,6 @@ export default function ModuleAssemblyList() {
               <TableRow>
                 <TableHead>Work Order ID</TableHead>
                 <TableHead>SKU Blueprint</TableHead>
-                <TableHead>Capacity</TableHead>
                 <TableHead>Bound Cells</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Updated</TableHead>
@@ -67,17 +66,14 @@ export default function ModuleAssemblyList() {
             </TableHeader>
             <tbody>
               {loading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-20"><Loader2 className="animate-spin h-8 w-8 mx-auto opacity-20" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-20"><Loader2 className="animate-spin h-8 w-8 mx-auto opacity-20" /></TableCell></TableRow>
               ) : modules.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-20 text-muted-foreground">No active module work orders found.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={6} className="text-center py-20 text-muted-foreground">No active module work orders found.</TableCell></TableRow>
               ) : (
                 modules.map(m => (
                   <TableRow key={m.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors group" onClick={() => navigate(`/operate/modules/${m.id}`)}>
                     <TableCell className="font-mono font-bold text-primary">{m.id}</TableCell>
-                    <TableCell>
-                      <div className="text-sm font-medium">{m.skuCode}</div>
-                    </TableCell>
-                    <TableCell className="text-xs">{m.targetCells} Cells</TableCell>
+                    <TableCell>{m.skuCode}</TableCell>
                     <TableCell>
                        <div className="flex items-center gap-2">
                           <div className="w-16 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -87,18 +83,13 @@ export default function ModuleAssemblyList() {
                        </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(m.status)}</TableCell>
-                    <TableCell>
-                       <div className="flex flex-col text-[11px] text-muted-foreground">
-                          <span className="flex items-center gap-1 font-medium text-slate-600 dark:text-slate-400"><Calendar size={10} /> {new Date(m.updatedAt).toLocaleDateString()}</span>
-                          <span className="flex items-center gap-1"><User size={10} /> {m.createdBy}</span>
-                       </div>
-                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{new Date(m.updatedAt).toLocaleDateString()}</TableCell>
                     <TableCell className="text-right">
                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                            <Tooltip content="Quick Trace">
                                <Button variant="ghost" size="icon" onClick={() => setTraceId(m.id)} className="text-indigo-500"><History size={16} /></Button>
                            </Tooltip>
-                           <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate(`/operate/modules/${m.id}`)}>Open <Eye size={14} /></Button>
+                           <Button variant="ghost" size="sm" onClick={() => navigate(`/operate/modules/${m.id}`)}>Open</Button>
                        </div>
                     </TableCell>
                   </TableRow>
@@ -109,12 +100,7 @@ export default function ModuleAssemblyList() {
         </CardContent>
       </Card>
 
-      <TraceDrawer 
-        isOpen={!!traceId} 
-        onClose={() => setTraceId(null)} 
-        assetId={traceId || ''} 
-        assetType="MODULE" 
-      />
+      <TraceDrawer isOpen={!!traceId} onClose={() => setTraceId(null)} assetId={traceId || ''} assetType="MODULE" />
     </div>
   );
 }

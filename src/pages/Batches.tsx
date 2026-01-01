@@ -1,9 +1,10 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { batchService } from '../services/api';
 import { Batch, BatchStatus } from '../domain/types';
 import { Button, Input, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Card, CardContent } from '../components/ui/design-system';
-import { Plus, Search, Filter, Eye, MoreHorizontal, FileDown, Lock, Unlock, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Plus, Search, Filter, Eye, MoreHorizontal, FileDown, Lock, Unlock, AlertTriangle, CheckCircle, Loader2, PackageOpen } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -119,9 +120,14 @@ export default function Batches() {
 
   const loadBatches = async () => {
     setLoading(true);
-    const data = await batchService.getBatches();
-    setBatches(data);
-    setLoading(false);
+    try {
+      const data = await batchService.getBatches();
+      setBatches(data);
+    } catch (err) {
+      console.error("Failed to load batches", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreateSuccess = () => {
@@ -150,7 +156,7 @@ export default function Batches() {
         </div>
         <div className="flex gap-2">
           {canCreate && (
-            <Button onClick={() => setIsCreateOpen(true)}>
+            <Button onClick={() => setIsCreateOpen(true)} disabled={loading}>
               <Plus className="mr-2 h-4 w-4" /> Create Batch
             </Button>
           )}
@@ -197,12 +203,22 @@ export default function Batches() {
             </TableHeader>
             <tbody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Loading batches...</TableCell>
-                </TableRow>
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="animate-pulse">
+                    <TableCell colSpan={8} className="py-6">
+                       <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-full"></div>
+                    </TableCell>
+                  </TableRow>
+                ))
               ) : filteredBatches.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-muted-foreground">No batches found matching your filters.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-20 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <PackageOpen className="h-12 w-12 opacity-10 mb-2" />
+                      <p className="font-medium">No production batches found.</p>
+                      <p className="text-xs">Try adjusting filters or checking the current demo scenario.</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
                 filteredBatches.map((batch) => (

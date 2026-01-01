@@ -1,11 +1,13 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { dashboardMetricsService, DashboardMetrics } from '../services/dashboardMetrics';
 import { useAppStore } from '../lib/store';
 import { canView } from '../rbac/can';
 import { ScreenId } from '../rbac/screenIds';
-import { Card, CardContent, CardHeader, CardTitle, Badge } from '../components/ui/design-system';
-import { Battery, Box, CheckCircle, AlertTriangle, Truck, Layers, Activity, ShieldAlert, FileCheck, Package } from 'lucide-react';
+// Added Button to imports
+import { Card, CardContent, CardHeader, CardTitle, Badge, Button } from '../components/ui/design-system';
+import { Battery, Box, CheckCircle, AlertTriangle, Truck, Layers, Activity, ShieldAlert, FileCheck, Package, Loader2, Inbox } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
 // --- Widget Components ---
@@ -34,16 +36,23 @@ const ProductionWidget = ({ data }: { data: DashboardMetrics['production'] }) =>
     <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Layers className="h-5 w-5" /> Production Output</CardTitle></CardHeader>
     <CardContent>
       <div className="h-[250px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.outputTrend}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis fontSize={12} tickLine={false} axisLine={false} />
-            <Tooltip />
-            <Bar dataKey="built" fill="#4f46e5" radius={[4, 4, 0, 0]} name="Built" />
-            <Bar dataKey="target" fill="#e2e8f0" radius={[4, 4, 0, 0]} name="Target" />
-          </BarChart>
-        </ResponsiveContainer>
+        {data.outputTrend.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data.outputTrend}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis fontSize={12} tickLine={false} axisLine={false} />
+              <Tooltip />
+              <Bar dataKey="built" fill="#4f46e5" radius={[4, 4, 0, 0]} name="Built" />
+              <Bar dataKey="target" fill="#e2e8f0" radius={[4, 4, 0, 0]} name="Target" />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+             <Inbox className="h-8 w-8 mb-2 opacity-20" />
+             <p className="text-xs">No production data in current scenario.</p>
+          </div>
+        )}
       </div>
       <div className="mt-4 grid grid-cols-2 gap-4 text-center text-sm">
          <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded">
@@ -64,7 +73,11 @@ const ActiveBatchesWidget = ({ data }: { data: DashboardMetrics['production']['t
         <CardHeader><CardTitle className="text-lg">Active Batches</CardTitle></CardHeader>
         <CardContent>
             <div className="space-y-4">
-                {data.length === 0 ? <p className="text-sm text-muted-foreground">No active batches.</p> : 
+                {data.length === 0 ? (
+                  <div className="py-10 text-center text-muted-foreground italic text-sm">
+                     No active production batches.
+                  </div>
+                ) : 
                  data.map(b => (
                     <div key={b.id} className="flex items-center justify-between">
                         <div>
@@ -90,16 +103,23 @@ const QualityWidget = ({ data }: { data: DashboardMetrics['quality'] }) => (
         <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Activity className="h-5 w-5" /> Quality Trends</CardTitle></CardHeader>
         <CardContent>
             <div className="h-[250px]">
-                <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data.passFailTrend}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis fontSize={12} tickLine={false} axisLine={false} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="passed" stroke="#10b981" strokeWidth={2} dot={{r: 3}} name="Passed" />
-                        <Line type="monotone" dataKey="failed" stroke="#ef4444" strokeWidth={2} dot={{r: 3}} name="Failed" />
-                    </LineChart>
-                </ResponsiveContainer>
+                {data.passFailTrend.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={data.passFailTrend}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                          <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                          <YAxis fontSize={12} tickLine={false} axisLine={false} />
+                          <Tooltip />
+                          <Line type="monotone" dataKey="passed" stroke="#10b981" strokeWidth={2} dot={{r: 3}} name="Passed" />
+                          <Line type="monotone" dataKey="failed" stroke="#ef4444" strokeWidth={2} dot={{r: 3}} name="Failed" />
+                      </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-muted-foreground bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+                    <Activity className="h-8 w-8 mb-2 opacity-20" />
+                    <p className="text-xs">Awaiting EOL test results...</p>
+                  </div>
+                )}
             </div>
         </CardContent>
     </Card>
@@ -176,24 +196,46 @@ export default function Dashboard() {
   const isExternal = currentCluster?.id === 'C9';
 
   useEffect(() => {
+    setLoading(true);
     dashboardMetricsService.getMetrics().then(data => {
       setMetrics(data);
+      setLoading(false);
+    }).catch(err => {
+      console.error("Dashboard metric fetch failed", err);
       setLoading(false);
     });
   }, []);
 
-  if (loading || !metrics) return <div className="flex items-center justify-center h-[50vh]">Loading dashboard...</div>;
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary opacity-50" />
+        <p className="text-sm text-muted-foreground font-medium animate-pulse">Aggregating real-time ledger metrics...</p>
+      </div>
+    );
+  }
+
+  if (!metrics) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] space-y-4">
+        <AlertTriangle className="h-10 w-10 text-rose-500 opacity-50" />
+        <h3 className="text-lg font-bold">Metrics Unavailable</h3>
+        <p className="text-sm text-muted-foreground">Unable to fetch dashboard data. Please try again or check scenario.</p>
+        <Button variant="outline" onClick={() => window.location.reload()}>Retry Fetch</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="animate-in fade-in slide-in-from-top-1 duration-500">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <p className="text-muted-foreground">Operational overview and key performance indicators.</p>
       </div>
 
       {/* Executive Summary Row */}
       {showExec && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
           <KPICard 
             title={isExternal ? "My Batteries" : "Total Batteries"} 
             value={isExternal ? metrics.kpis.shippedCount : metrics.kpis.totalBatteries} 
@@ -215,7 +257,7 @@ export default function Dashboard() {
             value={`${metrics.kpis.eolPassRate}%`} 
             icon={CheckCircle} 
             color="emerald" 
-            onClick={() => navigate('/eol')} // Safe nav
+            onClick={() => navigate('/eol')} 
           />
           {!isExternal && (
             <KPICard 
@@ -223,7 +265,7 @@ export default function Dashboard() {
                 value={metrics.kpis.openExceptions} 
                 icon={AlertTriangle} 
                 color="amber"
-                onClick={() => navigate('/batteries')} // Ideally filtered
+                onClick={() => navigate('/compliance')} 
             />
           )}
           {isExternal && (
@@ -238,7 +280,7 @@ export default function Dashboard() {
       )}
 
       {/* Main Widgets Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in duration-700">
         
         {/* Production Column */}
         {showProd && (

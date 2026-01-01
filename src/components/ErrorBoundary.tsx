@@ -1,6 +1,9 @@
-import React, { ErrorInfo, ReactNode } from 'react';
-import { Button, Card, CardContent, CardHeader, CardTitle } from './ui/design-system';
-import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home } from 'lucide-react';
+
+import React, { Component, ErrorInfo, ReactNode } from 'react';
+// Added Badge to imports
+import { Button, Card, CardContent, CardHeader, CardTitle, Badge } from './ui/design-system';
+import { AlertTriangle, RefreshCw, ChevronDown, ChevronRight, Home, Database, ClipboardCopy, Trash2 } from 'lucide-react';
+import { logger } from '../utils/logger';
 
 interface Props {
   children?: ReactNode;
@@ -13,85 +16,109 @@ interface State {
   showDetails: boolean;
 }
 
-/**
- * Standard React Error Boundary component.
- * Inherits from React.Component to provide lifecycle hooks for error tracking.
- */
-// Explicitly extending React.Component to ensure TypeScript correctly recognizes props, state, and setState members
-class ErrorBoundary extends React.Component<Props, State> {
+// Fixed class component inheritance by using the Component named import
+class ErrorBoundary extends Component<Props, State> {
+  // state property initialization without override
+  public state: State = {
+    hasError: false,
+    error: null,
+    errorInfo: null,
+    showDetails: false
+  };
+
   constructor(props: Props) {
     super(props);
-    // Initialize state using the defined State interface
-    this.state = {
-      hasError: false,
-      error: null,
-      errorInfo: null,
-      showDetails: false
-    };
   }
 
   public static getDerivedStateFromError(error: Error): State {
-    // Update state so the next render will show the fallback UI
     return { hasError: true, error, errorInfo: null, showDetails: false };
   }
 
+  // Lifecycle methods without override to resolve environment-specific compilation errors
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Correctly updating state using the setState method inherited from React.Component
     this.setState({ error, errorInfo });
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    logger.error("Global Error Boundary caught exception", error);
   }
 
   private handleReload = () => {
     window.location.reload();
   };
 
+  private handleHardReset = () => {
+    if (window.confirm("This will clear all local data, demo selections, and log you out. Proceed?")) {
+      localStorage.clear();
+      window.location.href = '/';
+    }
+  };
+
+  private copyDiagnostics = () => {
+    const data = logger.getDiagnostics(this.state.error || undefined);
+    navigator.clipboard.writeText(data);
+    alert("Diagnostic info copied to clipboard.");
+  };
+
   private toggleDetails = () => {
-    // Correctly updating state using the setState method inherited from React.Component
-    this.setState(prev => ({ showDetails: !prev.showDetails }));
+    this.setState((prev: State) => ({ showDetails: !prev.showDetails }));
   };
 
   public render() {
-    // Accessing component state to determine whether to show error UI
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center p-6 font-sans">
-          <Card className="w-full max-w-2xl border-rose-200 dark:border-rose-900 shadow-xl">
+          <Card className="w-full max-w-3xl border-rose-200 dark:border-rose-900 shadow-2xl">
             <CardHeader className="bg-rose-50 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900">
-              <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
-                <AlertTriangle className="h-6 w-6" />
-                <CardTitle>Application Error</CardTitle>
+              <div className="flex items-center justify-between text-rose-600 dark:text-rose-400">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-8 w-8" />
+                  <div>
+                    <CardTitle className="text-xl">Console System Failure</CardTitle>
+                    <p className="text-xs opacity-70 font-mono">CRITICAL_RUNTIME_ERR</p>
+                  </div>
+                </div>
+                <Badge variant="destructive">Safety Guard Active</Badge>
               </div>
             </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <p className="text-slate-600 dark:text-slate-400">
-                The application encountered an unexpected runtime error. This might be due to a temporary state mismatch or a routing issue.
-              </p>
+            <CardContent className="pt-6 space-y-6">
+              <div className="space-y-2">
+                <p className="text-slate-700 dark:text-slate-300 font-medium">
+                  The application encountered a fatal error that prevented it from rendering.
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  This often happens during demo data switching if assets expected by the current route are purged or if the session state becomes incoherent.
+                </p>
+              </div>
               
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button variant="outline" onClick={() => window.location.href = '#/'} className="gap-2 justify-start h-12">
+                  <Home className="h-4 w-4" /> Reset to Dashboard
+                </Button>
+                <Button onClick={this.handleReload} className="gap-2 bg-slate-900 hover:bg-slate-800 text-white border-none h-12 justify-start">
+                  <RefreshCw className="h-4 w-4" /> Hot Reload Component
+                </Button>
+                <Button variant="outline" onClick={this.handleHardReset} className="gap-2 text-rose-600 hover:bg-rose-50 h-12 justify-start">
+                  <Trash2 className="h-4 w-4" /> Clear All Cache & Logout
+                </Button>
+                <Button variant="outline" onClick={this.copyDiagnostics} className="gap-2 h-12 justify-start">
+                  <ClipboardCopy className="h-4 w-4" /> Copy Diagnostic Bundle
+                </Button>
+              </div>
+
               <div className="border border-slate-200 dark:border-slate-800 rounded-md overflow-hidden bg-slate-900 text-slate-300 font-mono text-xs">
                 <button 
                   onClick={this.toggleDetails}
-                  className="w-full flex items-center gap-2 p-2 bg-slate-800 dark:bg-slate-900 hover:bg-slate-700 dark:hover:bg-slate-800 text-slate-400 transition-colors border-b border-slate-700 dark:border-slate-800"
+                  className="w-full flex items-center gap-2 p-3 bg-slate-800 dark:bg-slate-900 hover:bg-slate-700 dark:hover:bg-slate-800 text-slate-400 transition-colors border-b border-slate-700 dark:border-slate-800"
                 >
                   {this.state.showDetails ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                  Diagnostics
+                  Developer Trace Log
                 </button>
                 {this.state.showDetails && (
-                  <div className="p-3 overflow-auto max-h-[300px]">
-                    <p className="text-rose-400 mb-2 font-bold">{this.state.error?.toString()}</p>
-                    <pre className="whitespace-pre-wrap text-slate-500">
+                  <div className="p-4 overflow-auto max-h-[250px] leading-relaxed">
+                    <p className="text-rose-400 mb-2 font-bold select-all">{this.state.error?.toString()}</p>
+                    <pre className="whitespace-pre-wrap text-slate-500 text-[10px]">
                       {this.state.errorInfo?.componentStack}
                     </pre>
                   </div>
                 )}
-              </div>
-
-              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={() => window.location.href = '/'} className="gap-2">
-                  <Home className="h-4 w-4" /> Reset to Dashboard
-                </Button>
-                <Button onClick={this.handleReload} className="gap-2 bg-rose-600 hover:bg-rose-700 text-white border-none">
-                  <RefreshCw className="h-4 w-4" /> Reload Console
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -99,7 +126,6 @@ class ErrorBoundary extends React.Component<Props, State> {
       );
     }
 
-    // Accessing children from props as defined in the React.Component base class
     return this.props.children;
   }
 }

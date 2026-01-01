@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { batteryService, batchService } from '../services/api';
 import { Battery, BatteryStatus, Batch } from '../domain/types';
 import { Button, Input, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Card, CardContent, Tooltip } from '../components/ui/design-system';
-import { Plus, Search, Filter, Eye, QrCode, Cpu, CheckCircle, Truck, FileDown, ClipboardCheck } from 'lucide-react';
+import { Plus, Search, Filter, Eye, QrCode, Cpu, CheckCircle, Truck, FileDown, ClipboardCheck, Loader2, ZapOff } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -122,13 +122,18 @@ export default function Batteries() {
 
   const loadBatteries = async () => {
     setLoading(true);
-    const data = await batteryService.getBatteries({ 
-        search, 
-        status: statusFilter, 
-        eolResult: eolFilter 
-    });
-    setBatteries(data);
-    setLoading(false);
+    try {
+      const data = await batteryService.getBatteries({ 
+          search, 
+          status: statusFilter, 
+          eolResult: eolFilter 
+      });
+      setBatteries(data);
+    } catch (err) {
+      console.error("Failed to load battery trace", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleScan = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -167,6 +172,8 @@ export default function Batteries() {
     }
   };
 
+  const filteredBatteries = batteries; // already filtered by service in this mock
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -184,7 +191,7 @@ export default function Batteries() {
               />
            </div>
           {canRegister && (
-            <Button onClick={() => setIsRegisterOpen(true)}>
+            <Button onClick={() => setIsRegisterOpen(true)} disabled={loading}>
               <Plus className="mr-2 h-4 w-4" /> Register
             </Button>
           )}
@@ -239,15 +246,25 @@ export default function Batteries() {
             </TableHeader>
             <tbody>
               {loading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={i} className="animate-pulse">
+                    <TableCell colSpan={7} className="py-5">
+                       <div className="h-4 bg-slate-100 dark:bg-slate-800 rounded w-full"></div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : filteredBatteries.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">Loading inventory...</TableCell>
-                </TableRow>
-              ) : batteries.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">No batteries found.</TableCell>
+                  <TableCell colSpan={7} className="text-center py-20 text-muted-foreground">
+                    <div className="flex flex-col items-center gap-2">
+                      <ZapOff className="h-12 w-12 opacity-10 mb-2" />
+                      <p className="font-medium">No batteries found.</p>
+                      <p className="text-xs">No assets match your current role or search parameters.</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ) : (
-                batteries.map((batt) => (
+                filteredBatteries.map((batt) => (
                   <TableRow key={batt.id} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50" onClick={() => navigate(`/batteries/${batt.id}`)}>
                     <TableCell className="font-medium font-mono">
                       {batt.serialNumber}
