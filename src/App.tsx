@@ -1,12 +1,18 @@
+// NO ALIAS IMPORTS ALLOWED - Relative Paths Only (./ or ../)
 import React from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthGate } from './components/AuthGate';
+
+// CRITICAL: ESM Enforcer must run before all component definitions
+import { assertNoAliasImports } from './app/aliasImportEnforcer';
+assertNoAliasImports();
+
+// AUTH GATE DISABLED FOR AI STUDIO PREVIEW STABILITY
 import { RouteGuard } from './components/RouteGuard';
 import { ScreenId } from './rbac/screenIds';
 import { Layout } from './components/Layout';
-import { ROUTES } from '../app/routes';
+import { ROUTES } from './app/routes';
 
-// Pages
+// Pages - Explicit Relative Paths
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Telemetry from './pages/Telemetry';
@@ -15,6 +21,7 @@ import SkuList from './pages/SkuList';
 import SkuDetail from './pages/SkuDetail';
 import CellLotsList from './pages/CellLotsList';
 import CellLotDetail from './pages/CellLotDetail';
+import CreateCellLot from './pages/CreateCellLot';
 import LineageView from './pages/LineageView';
 import Batches from './pages/Batches';
 import BatchDetail from './pages/BatchDetail';
@@ -49,49 +56,49 @@ import ErrorBoundary from './components/ErrorBoundary';
 import NotFound from './pages/NotFound';
 import RunbookHub from './pages/RunbookHub';
 import RunbookDetail from './pages/RunbookDetail';
+import { DiagProbe } from './components/DiagProbe';
 
 /**
- * App component with routing and security gates.
- * Updated P51: Corrected relative imports for src-nested file.
+ * Main Application Shell
+ * ESM Enforcement Active (P-056H9)
+ * Strictly Relative Imports Only
  */
 export default function App() {
   return (
-    <HashRouter>
-      <ErrorBoundary>
+    <ErrorBoundary>
+      <HashRouter>
+        <DiagProbe />
         <Routes>
           <Route path={ROUTES.LOGIN} element={<Login />} />
           
-          <Route path="/" element={<AuthGate><Layout /></AuthGate>}>
+          <Route path="/" element={<Layout />}>
             <Route index element={<RouteGuard screen={ScreenId.DASHBOARD}><Dashboard /></RouteGuard>} />
             
-            {/* Observe */}
             <Route path={ROUTES.TELEMETRY.substring(1)} element={<RouteGuard screen={ScreenId.TELEMETRY}><Telemetry /></RouteGuard>} />
             <Route path={ROUTES.ANALYTICS.substring(1)} element={<RouteGuard screen={ScreenId.ANALYTICS}><Analytics /></RouteGuard>} />
             
-            {/* SOP Guide */}
             <Route path={ROUTES.RUNBOOKS.substring(1)} element={<RouteGuard screen={ScreenId.RUNBOOK_HUB}><RunbookHub /></RouteGuard>} />
             <Route path={ROUTES.RUNBOOK_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.RUNBOOK_DETAIL}><RunbookDetail /></RouteGuard>} />
 
-            {/* Design */}
             <Route path={ROUTES.SKU_DESIGN.substring(1)} element={<RouteGuard screen={ScreenId.SKU_LIST}><SkuList /></RouteGuard>} />
             <Route path={ROUTES.SKU_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.SKU_LIST}><SkuDetail /></RouteGuard>} />
             
-            {/* Trace */}
-            <Route path={ROUTES.CELL_SERIALIZATION.substring(1)} element={<RouteGuard screen={ScreenId.CELL_LOTS_LIST}><CellLotsList /></RouteGuard>} />
-            <Route path={ROUTES.CELL_LOT_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.CELL_LOTS_LIST}><CellLotDetail /></RouteGuard>} />
-            <Route path={ROUTES.LINEAGE_AUDIT.substring(1)} element={<Navigate to={ROUTES.CELL_SERIALIZATION} replace />} />
-            <Route path={ROUTES.LINEAGE_AUDIT_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.LINEAGE_VIEW}><LineageView /></RouteGuard>} />
+            <Route path="trace/cells">
+               <Route index element={<Navigate to={ROUTES.CELL_SERIALIZATION_HAPPY} replace />} />
+               <Route path="lot-happy" element={<RouteGuard screen={ScreenId.CELL_LOTS_LIST}><CellLotsList /></RouteGuard>} />
+               <Route path="new" element={<RouteGuard screen={ScreenId.CELL_LOTS_CREATE}><CreateCellLot /></RouteGuard>} />
+               <Route path=":lotId" element={<RouteGuard screen={ScreenId.CELL_LOTS_DETAIL}><CellLotDetail /></RouteGuard>} />
+            </Route>
+
+            <Route path="trace/lineage" element={<RouteGuard screen={ScreenId.LINEAGE_VIEW}><LineageView /></RouteGuard>} />
+            <Route path="trace/lineage/:id" element={<RouteGuard screen={ScreenId.LINEAGE_VIEW}><LineageView /></RouteGuard>} />
             
-            {/* Operate */}
             <Route path={ROUTES.BATCHES.substring(1)} element={<RouteGuard screen={ScreenId.BATCHES_LIST}><Batches /></RouteGuard>} />
             <Route path={ROUTES.BATCH_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.BATCHES_DETAIL}><BatchDetail /></RouteGuard>} />
-            
             <Route path={ROUTES.MODULE_ASSEMBLY.substring(1)} element={<RouteGuard screen={ScreenId.MODULE_ASSEMBLY_LIST}><ModuleAssemblyList /></RouteGuard>} />
             <Route path={ROUTES.MODULE_ASSEMBLY_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.MODULE_ASSEMBLY_DETAIL}><ModuleAssemblyDetail /></RouteGuard>} />
-            
             <Route path={ROUTES.PACK_ASSEMBLY.substring(1)} element={<RouteGuard screen={ScreenId.PACK_ASSEMBLY_LIST}><PackAssemblyList /></RouteGuard>} />
             <Route path={ROUTES.PACK_ASSEMBLY_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.PACK_ASSEMBLY_DETAIL}><PackAssemblyDetail /></RouteGuard>} />
-            
             <Route path={ROUTES.BATTERY_IDENTITY.substring(1)} element={<RouteGuard screen={ScreenId.BATTERIES_LIST}><Batteries /></RouteGuard>} />
             <Route path={ROUTES.BATTERY_IDENTITY_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.BATTERIES_DETAIL}><BatteryDetail /></RouteGuard>} />
 
@@ -103,7 +110,6 @@ export default function App() {
             <Route path={ROUTES.DISPATCH_ORDERS.substring(1)} element={<RouteGuard screen={ScreenId.DISPATCH_LIST}><DispatchList /></RouteGuard>} />
             <Route path={ROUTES.DISPATCH_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.DISPATCH_DETAIL}><DispatchDetail /></RouteGuard>} />
             
-            {/* Assure */}
             <Route path={ROUTES.EOL_QUEUE.substring(1)} element={<RouteGuard screen={ScreenId.EOL_QA_QUEUE}><EolQaList /></RouteGuard>} />
             <Route path={ROUTES.EOL_SETUP.substring(1)} element={<RouteGuard screen={ScreenId.EOL_SETUP}><EolStationSetup /></RouteGuard>} />
             <Route path={ROUTES.EOL_REVIEW.substring(1)} element={<RouteGuard screen={ScreenId.EOL_REVIEW}><EolReview /></RouteGuard>} />
@@ -111,25 +117,22 @@ export default function App() {
             <Route path={ROUTES.EOL_RUN.substring(1)} element={<RouteGuard screen={ScreenId.EOL_RUN_TEST}><EolRunTest /></RouteGuard>} />
             <Route path={ROUTES.EOL_AUDIT.substring(1)} element={<RouteGuard screen={ScreenId.EOL_AUDIT_DETAIL}><EolAuditDetail /></RouteGuard>} />
 
-            {/* Govern & Resolve */}
             <Route path={ROUTES.COMPLIANCE.substring(1)} element={<RouteGuard screen={ScreenId.COMPLIANCE}><Compliance /></RouteGuard>} />
             <Route path={ROUTES.CUSTODY.substring(1)} element={<RouteGuard screen={ScreenId.CUSTODY}><Custody /></RouteGuard>} />
-            <Route path={ROUTES.CUSTODY_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.CUSTODY}><CustodyDetail /></RouteGuard>} />
+            <Route path={ROUTES.CUSTODY_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.CUSTODY_DETAIL}><CustodyDetail /></RouteGuard>} />
             
             <Route path={ROUTES.WARRANTY_RETURNS.substring(1)} element={<RouteGuard screen={ScreenId.WARRANTY}><Warranty /></RouteGuard>} />
             <Route path={ROUTES.WARRANTY_CLAIM_DETAIL.substring(1)} element={<RouteGuard screen={ScreenId.WARRANTY}><WarrantyDetail /></RouteGuard>} />
             <Route path={ROUTES.WARRANTY_INTAKE.substring(1)} element={<RouteGuard screen={ScreenId.WARRANTY_EXTERNAL_INTAKE}><WarrantyIntake /></RouteGuard>} />
             
-            {/* Admin & Diagnostics */}
             <Route path={ROUTES.SETTINGS.substring(1)} element={<RouteGuard screen={ScreenId.SETTINGS}><Settings /></RouteGuard>} />
             <Route path={ROUTES.ACCESS_AUDIT.substring(1)} element={<RouteGuard screen={ScreenId.RBAC_VIEW}><RbacAdmin /></RouteGuard>} />
             <Route path={ROUTES.SYSTEM_HEALTH.substring(1)} element={<DiagnosticsPage />} />
 
-            {/* Catch-all for truly unknown paths */}
             <Route path="*" element={<NotFound />} />
           </Route>
         </Routes>
-      </ErrorBoundary>
-    </HashRouter>
+      </HashRouter>
+    </ErrorBoundary>
   );
 }

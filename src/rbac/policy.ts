@@ -23,12 +23,15 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.BATCHES_DETAIL]: ['V'],
     [ScreenId.BATTERIES_LIST]: ['V'],
     [ScreenId.BATTERIES_DETAIL]: ['V'],
-    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    [ScreenId.CELL_LOTS_LIST]: ['V'],
+    [ScreenId.CELL_LOTS_DETAIL]: ['V'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
     [ScreenId.EOL_QA_QUEUE]: ['V'],
-    // Fix: Corrected invalid ScreenId property reference from EOL_QA_DETAIL to EOL_DETAILS.
     [ScreenId.EOL_DETAILS]: ['V'],
     [ScreenId.COMPLIANCE]: ['V'],
     [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
+    [ScreenId.CUSTODY]: ['V'],
+    [ScreenId.CUSTODY_DETAIL]: ['V'],
     [ScreenId.WARRANTY]: ['V'],
     [ScreenId.WARRANTY_OVERVIEW]: ['V'],
     [ScreenId.SETTINGS]: ['V'],
@@ -50,11 +53,13 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.PACK_ASSEMBLY_DETAIL]: ['V', 'E', 'X'],
     [ScreenId.BATTERIES_LIST]: ['V', 'C'],
     [ScreenId.BATTERIES_DETAIL]: ['V'],
-    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    [ScreenId.CELL_LOTS_LIST]: ['V'],
+    [ScreenId.CELL_LOTS_DETAIL]: ['V'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
     [ScreenId.EOL_QA_QUEUE]: ['V'],
-    // Fix: Corrected invalid ScreenId property reference from EOL_QA_DETAIL to EOL_DETAILS.
     [ScreenId.EOL_DETAILS]: ['V'],
     [ScreenId.TELEMETRY]: ['V'],
+    [ScreenId.SKU_DETAIL]: ['V'],
   },
 
   // C3: Quality - Testing & Approval
@@ -66,18 +71,18 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DASHBOARD_RISK_COMPLIANCE]: ['V'],
     [ScreenId.PACK_ASSEMBLY_LIST]: ['V'],
     [ScreenId.PACK_ASSEMBLY_DETAIL]: ['V', 'E', 'A'],
-    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION to EOL_QA_QUEUE.
+    [ScreenId.CELL_LOTS_LIST]: ['V'],
+    [ScreenId.CELL_LOTS_DETAIL]: ['V'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
     [ScreenId.EOL_QA_QUEUE]: ['V', 'C', 'E', 'A', 'X'],
-    // Fix: Corrected invalid ScreenId property reference from EOL_QA_DETAIL to EOL_DETAILS.
     [ScreenId.EOL_DETAILS]: ['V', 'E', 'A', 'X'],
-    // Fix: Corrected invalid ScreenId property reference from EOL_QA_STATION_SETUP to EOL_SETUP.
     [ScreenId.EOL_SETUP]: ['V', 'E', 'M'],
-    // Fix: Corrected invalid ScreenId property reference from EOL_QA_REVIEW to EOL_REVIEW.
     [ScreenId.EOL_REVIEW]: ['V'],
     [ScreenId.COMPLIANCE]: ['V', 'C', 'E'],
     [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V'],
     [ScreenId.COMPLIANCE_FINDINGS_TAB]: ['V', 'C', 'E'],
     [ScreenId.WARRANTY]: ['V', 'E'],
+    [ScreenId.SKU_DETAIL]: ['V'],
   },
 
   // C4: IT & Engineering - Full Config
@@ -90,6 +95,8 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.SETTINGS_API_KEYS]: ['V', 'E', 'M'],
     [ScreenId.RBAC_VIEW]: ['V', 'M'],
     [ScreenId.COMPLIANCE]: ['V'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
+    [ScreenId.SKU_DETAIL]: ['V', 'E', 'M'],
   },
 
   // C5: BMS & Firmware
@@ -101,6 +108,8 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.TELEMETRY]: ['V', 'E'],
     [ScreenId.TELEMETRY_LIVE_VIEW]: ['V', 'E'],
     [ScreenId.BATTERIES_DETAIL]: ['V', 'E'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
+    [ScreenId.SKU_DETAIL]: ['V'],
   },
   
   // C6: Logistics
@@ -110,10 +119,15 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.DASHBOARD_LOGISTICS]: ['V'],
     [ScreenId.INVENTORY]: ['V', 'E', 'X'],
+    [ScreenId.CELL_LOTS_LIST]: ['V', 'C', 'E'],
+    [ScreenId.CELL_LOTS_CREATE]: ['C'],
+    [ScreenId.CELL_LOTS_DETAIL]: ['V', 'E'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
     [ScreenId.DISPATCH_LIST]: ['V', 'C', 'E', 'X'],
     [ScreenId.DISPATCH_DETAIL]: ['V', 'E', 'X'],
     [ScreenId.CUSTODY]: ['V', 'X'],
     [ScreenId.CUSTODY_LIST]: ['V'],
+    [ScreenId.CUSTODY_DETAIL]: ['V', 'E', 'X'],
     [ScreenId.CUSTODY_RECEIVE_ACTION]: ['X'],
   },
 
@@ -125,6 +139,8 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.WARRANTY_OVERVIEW]: ['V'],
     [ScreenId.WARRANTY_CLAIMS_LIST]: ['V', 'E'],
     [ScreenId.BATTERIES_DETAIL]: ['V'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
+    [ScreenId.SKU_DETAIL]: ['V'],
   },
 
   // C8: Compliance
@@ -135,6 +151,8 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.COMPLIANCE_OVERVIEW_TAB]: ['V'],
     [ScreenId.COMPLIANCE_CHECKS_TAB]: ['V', 'M'],
     [ScreenId.RBAC_VIEW]: ['V'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
+    [ScreenId.SKU_DETAIL]: ['V'],
   },
 
   // C9: External Partners
@@ -143,8 +161,10 @@ export const RBAC_POLICY: PolicyMap = {
     [ScreenId.RUNBOOK_DETAIL]: ['V'],
     [ScreenId.DASHBOARD]: ['V'],
     [ScreenId.CUSTODY]: ['V', 'X'],
+    [ScreenId.CUSTODY_DETAIL]: ['V', 'X'],
     [ScreenId.CUSTODY_ACCEPT_REJECT_ACTION]: ['X'],
     [ScreenId.WARRANTY_EXTERNAL_INTAKE]: ['V', 'C'],
     [ScreenId.BATTERIES_LIST]: ['V'],
+    [ScreenId.LINEAGE_VIEW]: ['V'],
   }
 };

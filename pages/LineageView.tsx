@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { moduleAssemblyService } from '../services/moduleAssemblyService';
@@ -120,7 +121,7 @@ export default function LineageView() {
           </div>
       )}
 
-      {loading && <div className="p-32 text-center animate-pulse text-muted-foreground font-mono text-xs uppercase tracking-widest">Resolving Decentralized Ledger...</div>}
+      {loading && <div className="p-32 text-center animate-pulse text-muted-foreground font-mono text-sm uppercase tracking-widest">Resolving Decentralized Ledger...</div>}
 
       {subject && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-500">

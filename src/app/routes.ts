@@ -1,6 +1,5 @@
 /**
  * Global Route Constants
- * Standardized short paths for P-056H2
  */
 export const ROUTES = {
   DASHBOARD: '/',
@@ -15,8 +14,8 @@ export const ROUTES = {
   ANALYTICS: '/analytics',
   
   // Design
-  SKU_DESIGN: '/sku',
-  SKU_DETAIL: '/sku/:id',
+  SKU_DESIGN: '/manufacturing/sku-design',
+  SKU_DETAIL: '/manufacturing/sku-design/:id',
   
   // Trace
   CELL_SERIALIZATION: '/trace/cells',
@@ -27,22 +26,22 @@ export const ROUTES = {
   LINEAGE_AUDIT_DETAIL: '/trace/lineage/:id',
   
   // Operate
-  BATCHES: '/batches',
-  BATCH_DETAIL: '/batches/:id',
-  MODULE_ASSEMBLY: '/operate/modules',
-  MODULE_ASSEMBLY_DETAIL: '/operate/modules/:id',
-  PACK_ASSEMBLY: '/operate/packs',
-  PACK_ASSEMBLY_DETAIL: '/operate/packs/:id',
-  BATTERY_IDENTITY: '/batteries',
-  BATTERY_IDENTITY_DETAIL: '/batteries/:id',
+  BATCHES: '/manufacturing/batches',
+  BATCH_DETAIL: '/manufacturing/batches/:id',
+  MODULE_ASSEMBLY: '/manufacturing/module-assembly',
+  MODULE_ASSEMBLY_DETAIL: '/manufacturing/module-assembly/:id',
+  PACK_ASSEMBLY: '/manufacturing/pack-assembly',
+  PACK_ASSEMBLY_DETAIL: '/manufacturing/pack-assembly/:id',
+  BATTERY_IDENTITY: '/manufacturing/battery-identity',
+  BATTERY_IDENTITY_DETAIL: '/manufacturing/battery-identity/:id',
   
-  PROVISIONING_QUEUE: '/provisioning',
-  PROVISIONING_SETUP: '/provisioning/setup',
-  PROVISIONING_WORKSTATION: '/provisioning/:batteryId',
+  PROVISIONING_QUEUE: '/manufacturing/provisioning/queue',
+  PROVISIONING_SETUP: '/manufacturing/provisioning/setup',
+  PROVISIONING_WORKSTATION: '/assure/provisioning/:batteryId',
   
   INVENTORY: '/inventory',
-  DISPATCH_ORDERS: '/dispatch',
-  DISPATCH_DETAIL: '/dispatch/:orderId',
+  DISPATCH_ORDERS: '/dispatch-orders',
+  DISPATCH_DETAIL: '/dispatch-orders/:orderId',
 
   // Assure
   EOL_QUEUE: '/assure/eol/qa-queue',

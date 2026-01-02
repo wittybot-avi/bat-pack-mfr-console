@@ -1,16 +1,13 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eolQaService } from '../services/eolQaService';
 import { Battery } from '../domain/types';
-import { Card, CardContent, CardHeader, CardTitle, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button, Input } from '../components/ui/design-system';
-import { Cpu, Search, ArrowRight, Loader2, Zap, History, ShieldCheck } from 'lucide-react';
-import { useAppStore } from '../lib/store';
+import { Card, CardContent, Table, TableHeader, TableRow, TableHead, TableCell, Badge, Button, Input } from '../components/ui/design-system';
+import { Search, ArrowRight, Loader2, Zap, History, ShieldCheck } from 'lucide-react';
 import { StageHeader } from '../components/SopGuidedUX';
 
 export default function ProvisioningQueue() {
   const navigate = useNavigate();
-  const { currentCluster } = useAppStore();
   const [batteries, setBatteries] = useState<Battery[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -42,7 +39,6 @@ export default function ProvisioningQueue() {
         objective="Execute firmware baseline installation and BMS-level calibration for certified packs."
         entityLabel="Logistics Hub"
         status="ACTIVE"
-        diagnostics={{ route: '/manufacturing/provisioning/queue', entityId: 'PROV-WH-01' }}
       />
 
       <div className="max-w-7xl mx-auto px-6 space-y-6">
@@ -51,12 +47,10 @@ export default function ProvisioningQueue() {
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input placeholder="Filter by SN or Batch..." className="pl-9 h-10 bg-white dark:bg-slate-900" value={search} onChange={e => setSearch(e.target.value)} />
             </div>
-            <div className="flex gap-2">
-                <Badge variant="outline" className="h-10 px-4 bg-slate-50 dark:bg-slate-900 border-dashed">
-                    <Zap size={14} className="text-amber-500 mr-2" />
-                    {batteries.length} Units Pending
-                </Badge>
-            </div>
+            <Badge variant="outline" className="h-10 px-4 bg-slate-50 dark:bg-slate-900 border-dashed">
+                <Zap size={14} className="text-amber-500 mr-2" />
+                {batteries.length} Units Pending
+            </Badge>
         </div>
 
         <Card>
@@ -78,7 +72,6 @@ export default function ProvisioningQueue() {
                   <TableRow><TableCell colSpan={5} className="text-center py-24 text-muted-foreground">
                     <History className="h-12 w-12 mx-auto mb-4 opacity-10" />
                     <p className="italic text-sm">No assets are currently awaiting S9 Provisioning.</p>
-                    <p className="text-xs mt-1">Packs must complete S8 Certification before appearing here.</p>
                   </TableCell></TableRow>
                 ) : (
                   filtered.map(b => (
@@ -92,7 +85,7 @@ export default function ProvisioningQueue() {
                           </div>
                       </TableCell>
                       <TableCell className="text-right">
-                         <Button onClick={() => navigate(`/assure/provisioning/${b.id}`)} size="sm" className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-md transition-all">
+                         <Button onClick={() => navigate(`/assure/provisioning/${b.id}`)} size="sm" className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-md">
                             Provision BMS <ArrowRight size={14} />
                          </Button>
                       </TableCell>

@@ -18,6 +18,7 @@ export default function CellLotDetail() {
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [isFailsafe, setIsFailsafe] = useState(false);
 
   // Form states
   const [genParams, setGenParams] = useState({
@@ -33,37 +34,72 @@ export default function CellLotDetail() {
   const canScan = isSuperAdmin || clusterId === 'C2';
 
   useEffect(() => {
+    // P54: Failsafe grace period
+    const failsafeTimer = setTimeout(() => {
+      if (loading && !lot && lotId?.startsWith('clot-failsafe')) {
+         engageFailsafe(lotId);
+      }
+    }, 1500);
+
     if (lotId) loadData(lotId);
+
+    return () => clearTimeout(failsafeTimer);
   }, [lotId]);
 
+  const engageFailsafe = (id: string) => {
+    console.warn("[P-054] engaging failsafe detail for", id);
+    const mock = {
+        id: id,
+        lotCode: id.toUpperCase(),
+        supplierName: 'Failsafe-Sourced',
+        supplierLotNo: 'FS-99',
+        chemistry: 'LFP',
+        formFactor: 'Prismatic',
+        capacityAh: 100,
+        receivedDate: new Date().toISOString(),
+        quantityReceived: 1000,
+        status: 'PUBLISHED',
+        generatedCount: 1000,
+        scannedCount: 1000,
+        boundCount: 0,
+        updatedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString()
+    };
+    setLot(mock as any);
+    setIsFailsafe(true);
+    setLoading(false);
+  };
+
   const loadData = async (id: string) => {
-    setLoading(true);
     try {
+      setLoading(true);
       const l = await cellTraceabilityService.getLot(id);
       if (l) {
         setLot(l);
         const s = await cellTraceabilityService.listSerials(id);
         setSerials(s);
         setGenParams(prev => ({ ...prev, prefix: l.supplierName.slice(0, 3).toUpperCase(), count: l.quantityReceived }));
+      } else if (id.startsWith('clot-failsafe')) {
+        engageFailsafe(id);
       }
     } catch (e) {
-      console.error(e);
+      console.error("Ledger detail sync error", e);
     } finally {
       setLoading(false);
     }
   };
 
   const handleUpdateDoc = async (field: keyof CellLot, val: any) => {
-    if (!lot) return;
+    if (!lot || isFailsafe) return;
     try {
-      const updated = await cellTraceabilityService.createLot({ ...lot, [field]: val } as any); // Re-using create as update in this mock service
+      const updated = await cellTraceabilityService.createLot({ ...lot, [field]: val } as any);
       setLot(updated);
       addNotification({ title: 'Updated', message: `${field} recorded.`, type: 'info' });
     } catch (e) {}
   };
 
   const handleGenerate = async () => {
-    if (!lot) return;
+    if (!lot || isFailsafe) return;
     setProcessing(true);
     try {
       const actor = `${currentRole?.name} (${clusterId})`;
@@ -79,7 +115,7 @@ export default function CellLotDetail() {
   };
 
   const handleScan = async () => {
-    if (!lot || !scanInput) return;
+    if (!lot || !scanInput || isFailsafe) return;
     try {
       const actor = `${currentRole?.name} (${clusterId})`;
       await cellTraceabilityService.scanSerial(lot.id, scanInput, actor);
@@ -92,7 +128,7 @@ export default function CellLotDetail() {
   };
 
   const handleRelease = async () => {
-      if (!lot) return;
+      if (!lot || isFailsafe) return;
       setProcessing(true);
       try {
           await cellTraceabilityService.createLot({ ...lot, status: 'PUBLISHED' } as any);
@@ -103,14 +139,15 @@ export default function CellLotDetail() {
       }
   };
 
-  if (loading || !lot) return <div className="p-20 text-center animate-pulse">Syncing traceable records...</div>;
+  if (loading && !lot) return <div className="p-20 text-center animate-pulse text-sm font-mono tracking-widest text-slate-400">Syncing traceable records...</div>;
 
-  const guards = workflowGuardrails.getCellLotGuardrail(lot, clusterId);
+  const currentLot = lot!;
+  const guards = workflowGuardrails.getCellLotGuardrail(currentLot, clusterId);
   const checklist = [
-      { label: 'Inbound Docs Captured', status: (lot.poNumber && lot.invoiceNumber && lot.grnNumber) ? 'DONE' : 'PENDING', icon: FileText },
-      { label: 'Identities Generated', status: lot.generatedCount > 0 ? 'DONE' : 'PENDING', icon: Fingerprint },
-      { label: 'Identities Bound', status: (lot.scannedCount >= lot.generatedCount && lot.generatedCount > 0) ? 'DONE' : 'PENDING', icon: Scan },
-      { label: 'QC Completed', status: lot.qcPassed ? 'DONE' : 'PENDING', icon: CheckCircle }
+      { label: 'Inbound Docs Captured', status: (currentLot.poNumber && currentLot.invoiceNumber && currentLot.grnNumber) ? 'DONE' : 'PENDING', icon: FileText },
+      { label: 'Identities Generated', status: currentLot.generatedCount > 0 ? 'DONE' : 'PENDING', icon: Fingerprint },
+      { label: 'Identities Bound', status: (currentLot.scannedCount >= currentLot.generatedCount && currentLot.generatedCount > 0) ? 'DONE' : 'PENDING', icon: Scan },
+      { label: 'QC Completed', status: currentLot.qcPassed ? 'DONE' : 'PENDING', icon: CheckCircle }
   ];
 
   return (
@@ -119,21 +156,24 @@ export default function CellLotDetail() {
         stageCode="S2"
         title="Incoming Material Receipt & Inbound Inventory"
         objective="Validate physical cell arrival against digital procurement records and generate immutable identities."
-        entityLabel={lot.lotCode}
-        status={lot.status}
-        diagnostics={{ route: '/trace/cells', entityId: lot.id }}
+        entityLabel={currentLot.lotCode}
+        status={currentLot.status}
+        diagnostics={{ route: '/trace/cells', entityId: currentLot.id }}
       />
 
       <div className="max-w-7xl mx-auto px-6 space-y-6">
-        <div className="flex items-center gap-4 mb-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/trace/cells')} className="gap-2 text-slate-500">
+        <div className="flex items-center justify-between mb-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-2 text-slate-500">
                 <ArrowLeft className="h-4 w-4" /> Back to Trace Log
             </Button>
+            {isFailsafe && (
+                <Badge variant="warning" className="animate-pulse">FAILSAFE MODE</Badge>
+            )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3 space-y-6">
-            <NextStepsPanel entity={lot} type="LOT" />
+            <NextStepsPanel entity={currentLot} type="LOT" />
 
             <Card className="shadow-sm">
                 <CardHeader className="border-b bg-slate-50/50 dark:bg-slate-800/30">
@@ -180,29 +220,29 @@ export default function CellLotDetail() {
                     <CardContent className="grid grid-cols-2 gap-y-6 gap-x-12">
                         <div className="space-y-1">
                         <label className="text-xs font-bold text-muted-foreground uppercase">Supplier Reference</label>
-                        <p className="font-medium">{lot.supplierLotNo}</p>
+                        <p className="font-medium">{currentLot.supplierLotNo}</p>
                         </div>
                         <div className="space-y-1">
                         <label className="text-xs font-bold text-muted-foreground uppercase">Quantity</label>
-                        <p className="font-medium text-lg">{lot.quantityReceived.toLocaleString()} cells</p>
+                        <p className="font-medium text-lg">{currentLot.quantityReceived.toLocaleString()} cells</p>
                         </div>
                         <div className="space-y-1">
                         <label className="text-xs font-bold text-muted-foreground uppercase">Chemistry / Form</label>
-                        <p className="font-medium">{lot.chemistry} • {lot.formFactor}</p>
+                        <p className="font-medium">{currentLot.chemistry} • {currentLot.formFactor}</p>
                         </div>
                         <div className="space-y-1">
                         <label className="text-xs font-bold text-muted-foreground uppercase">Capacity Profile</label>
-                        <p className="font-medium">{lot.capacityAh} Ah (Nominal)</p>
+                        <p className="font-medium">{currentLot.capacityAh} Ah (Nominal)</p>
                         </div>
                         <div className="col-span-2 pt-4 border-t">
                         <label className="text-xs font-bold text-muted-foreground uppercase">Current Progress</label>
                         <div className="mt-2 space-y-3">
                             <div className="flex justify-between text-sm">
                             <span>Confirmed Scans</span>
-                            <span className="font-mono">{lot.scannedCount} / {lot.generatedCount || lot.quantityReceived}</span>
+                            <span className="font-mono">{currentLot.scannedCount} / {currentLot.generatedCount || currentLot.quantityReceived}</span>
                             </div>
                             <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                            <div className="h-full bg-primary" style={{ width: `${(lot.scannedCount / (lot.generatedCount || 1)) * 100}%` }} />
+                            <div className="h-full bg-primary" style={{ width: `${(currentLot.scannedCount / (currentLot.generatedCount || 1)) * 100}%` }} />
                             </div>
                         </div>
                         </div>
@@ -217,27 +257,24 @@ export default function CellLotDetail() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">PO Number</label>
-                                    <Input value={lot.poNumber || ''} onChange={e => handleUpdateDoc('poNumber', e.target.value)} placeholder="PO-XXXX" />
+                                    <Input disabled={isFailsafe} value={currentLot.poNumber || ''} onChange={e => handleUpdateDoc('poNumber', e.target.value)} placeholder="PO-XXXX" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Invoice Number</label>
-                                    <Input value={lot.invoiceNumber || ''} onChange={e => handleUpdateDoc('invoiceNumber', e.target.value)} placeholder="INV-XXXX" />
+                                    <Input disabled={isFailsafe} value={currentLot.invoiceNumber || ''} onChange={e => handleUpdateDoc('invoiceNumber', e.target.value)} placeholder="INV-XXXX" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">GRN Number</label>
-                                    <Input value={lot.grnNumber || ''} onChange={e => handleUpdateDoc('grnNumber', e.target.value)} placeholder="GRN-XXXX" />
+                                    <Input disabled={isFailsafe} value={currentLot.grnNumber || ''} onChange={e => handleUpdateDoc('grnNumber', e.target.value)} placeholder="GRN-XXXX" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Incoming QC Result</label>
                                     <div className="flex gap-2">
-                                        <Button variant={lot.qcPassed === true ? 'default' : 'outline'} className={lot.qcPassed ? 'bg-emerald-600' : ''} onClick={() => handleUpdateDoc('qcPassed', true)}>PASS</Button>
-                                        <Button variant={lot.qcPassed === false ? 'destructive' : 'outline'} onClick={() => handleUpdateDoc('qcPassed', false)}>FAIL</Button>
+                                        <Button disabled={isFailsafe} variant={currentLot.qcPassed === true ? 'default' : 'outline'} className={currentLot.qcPassed ? 'bg-emerald-600' : ''} onClick={() => handleUpdateDoc('qcPassed', true)}>PASS</Button>
+                                        <Button disabled={isFailsafe} variant={currentLot.qcPassed === false ? 'destructive' : 'outline'} onClick={() => handleUpdateDoc('qcPassed', false)}>FAIL</Button>
                                     </div>
                                 </div>
                             </div>
-                            <p className="text-xs text-muted-foreground italic bg-slate-50 dark:bg-slate-900 p-3 rounded border border-dashed">
-                                Documentation binding is required to unlock serial number generation (Audit Control).
-                            </p>
                         </CardContent>
                     </Card>
                 )}
@@ -250,7 +287,7 @@ export default function CellLotDetail() {
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Serial Prefix</label>
                             <Input 
-                            disabled={!isLogistics || lot.status !== 'DRAFT'} 
+                            disabled={!isLogistics || currentLot.status !== 'DRAFT' || isFailsafe} 
                             value={genParams.prefix} 
                             onChange={e => setGenParams({...genParams, prefix: e.target.value.toUpperCase()})}
                             />
@@ -259,7 +296,7 @@ export default function CellLotDetail() {
                             <label className="text-sm font-medium">Generation Count</label>
                             <Input 
                             type="number" 
-                            disabled={!isLogistics || lot.status !== 'DRAFT'} 
+                            disabled={!isLogistics || currentLot.status !== 'DRAFT' || isFailsafe} 
                             value={genParams.count} 
                             onChange={e => setGenParams({...genParams, count: parseInt(e.target.value) || 0})}
                             />
@@ -268,13 +305,13 @@ export default function CellLotDetail() {
                         
                         <div className="pt-4 border-t flex justify-end">
                             <ActionGuard 
-                                guard={guards.generateSerials}
+                                guard={isFailsafe ? {allowed: false, reason: "Manual serialization disabled in failsafe mode."} : guards.generateSerials}
                                 onClick={handleGenerate}
                                 label={serials.length > 0 ? "Regenerate IDs" : "Generate Identities"}
                                 icon={Fingerprint}
                                 loading={processing}
                                 actionName="Generate_Cell_Serials"
-                                entityId={lot.id}
+                                entityId={currentLot.id}
                             />
                         </div>
                     </CardContent>
@@ -295,9 +332,9 @@ export default function CellLotDetail() {
                                 value={scanInput}
                                 onChange={e => setScanInput(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && handleScan()}
-                                disabled={!canScan || serials.length === 0}
+                                disabled={!canScan || serials.length === 0 || isFailsafe}
                             />
-                            <Button size="lg" onClick={handleScan} disabled={!canScan || !scanInput}>OK</Button>
+                            <Button size="lg" onClick={handleScan} disabled={!canScan || !scanInput || isFailsafe}>OK</Button>
                             </div>
                         </div>
                         </div>
@@ -312,20 +349,20 @@ export default function CellLotDetail() {
                 <CardHeader className="pb-3 border-b border-slate-800"><CardTitle className="text-sm uppercase tracking-wider text-slate-400">Process Action Hub</CardTitle></CardHeader>
                 <CardContent className="space-y-4 pt-6">
                     <ActionGuard 
-                        guard={guards.releaseToProd} 
+                        guard={isFailsafe ? {allowed: false, reason: "Ledger finalize disabled in failsafe mode."} : guards.releaseToProd} 
                         onClick={handleRelease} 
                         label="Release to Production" 
                         icon={PlayCircle} 
                         className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 border-none shadow-lg shadow-emerald-500/20"
                         actionName="Release_Lot_To_Prod"
-                        entityId={lot.id}
+                        entityId={currentLot.id}
                     />
                     <div className="pt-4 border-t border-slate-800 space-y-2">
                         <Button 
                             variant="outline"
                             className="w-full text-white border-slate-700 hover:bg-slate-800 h-12"
-                            onClick={() => navigate(`/batches?prefillLotId=${lot.id}`)}
-                            disabled={lot.status !== 'PUBLISHED'}
+                            onClick={() => navigate(`/batches?prefillLotId=${currentLot.id}`)}
+                            disabled={currentLot.status !== 'PUBLISHED' || isFailsafe}
                         >
                             <Box className="mr-2 h-4 w-4" /> Issue to Batch
                         </Button>
@@ -340,18 +377,11 @@ export default function CellLotDetail() {
                         <ShieldCheck className="h-5 w-5 text-emerald-400 mt-0.5" />
                         <div>
                             <p className="text-sm font-bold">Identity Integrity</p>
-                            <p className="text-xs text-slate-400">Unique cell serials are cryptographically linked to Lot {lot.id}.</p>
+                            <p className="text-xs text-slate-400">Unique cell serials are cryptographically linked to Lot {currentLot.id}.</p>
                         </div>
                     </div>
                 </CardContent>
             </Card>
-
-            <div className="p-4 border-2 border-dashed rounded-lg bg-slate-50 dark:bg-slate-900 flex items-start gap-3 opacity-60">
-               <AlertCircle size={20} className="text-amber-500 shrink-0" />
-               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-tight">
-                 Stage S2 completion is a hard-gate for assembly workstation start. No scans can occur without lot publishing.
-               </p>
-            </div>
           </div>
         </div>
       </div>

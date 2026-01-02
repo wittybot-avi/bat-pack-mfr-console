@@ -24,11 +24,12 @@ import {
   Leaf,
   Recycle,
   Fingerprint,
-  Play
+  Play,
+  Plus
 } from 'lucide-react';
 import { ScreenId } from '../rbac/screenIds';
 import { matchPath } from 'react-router-dom';
-import { ROUTES } from '../../app/routes';
+import { ROUTES } from './routes';
 
 export interface RouteConfig {
   icon: any;
@@ -41,6 +42,7 @@ export interface RouteConfig {
 /**
  * Route Registry - SINGLE SOURCE OF TRUTH
  * Using canonical ROUTES constants to ensure alignment between Sidebar and Router.
+ * All imports use relative paths for browser-native ESM compatibility.
  */
 export const APP_ROUTES: Record<string, RouteConfig> = {
   // Guided
@@ -71,10 +73,13 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   
   // Design
   [ScreenId.SKU_LIST]: { icon: Layers, label: 'SKU Design', path: ROUTES.SKU_DESIGN, screenId: ScreenId.SKU_LIST, componentName: 'SkuList.tsx' },
+  [ScreenId.SKU_DETAIL]: { icon: Layers, label: 'SKU Detail', path: ROUTES.SKU_DETAIL, screenId: ScreenId.SKU_LIST, componentName: 'SkuDetail.tsx' },
   
   // Trace
-  [ScreenId.CELL_LOTS_LIST]: { icon: Archive, label: 'Cell Serialization', path: ROUTES.CELL_SERIALIZATION, screenId: ScreenId.CELL_LOTS_LIST, componentName: 'CellLotsList.tsx' },
-  [ScreenId.LINEAGE_VIEW]: { icon: History, label: 'Lineage Audit', path: ROUTES.LINEAGE_AUDIT_DETAIL, screenId: ScreenId.LINEAGE_VIEW, componentName: 'LineageView.tsx' },
+  [ScreenId.CELL_LOTS_LIST]: { icon: Archive, label: 'Cell Serialization', path: ROUTES.CELL_SERIALIZATION_HAPPY, screenId: ScreenId.CELL_LOTS_LIST, componentName: 'CellLotsList.tsx' },
+  [ScreenId.CELL_LOTS_CREATE]: { icon: Plus, label: 'Register Cell Shipment', path: ROUTES.CELL_SERIALIZATION_NEW, screenId: ScreenId.CELL_LOTS_CREATE, componentName: 'CreateCellLot.tsx' },
+  [ScreenId.CELL_LOTS_DETAIL]: { icon: Search, label: 'Cell Lot Details', path: ROUTES.CELL_LOT_DETAIL, screenId: ScreenId.CELL_LOTS_DETAIL, componentName: 'CellLotDetail.tsx' },
+  [ScreenId.LINEAGE_VIEW]: { icon: History, label: 'Lineage Audit', path: ROUTES.LINEAGE_AUDIT, screenId: ScreenId.LINEAGE_VIEW, componentName: 'LineageView.tsx' },
   
   // Operate
   [ScreenId.BATCHES_LIST]: { icon: Box, label: 'Manufacturing Batches', path: ROUTES.BATCHES, screenId: ScreenId.BATCHES_LIST, componentName: 'Batches.tsx' },
@@ -124,6 +129,7 @@ export const APP_ROUTES: Record<string, RouteConfig> = {
   [ScreenId.CUSTODY]: { icon: History, label: 'Chain of Custody', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY, componentName: 'Custody.tsx' },
   [ScreenId.CUSTODY_OVERVIEW]: { icon: History, label: 'Custody: Overview', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY_OVERVIEW, componentName: 'Custody.tsx' },
   [ScreenId.CUSTODY_LIST]: { icon: History, label: 'Custody: List', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY_LIST, componentName: 'Custody.tsx' },
+  [ScreenId.CUSTODY_DETAIL]: { icon: History, label: 'Custody Detail', path: ROUTES.CUSTODY_DETAIL, screenId: ScreenId.CUSTODY_DETAIL, componentName: 'CustodyDetail.tsx' },
   [ScreenId.CUSTODY_EXCEPTIONS]: { icon: History, label: 'Custody: Exceptions', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY_EXCEPTIONS, componentName: 'Custody.tsx' },
   [ScreenId.CUSTODY_RECEIVE_ACTION]: { icon: History, label: 'Custody: Receive', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY_RECEIVE_ACTION, componentName: 'Custody.tsx' },
   [ScreenId.CUSTODY_ACCEPT_REJECT_ACTION]: { icon: History, label: 'Custody: Accept/Reject', path: ROUTES.CUSTODY, screenId: ScreenId.CUSTODY_ACCEPT_REJECT_ACTION, componentName: 'Custody.tsx' },

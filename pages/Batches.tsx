@@ -235,7 +235,8 @@ export default function Batches() {
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <option value="All">All Statuses</option>
-                {Object.values(BatchStatus).map(s => <option key={s} value={s}>{s}</option>)}
+                {/* Fix: Explicitly cast Object.values to string[] to resolve 'unknown' type assignment issues in select options mapping */}
+                {(Object.values(BatchStatus) as string[]).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           </div>
